@@ -1,0 +1,109 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root,
+.light {
+  --background: #f5f5f7;
+  --foreground: #1d1d1f;
+  --muted: #6e6e73;
+  --muted-foreground: #86868b;
+  --border: #d2d2d7;
+  --card: #ffffff;
+  --card-foreground: #1d1d1f;
+  --primary: #1d1d1f;
+  --primary-foreground: #f5f5f7;
+  --sidebar: #f5f5f7;
+  --input-bg: #ffffff;
+  --input-border: #d2d2d7;
+  --input-focus-ring: rgba(0, 0, 0, 0.12);
+  --card-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+  --card-shadow-hover: 0 4px 12px rgba(0, 0, 0, 0.08);
+  --radius: 0.75rem;
+  --radius-sm: 0.5rem;
+  --radius-lg: 1rem;
+  --radius-xl: 1.25rem;
+  --radius-full: 9999px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not(.light) {
+    --background: #000000;
+    --foreground: #f5f5f7;
+    --muted: #a1a1a6;
+    --muted-foreground: #636366;
+    --border: #38383a;
+    --card: #1c1c1e;
+    --card-foreground: #f5f5f7;
+    --primary: #f5f5f7;
+    --primary-foreground: #1d1d1f;
+    --sidebar: #1c1c1e;
+    --input-bg: #2c2c2e;
+    --input-border: #38383a;
+    --input-focus-ring: rgba(255, 255, 255, 0.15);
+    --card-shadow: 0 1px 0 rgba(255, 255, 255, 0.05);
+    --card-shadow-hover: 0 2px 8px rgba(0, 0, 0, 0.4);
+  }
+}
+
+.dark {
+  --background: #000000;
+  --foreground: #f5f5f7;
+  --muted: #a1a1a6;
+  --muted-foreground: #636366;
+  --border: #38383a;
+  --card: #1c1c1e;
+  --card-foreground: #f5f5f7;
+  --primary: #f5f5f7;
+  --primary-foreground: #1d1d1f;
+  --sidebar: #1c1c1e;
+  --input-bg: #2c2c2e;
+  --input-border: #38383a;
+  --input-focus-ring: rgba(255, 255, 255, 0.15);
+  --card-shadow: 0 1px 0 rgba(255, 255, 255, 0.05);
+  --card-shadow-hover: 0 2px 8px rgba(0, 0, 0, 0.4);
+}
+
+body {
+  color: var(--foreground);
+  background: var(--background);
+  font-feature-settings: "rlig" 1, "calt" 1;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Garantizar fondo opaco en el área de contenido del dashboard */
+main {
+  background-color: var(--background);
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+}
+
+/* Minimal scrollbar */
+@layer base {
+  * {
+    @apply border-[var(--border)];
+  }
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--muted-foreground);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--muted);
+}
