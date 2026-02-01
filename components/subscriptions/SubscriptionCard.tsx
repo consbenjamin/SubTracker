@@ -55,6 +55,15 @@ export function SubscriptionCard({
       ? "año"
       : "trimestre";
 
+  const yearlySavingsIfCancelled =
+    subscription.status === "active"
+      ? subscription.billing_cycle === "monthly"
+        ? subscription.price * 12
+        : subscription.billing_cycle === "quarterly"
+        ? subscription.price * 4
+        : subscription.price
+      : null;
+
   return (
     <Card className="group transition-shadow hover:shadow-[var(--card-shadow)] hover:shadow-[var(--card-shadow-hover)]">
       <div className="flex flex-col gap-4">
@@ -103,6 +112,11 @@ export function SubscriptionCard({
               {subscription.category}
             </Badge>
           </div>
+        )}
+        {yearlySavingsIfCancelled != null && yearlySavingsIfCancelled > 0 && (
+          <p className="text-sm text-muted-foreground">
+            Ahorro anual si cancelas: {formatCurrency(yearlySavingsIfCancelled)}
+          </p>
         )}
       </div>
     </Card>

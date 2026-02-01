@@ -24,6 +24,14 @@
   --radius-lg: 1rem;
   --radius-xl: 1.25rem;
   --radius-full: 9999px;
+  /* Chart palette - professional gradient-friendly */
+  --chart-1: #6366f1;
+  --chart-2: #8b5cf6;
+  --chart-3: #06b6d4;
+  --chart-4: #10b981;
+  --chart-5: #f59e0b;
+  --chart-6: #ef4444;
+  --chart-grid: rgba(0, 0, 0, 0.06);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -43,6 +51,13 @@
     --input-focus-ring: rgba(255, 255, 255, 0.15);
     --card-shadow: 0 1px 0 rgba(255, 255, 255, 0.05);
     --card-shadow-hover: 0 2px 8px rgba(0, 0, 0, 0.4);
+    --chart-grid: rgba(255, 255, 255, 0.06);
+    --chart-1: #818cf8;
+    --chart-2: #a78bfa;
+    --chart-3: #22d3ee;
+    --chart-4: #34d399;
+    --chart-5: #fbbf24;
+    --chart-6: #f87171;
   }
 }
 
@@ -62,6 +77,13 @@
   --input-focus-ring: rgba(255, 255, 255, 0.15);
   --card-shadow: 0 1px 0 rgba(255, 255, 255, 0.05);
   --card-shadow-hover: 0 2px 8px rgba(0, 0, 0, 0.4);
+  --chart-grid: rgba(255, 255, 255, 0.06);
+  --chart-1: #818cf8;
+  --chart-2: #a78bfa;
+  --chart-3: #22d3ee;
+  --chart-4: #34d399;
+  --chart-5: #fbbf24;
+  --chart-6: #f87171;
 }
 
 body {
@@ -106,4 +128,26 @@ main {
 
 ::-webkit-scrollbar-thumb:hover {
   background: var(--muted);
+}
+
+/* Ocultar cruz nativa del input search para controlar botón clear y loading */
+.search-input-clear-none::-webkit-search-cancel-button,
+.search-input-clear-none::-webkit-search-decoration {
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+/* Toast slide-in */
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateX(1rem);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+.toast-item {
+  animation: toast-in 0.3s ease-out;
 }

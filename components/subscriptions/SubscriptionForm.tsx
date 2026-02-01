@@ -5,10 +5,10 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Subscription, SubscriptionFormData, BillingCycle, SubscriptionStatus } from "@/types";
+import { SUBSCRIPTION_TEMPLATES } from "@/lib/constants/subscriptionTemplates";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { Button } from "@/components/ui/Button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 
 const subscriptionSchema = z.object({
   name: z.string().min(1, "El nombre es requerido"),
@@ -52,6 +52,7 @@ export function SubscriptionForm({
     register,
     handleSubmit,
     watch,
+    reset,
     formState: { errors, isSubmitting },
   } = useForm<SubscriptionFormData>({
     resolver: zodResolver(subscriptionSchema),
@@ -92,8 +93,41 @@ export function SubscriptionForm({
     }
   };
 
+  const applyTemplate = (name: string, category: string, billing_cycle: BillingCycle) => {
+    const next = new Date();
+    next.setMonth(next.getMonth() + 1);
+    next.setDate(1);
+    const nextPaymentDate = next.toISOString().slice(0, 10);
+    reset({
+      name,
+      price: 0,
+      billing_cycle,
+      next_payment_date: nextPaymentDate,
+      category,
+      status: "active",
+      notes: "",
+    });
+  };
+
   return (
     <form onSubmit={handleSubmit(onSubmitForm)} className="space-y-4">
+      {!subscription && SUBSCRIPTION_TEMPLATES.length > 0 && (
+        <div className="space-y-2">
+          <p className="text-sm font-medium text-foreground">Empezar con una plantilla</p>
+          <div className="flex flex-wrap gap-2">
+            {SUBSCRIPTION_TEMPLATES.map((t) => (
+              <button
+                key={t.id}
+                type="button"
+                onClick={() => applyTemplate(t.name, t.category, t.billing_cycle)}
+                className="rounded-full border border-border bg-muted/40 px-3 py-1.5 text-sm text-foreground transition-colors hover:bg-muted hover:border-foreground/20"
+              >
+                {t.name}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
       <Input
         label="Nombre del servicio"
         {...register("name")}

@@ -4,8 +4,9 @@ import { SubscriptionFormData } from "@/types";
 
 export async function GET(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   const supabase = await createClient();
   const {
     data: { user },
@@ -18,7 +19,7 @@ export async function GET(
   const { data, error } = await supabase
     .from("subscriptions")
     .select("*")
-    .eq("id", params.id)
+    .eq("id", id)
     .eq("user_id", user.id)
     .single();
 
@@ -31,8 +32,9 @@ export async function GET(
 
 export async function PUT(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   const supabase = await createClient();
   const {
     data: { user },
@@ -51,7 +53,7 @@ export async function PUT(
     const { data: current } = await supabase
       .from("subscriptions")
       .select("price, next_payment_date")
-      .eq("id", params.id)
+      .eq("id", id)
       .eq("user_id", user.id)
       .single();
 
@@ -61,7 +63,7 @@ export async function PUT(
           ? new Date().toISOString().slice(0, 10)
           : current.data.next_payment_date?.toString().slice(0, 10) ?? new Date().toISOString().slice(0, 10);
       await supabase.from("payment_history").insert({
-        subscription_id: params.id,
+        subscription_id: id,
         amount: current.data.price,
         payment_date: paymentDate,
       });
@@ -71,7 +73,7 @@ export async function PUT(
   const { data, error } = await supabase
     .from("subscriptions")
     .update(formData)
-    .eq("id", params.id)
+    .eq("id", id)
     .eq("user_id", user.id)
     .select()
     .single();
@@ -85,8 +87,9 @@ export async function PUT(
 
 export async function DELETE(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   const supabase = await createClient();
   const {
     data: { user },
@@ -99,7 +102,7 @@ export async function DELETE(
   const { error } = await supabase
     .from("subscriptions")
     .delete()
-    .eq("id", params.id)
+    .eq("id", id)
     .eq("user_id", user.id);
 
   if (error) {

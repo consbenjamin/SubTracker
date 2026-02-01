@@ -10,15 +10,71 @@ import {
   PieChart,
   Pie,
   Cell,
+  AreaChart,
+  Area,
   XAxis,
   YAxis,
   CartesianGrid,
   Tooltip,
-  Legend,
   ResponsiveContainer,
 } from "recharts";
 
-const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884d8", "#82ca9d"];
+const CHART_COLORS = [
+  "var(--chart-1)",
+  "var(--chart-2)",
+  "var(--chart-3)",
+  "var(--chart-4)",
+  "var(--chart-5)",
+  "var(--chart-6)",
+];
+
+function CustomTooltipPie({
+  active,
+  payload,
+  formatter,
+}: {
+  active?: boolean;
+  payload?: { name: string; value: number; payload: { name: string; value: number } }[];
+  formatter: (v: number) => string;
+}) {
+  if (!active || !payload?.length) return null;
+  return (
+    <div className="rounded-xl border border-border bg-card px-4 py-3 shadow-lg backdrop-blur-sm">
+      <p className="font-semibold text-foreground">{payload[0].name}</p>
+      <p className="mt-0.5 text-sm font-medium text-muted-foreground">
+        {formatter(payload[0].value)}
+      </p>
+    </div>
+  );
+}
+
+function CustomTooltipBar({
+  active,
+  payload,
+  formatter,
+  labelKey = "month",
+}: {
+  active?: boolean;
+  payload?: { payload: Record<string, unknown> }[];
+  formatter: (v: number) => string;
+  labelKey?: string;
+}) {
+  if (!active || !payload?.length) return null;
+  const p = payload[0].payload;
+  return (
+    <div className="rounded-xl border border-border bg-card px-4 py-3 shadow-lg backdrop-blur-sm">
+      <p className="font-semibold text-foreground">{String(p[labelKey])}</p>
+      <p className="mt-0.5 text-sm text-muted-foreground">
+        Mostrado: {formatter(p.gasto as number)}
+      </p>
+      {((p.real as number) ?? 0) > 0 && (
+        <p className="mt-0.5 text-xs text-muted-foreground/80">
+          Real: {formatter(p.real as number)}
+        </p>
+      )}
+    </div>
+  );
+}
 
 export default function AnalyticsPage() {
   const formatCurrency = useFormatCurrency();
@@ -58,7 +114,6 @@ export default function AnalyticsPage() {
 
   const activeSubscriptions = subscriptions.filter((s) => s.status === "active");
 
-  // Real totals from payment_history
   const totalRealAllTime = payments.reduce((sum, p) => sum + p.amount, 0);
   const now = new Date();
   const last12MonthsStart = new Date(now.getFullYear(), now.getMonth() - 11, 1);
@@ -70,7 +125,6 @@ export default function AnalyticsPage() {
     0
   );
 
-  // Monthly expenses by category (proyección)
   const categoryData = activeSubscriptions.reduce((acc, sub) => {
     const multiplier =
       sub.billing_cycle === "monthly"
@@ -79,13 +133,9 @@ export default function AnalyticsPage() {
         ? 1 / 3
         : 1 / 12;
     const monthlyPrice = sub.price * multiplier;
-
     const cat = sub.category ?? "Sin categoría";
-    if (acc[cat]) {
-      acc[cat] += monthlyPrice;
-    } else {
-      acc[cat] = monthlyPrice;
-    }
+    if (acc[cat]) acc[cat] += monthlyPrice;
+    else acc[cat] = monthlyPrice;
     return acc;
   }, {} as Record<string, number>);
 
@@ -94,7 +144,6 @@ export default function AnalyticsPage() {
     value: Number(value.toFixed(2)),
   }));
 
-  // Monthly expenses: real (payment_history) + proyección fallback
   const monthlyExpensesReal: Record<string, number> = {};
   for (let i = 5; i >= 0; i--) {
     const date = new Date();
@@ -105,9 +154,7 @@ export default function AnalyticsPage() {
   payments.forEach((p) => {
     const d = new Date(p.payment_date);
     const monthKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
-    if (monthKey in monthlyExpensesReal) {
-      monthlyExpensesReal[monthKey] += p.amount;
-    }
+    if (monthKey in monthlyExpensesReal) monthlyExpensesReal[monthKey] += p.amount;
   });
 
   const monthlyExpenses = Array.from({ length: 6 }, (_, i) => {
@@ -132,7 +179,6 @@ export default function AnalyticsPage() {
     };
   });
 
-  // Billing cycle distribution
   const billingCycleData = activeSubscriptions.reduce((acc, sub) => {
     acc[sub.billing_cycle] = (acc[sub.billing_cycle] || 0) + 1;
     return acc;
@@ -156,9 +202,19 @@ export default function AnalyticsPage() {
 
   const totalYearly = totalMonthly * 12;
   const avgRealMonthly =
-    paymentsLast12Months.length > 0
-      ? totalRealLast12Months / 12
-      : 0;
+    paymentsLast12Months.length > 0 ? totalRealLast12Months / 12 : 0;
+
+  const chartGridStyle = {
+    stroke: "var(--chart-grid)",
+    strokeDasharray: "4 4",
+    strokeWidth: 1,
+  };
+
+  const axisStyle = {
+    stroke: "var(--muted-foreground)",
+    fontSize: 11,
+    fontFamily: "inherit",
+  };
 
   if (loading) {
     return (
@@ -181,7 +237,7 @@ export default function AnalyticsPage() {
       </header>
 
       <div className="mb-10 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Card variant="outline">
+        <Card variant="outline" className="transition-shadow duration-200 hover:shadow-[var(--card-shadow-hover)]">
           <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
             Total mensual (proyección)
           </p>
@@ -189,7 +245,7 @@ export default function AnalyticsPage() {
             {formatCurrency(totalMonthly)}
           </p>
         </Card>
-        <Card variant="outline">
+        <Card variant="outline" className="transition-shadow duration-200 hover:shadow-[var(--card-shadow-hover)]">
           <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
             Proyección anual
           </p>
@@ -197,7 +253,7 @@ export default function AnalyticsPage() {
             {formatCurrency(totalYearly)}
           </p>
         </Card>
-        <Card variant="outline">
+        <Card variant="outline" className="transition-shadow duration-200 hover:shadow-[var(--card-shadow-hover)]">
           <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
             Gasto real (últimos 12 meses)
           </p>
@@ -210,7 +266,7 @@ export default function AnalyticsPage() {
             </p>
           )}
         </Card>
-        <Card variant="outline">
+        <Card variant="outline" className="transition-shadow duration-200 hover:shadow-[var(--card-shadow-hover)]">
           <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
             Total histórico
           </p>
@@ -225,35 +281,103 @@ export default function AnalyticsPage() {
         </Card>
       </div>
 
-      <div className="mb-10 grid grid-cols-1 gap-6 lg:grid-cols-2">
-        <Card variant="outline">
+      {activeSubscriptions.length > 0 && (
+        <Card variant="outline" className="mb-10">
           <CardHeader>
-            <CardTitle>Gastos por categoría</CardTitle>
+            <CardTitle className="text-base font-semibold">
+              Si cancelas todas las suscripciones activas
+            </CardTitle>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Ahorrarías {formatCurrency(totalMonthly)}/mes ({formatCurrency(totalYearly)}/año)
+            </p>
           </CardHeader>
-          <CardContent>
+          <CardContent className="pt-0">
+            <p className="text-xs text-muted-foreground mb-3">
+              Suscripciones activas más caras (mensual):
+            </p>
+            <ul className="divide-y divide-border">
+              {activeSubscriptions
+                .map((s) => ({
+                  ...s,
+                  monthlyEquivalent:
+                    s.billing_cycle === "monthly"
+                      ? s.price
+                      : s.billing_cycle === "quarterly"
+                      ? s.price / 3
+                      : s.price / 12,
+                }))
+                .sort((a, b) => b.monthlyEquivalent - a.monthlyEquivalent)
+                .slice(0, 5)
+                .map((s) => (
+                  <li
+                    key={s.id}
+                    className="flex items-center justify-between py-2 first:pt-0 last:pb-0"
+                  >
+                    <span className="font-medium text-foreground">{s.name}</span>
+                    <span className="text-sm text-muted-foreground">
+                      {formatCurrency(s.monthlyEquivalent)}/mes
+                    </span>
+                  </li>
+                ))}
+            </ul>
+          </CardContent>
+        </Card>
+      )}
+
+      <div className="mb-10 grid grid-cols-1 gap-6 lg:grid-cols-2">
+        {/* Gastos por categoría - Donut profesional */}
+        <Card variant="outline" className="overflow-hidden">
+          <CardHeader>
+            <CardTitle className="text-base font-semibold">Gastos por categoría</CardTitle>
+          </CardHeader>
+          <CardContent className="pt-0">
             {categoryChartData.length > 0 ? (
-              <ResponsiveContainer width="100%" height={300}>
-                <PieChart>
+              <ResponsiveContainer width="100%" height={320}>
+                <PieChart margin={{ top: 12, right: 12, bottom: 12, left: 12 }}>
+                  <defs>
+                    {categoryChartData.map((_, i) => (
+                      <linearGradient
+                        key={i}
+                        id={`pieGrad-${i}`}
+                        x1="0"
+                        y1="0"
+                        x2="1"
+                        y2="1"
+                      >
+                        <stop offset="0%" stopColor={CHART_COLORS[i % CHART_COLORS.length]} stopOpacity={1} />
+                        <stop offset="100%" stopColor={CHART_COLORS[i % CHART_COLORS.length]} stopOpacity={0.75} />
+                      </linearGradient>
+                    ))}
+                  </defs>
                   <Pie
                     data={categoryChartData}
                     cx="50%"
                     cy="50%"
-                    labelLine={false}
-                    label={({ name, percent }) =>
-                      `${name} ${(percent * 100).toFixed(0)}%`
-                    }
-                    outerRadius={80}
-                    fill="#8884d8"
+                    innerRadius={72}
+                    outerRadius={110}
+                    paddingAngle={2}
                     dataKey="value"
+                    stroke="var(--card)"
+                    strokeWidth={2}
+                    animationBegin={0}
+                    animationDuration={600}
+                    label={({ name, percent }) =>
+                      percent >= 0.08 ? `${name} ${(percent * 100).toFixed(0)}%` : ""
+                    }
+                    labelLine={{ stroke: "var(--muted-foreground)", strokeWidth: 1 }}
                   >
-                    {categoryChartData.map((entry, index) => (
+                    {categoryChartData.map((_, index) => (
                       <Cell
                         key={`cell-${index}`}
-                        fill={COLORS[index % COLORS.length]}
+                        fill={`url(#pieGrad-${index})`}
+                        style={{ outline: "none" }}
                       />
                     ))}
                   </Pie>
-                  <Tooltip formatter={(value: number) => formatCurrency(value)} />
+                  <Tooltip
+                    content={<CustomTooltipPie formatter={formatCurrency} />}
+                    cursor={{ fill: "transparent" }}
+                  />
                 </PieChart>
               </ResponsiveContainer>
             ) : (
@@ -264,19 +388,64 @@ export default function AnalyticsPage() {
           </CardContent>
         </Card>
 
-        <Card variant="outline">
+        {/* Distribución por ciclo - Barras modernas */}
+        <Card variant="outline" className="overflow-hidden">
           <CardHeader>
-            <CardTitle>Distribución por ciclo de facturación</CardTitle>
+            <CardTitle className="text-base font-semibold">Distribución por ciclo de facturación</CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="pt-0">
             {billingCycleChartData.length > 0 ? (
-              <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={billingCycleChartData}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="name" />
-                  <YAxis />
-                  <Tooltip />
-                  <Bar dataKey="value" fill="#8884d8" />
+              <ResponsiveContainer width="100%" height={320}>
+                <BarChart
+                  data={billingCycleChartData}
+                  margin={{ top: 16, right: 16, left: 8, bottom: 8 }}
+                  barCategoryGap="20%"
+                  barGap={8}
+                >
+                  <defs>
+                    <linearGradient id="barGrad" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="var(--chart-1)" stopOpacity={1} />
+                      <stop offset="100%" stopColor="var(--chart-2)" stopOpacity={0.85} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid vertical={false} strokeDasharray="4 4" stroke="var(--chart-grid)" />
+                  <XAxis
+                    dataKey="name"
+                    axisLine={false}
+                    tickLine={false}
+                    tick={axisStyle}
+                    tickMargin={10}
+                  />
+                  <YAxis
+                    axisLine={false}
+                    tickLine={false}
+                    tick={axisStyle}
+                    tickMargin={8}
+                    allowDecimals={false}
+                    width={28}
+                  />
+                  <Tooltip
+                    content={({ active, payload }) =>
+                      active && payload?.length ? (
+                        <div className="rounded-xl border border-border bg-card px-4 py-3 shadow-lg backdrop-blur-sm">
+                          <p className="font-semibold text-foreground">{payload[0].payload.name}</p>
+                          <p className="mt-0.5 text-sm text-muted-foreground">
+                            {payload[0].value} suscripción{(payload[0].value as number) !== 1 ? "es" : ""}
+                          </p>
+                        </div>
+                      ) : null
+                    }
+                    cursor={{ fill: "var(--muted-foreground)", fillOpacity: 0.06 }}
+                  />
+                  <Bar
+                    dataKey="value"
+                    fill="url(#barGrad)"
+                    radius={[6, 6, 0, 0]}
+                    maxBarSize={56}
+                    animationBegin={0}
+                    animationDuration={500}
+                    name="Suscripciones"
+                  />
                 </BarChart>
               </ResponsiveContainer>
             ) : (
@@ -288,45 +457,58 @@ export default function AnalyticsPage() {
         </Card>
       </div>
 
-      <Card variant="outline">
+      {/* Gastos mensuales - Area chart con gradiente */}
+      <Card variant="outline" className="overflow-hidden">
         <CardHeader>
-          <CardTitle>Gastos mensuales (últimos 6 meses)</CardTitle>
+          <CardTitle className="text-base font-semibold">Gastos mensuales (últimos 6 meses)</CardTitle>
           <p className="text-xs font-normal text-muted-foreground mt-1">
             Datos reales del historial cuando hay pagos; si no, proyección.
           </p>
         </CardHeader>
-        <CardContent>
+        <CardContent className="pt-0">
           {monthlyExpenses.length > 0 ? (
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={monthlyExpenses}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="month" />
-                <YAxis />
-                <Tooltip
-                  formatter={(value: number) => formatCurrency(value)}
-                  content={({ active, payload }) =>
-                    active && payload?.length ? (
-                      <div
-                        className="rounded-lg border border-border bg-card px-3 py-2 text-sm shadow"
-                        style={{ backgroundColor: "var(--card)" }}
-                      >
-                        <p className="font-medium text-foreground">
-                          {payload[0]?.payload?.month}
-                        </p>
-                        <p className="text-muted-foreground">
-                          Mostrado: {formatCurrency(payload[0]?.value as number)}
-                        </p>
-                        {(payload[0]?.payload?.real ?? 0) > 0 && (
-                          <p className="text-xs text-muted-foreground">
-                            Real: {formatCurrency(payload[0]?.payload?.real)}
-                          </p>
-                        )}
-                      </div>
-                    ) : null
-                  }
+            <ResponsiveContainer width="100%" height={340}>
+              <AreaChart
+                data={monthlyExpenses}
+                margin={{ top: 20, right: 20, left: 24, bottom: 8 }}
+              >
+                <defs>
+                  <linearGradient id="areaGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="var(--chart-3)" stopOpacity={0.4} />
+                    <stop offset="100%" stopColor="var(--chart-3)" stopOpacity={0.05} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid vertical={false} strokeDasharray="4 4" stroke="var(--chart-grid)" />
+                <XAxis
+                  dataKey="month"
+                  axisLine={false}
+                  tickLine={false}
+                  tick={axisStyle}
+                  tickMargin={12}
                 />
-                <Bar dataKey="gasto" fill="#8884d8" name="Gasto" />
-              </BarChart>
+                <YAxis
+                  axisLine={false}
+                  tickLine={false}
+                  tick={axisStyle}
+                  tickFormatter={(v) => formatCurrency(v)}
+                  tickMargin={8}
+                  width={90}
+                />
+                <Tooltip
+                  content={<CustomTooltipBar formatter={formatCurrency} labelKey="month" />}
+                  cursor={{ stroke: "var(--chart-3)", strokeWidth: 1, strokeDasharray: "4 4" }}
+                />
+                <Area
+                  type="monotone"
+                  dataKey="gasto"
+                  stroke="var(--chart-3)"
+                  strokeWidth={2.5}
+                  fill="url(#areaGrad)"
+                  animationBegin={0}
+                  animationDuration={700}
+                  name="Gasto"
+                />
+              </AreaChart>
             </ResponsiveContainer>
           ) : (
             <p className="py-12 text-center text-sm text-muted-foreground">

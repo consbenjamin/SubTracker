@@ -1,11 +1,14 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { useSettings } from "@/lib/contexts/SettingsContext";
 import type { Theme } from "@/lib/contexts/SettingsContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Select } from "@/components/ui/Select";
+import { Input } from "@/components/ui/Input";
+import { Button } from "@/components/ui/Button";
 import { CURRENCIES } from "@/lib/constants/currencies";
-import { Sun, Moon, Monitor, DollarSign } from "lucide-react";
+import { Sun, Moon, Monitor, DollarSign, Target, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const THEMES: { value: Theme; label: string; icon: typeof Sun }[] = [
@@ -15,7 +18,23 @@ const THEMES: { value: Theme; label: string; icon: typeof Sun }[] = [
 ];
 
 export default function SettingsPage() {
-  const { theme, setTheme, currency, setCurrency } = useSettings();
+  const { theme, setTheme, currency, setCurrency, monthlyBudget, setMonthlyBudget } = useSettings();
+  const [budgetInput, setBudgetInput] = useState(monthlyBudget?.toString() ?? "");
+
+  useEffect(() => {
+    setBudgetInput(monthlyBudget?.toString() ?? "");
+  }, [monthlyBudget]);
+
+  const handleBudgetSubmit = () => {
+    const parsed = budgetInput.trim() ? parseFloat(budgetInput.replace(",", ".")) : null;
+    if (parsed !== null && (isNaN(parsed) || parsed <= 0)) return;
+    setMonthlyBudget(parsed !== null && !isNaN(parsed) && parsed > 0 ? parsed : null);
+  };
+
+  const clearBudget = () => {
+    setBudgetInput("");
+    setMonthlyBudget(null);
+  };
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
@@ -58,6 +77,44 @@ export default function SettingsPage() {
                   {label}
                 </button>
               ))}
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card variant="outline">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Target className="h-4 w-4 text-muted-foreground" />
+              Presupuesto mensual
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="mb-4 text-sm text-muted-foreground">
+              Opcional. Si lo defines, en el Dashboard verás cuánto llevas gastado respecto a tu límite.
+            </p>
+            <div className="flex flex-wrap items-end gap-2">
+              <div className="min-w-[140px] max-w-[200px]">
+                <Input
+                  type="number"
+                  min={0}
+                  step={1}
+                  placeholder="Sin límite"
+                  value={budgetInput}
+                  onChange={(e) => setBudgetInput(e.target.value)}
+                  onBlur={handleBudgetSubmit}
+                  onKeyDown={(e) => e.key === "Enter" && handleBudgetSubmit()}
+                  label="Importe"
+                />
+              </div>
+              <Button variant="secondary" size="sm" onClick={handleBudgetSubmit}>
+                Guardar
+              </Button>
+              {monthlyBudget != null && (
+                <Button variant="ghost" size="sm" onClick={clearBudget} className="gap-1">
+                  <X className="h-4 w-4" />
+                  Quitar límite
+                </Button>
+              )}
             </div>
           </CardContent>
         </Card>

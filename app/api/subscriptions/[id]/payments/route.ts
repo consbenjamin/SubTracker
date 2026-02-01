@@ -3,8 +3,9 @@ import { NextResponse } from "next/server";
 
 export async function GET(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   const supabase = await createClient();
   const {
     data: { user },
@@ -17,7 +18,7 @@ export async function GET(
   const sub = await supabase
     .from("subscriptions")
     .select("id")
-    .eq("id", params.id)
+    .eq("id", id)
     .eq("user_id", user.id)
     .single();
 
@@ -28,7 +29,7 @@ export async function GET(
   const { data, error } = await supabase
     .from("payment_history")
     .select("*")
-    .eq("subscription_id", params.id)
+    .eq("subscription_id", id)
     .order("payment_date", { ascending: false });
 
   if (error) {
@@ -40,8 +41,9 @@ export async function GET(
 
 export async function POST(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   const supabase = await createClient();
   const {
     data: { user },
@@ -54,7 +56,7 @@ export async function POST(
   const sub = await supabase
     .from("subscriptions")
     .select("id")
-    .eq("id", params.id)
+    .eq("id", id)
     .eq("user_id", user.id)
     .single();
 
@@ -82,7 +84,7 @@ export async function POST(
   const { data, error } = await supabase
     .from("payment_history")
     .insert({
-      subscription_id: params.id,
+      subscription_id: id,
       amount,
       payment_date,
     })

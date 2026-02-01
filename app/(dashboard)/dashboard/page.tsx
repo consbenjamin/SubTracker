@@ -8,11 +8,14 @@ import { Pagination } from "@/components/ui/Pagination";
 import { Modal } from "@/components/ui/Modal";
 import { SubscriptionForm } from "@/components/subscriptions/SubscriptionForm";
 import { Button } from "@/components/ui/Button";
+import { ExportDropdown } from "@/components/ui/ExportDropdown";
 import { useFormatCurrency } from "@/lib/hooks/useFormatCurrency";
 import { differenceInDays } from "date-fns";
 import { TrendingUp, Calendar, DollarSign, Bell, Loader2 } from "lucide-react";
 import { useOfflineStorage } from "@/lib/hooks/useOfflineStorage";
 import { useNotifications } from "@/lib/hooks/useNotifications";
+import { useToast } from "@/lib/contexts/ToastContext";
+import { useSettings } from "@/lib/contexts/SettingsContext";
 
 export default function DashboardPage() {
   const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
@@ -26,6 +29,8 @@ export default function DashboardPage() {
   const formatCurrency = useFormatCurrency();
   const { isOnline, saveSubscriptions, getSubscriptions } = useOfflineStorage();
   const { permission, requestPermission, checkUpcomingPayments } = useNotifications();
+  const toast = useToast();
+  const { monthlyBudget } = useSettings();
 
   useEffect(() => {
     if (permission === "default") {
@@ -79,6 +84,9 @@ export default function DashboardPage() {
         const newSub = await response.json();
         await fetchSubscriptions();
         setIsModalOpen(false);
+        toast.success("Suscripción creada");
+      } else {
+        toast.error("Error al crear la suscripción");
       }
     } else {
       const newSub: Subscription = {
@@ -91,6 +99,7 @@ export default function DashboardPage() {
       await saveSubscriptions([...subscriptions, newSub]);
       setSubscriptions([...subscriptions, newSub]);
       setIsModalOpen(false);
+      toast.success("Suscripción creada (guardada localmente)");
     }
   };
 
@@ -113,6 +122,9 @@ export default function DashboardPage() {
         await fetchSubscriptions();
         setIsModalOpen(false);
         setEditingSubscription(null);
+        toast.success("Suscripción actualizada");
+      } else {
+        toast.error("Error al actualizar");
       }
     } else {
       const updated = { ...editingSubscription, ...data, updated_at: new Date().toISOString() };
@@ -123,6 +135,7 @@ export default function DashboardPage() {
       setSubscriptions(updatedList);
       setIsModalOpen(false);
       setEditingSubscription(null);
+      toast.success("Suscripción actualizada (guardada localmente)");
     }
   };
 
@@ -138,11 +151,15 @@ export default function DashboardPage() {
 
       if (response.ok) {
         await fetchSubscriptions();
+        toast.success("Suscripción eliminada");
+      } else {
+        toast.error("Error al eliminar");
       }
     } else {
       const updatedList = subscriptions.filter((s) => s.id !== id);
       await saveSubscriptions(updatedList);
       setSubscriptions(updatedList);
+      toast.success("Suscripción eliminada");
     }
   };
 
@@ -199,14 +216,58 @@ export default function DashboardPage() {
   return (
     <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
       {/* Header */}
-      <header className="mb-10">
-        <h1 className="text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
-          Dashboard
-        </h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Resumen de tus suscripciones
-        </p>
+      <header className="mb-10 flex flex-wrap items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
+            Dashboard
+          </h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Resumen de tus suscripciones
+          </p>
+        </div>
+        <ExportDropdown subscriptions={subscriptions} />
       </header>
+
+      {/* Presupuesto mensual (si está definido) */}
+      {monthlyBudget != null && monthlyBudget > 0 && (
+        <section className="mb-8">
+          <Card variant="outline">
+            <CardContent className="pt-6">
+              <div className="flex flex-wrap items-center justify-between gap-4">
+                <div>
+                  <p className="text-sm font-medium text-foreground">
+                    Presupuesto mensual
+                  </p>
+                  <p className="mt-0.5 text-sm text-muted-foreground">
+                    {formatCurrency(monthlyTotal)} de {formatCurrency(monthlyBudget)} usado
+                  </p>
+                </div>
+                <div className="min-w-[160px] flex-1 max-w-xs">
+                  <div className="h-3 w-full overflow-hidden rounded-full bg-muted/60">
+                    <div
+                      className="h-full rounded-full transition-all duration-500"
+                      style={{
+                        width: `${Math.min(100, (monthlyTotal / monthlyBudget) * 100)}%`,
+                        backgroundColor:
+                          monthlyTotal > monthlyBudget
+                            ? "var(--chart-6)"
+                            : monthlyTotal / monthlyBudget > 0.8
+                            ? "var(--chart-5)"
+                            : "var(--chart-4)",
+                      }}
+                    />
+                  </div>
+                  <p className="mt-1.5 text-xs font-medium text-muted-foreground">
+                    {monthlyTotal > monthlyBudget
+                      ? `${formatCurrency(monthlyTotal - monthlyBudget)} por encima del presupuesto`
+                      : `${((monthlyTotal / monthlyBudget) * 100).toFixed(0)}% usado`}
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </section>
+      )}
 
       {/* Stats */}
       <section className="mb-10 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">

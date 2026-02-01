@@ -8,7 +8,9 @@ import { Modal } from "@/components/ui/Modal";
 import { Pagination } from "@/components/ui/Pagination";
 import { SubscriptionForm } from "@/components/subscriptions/SubscriptionForm";
 import { Button } from "@/components/ui/Button";
+import { ExportDropdown } from "@/components/ui/ExportDropdown";
 import { Select } from "@/components/ui/Select";
+import { useToast } from "@/lib/contexts/ToastContext";
 
 export default function SubscriptionsPage() {
   const router = useRouter();
@@ -22,6 +24,7 @@ export default function SubscriptionsPage() {
   const [page, setPage] = useState(1);
 
   const PAGE_SIZE = 12;
+  const toast = useToast();
 
   useEffect(() => {
     setSearchQuery(searchParams.get("q") ?? "");
@@ -60,6 +63,9 @@ export default function SubscriptionsPage() {
     if (response.ok) {
       await fetchSubscriptions();
       setIsModalOpen(false);
+      toast.success("Suscripción creada");
+    } else {
+      toast.error("Error al crear la suscripción");
     }
   };
 
@@ -81,6 +87,9 @@ export default function SubscriptionsPage() {
       await fetchSubscriptions();
       setIsModalOpen(false);
       setEditingSubscription(null);
+      toast.success("Suscripción actualizada");
+    } else {
+      toast.error("Error al actualizar");
     }
   };
 
@@ -95,6 +104,9 @@ export default function SubscriptionsPage() {
 
     if (response.ok) {
       await fetchSubscriptions();
+      toast.success("Suscripción eliminada");
+    } else {
+      toast.error("Error al eliminar");
     }
   };
 
@@ -132,9 +144,12 @@ export default function SubscriptionsPage() {
             Gestiona todas tus suscripciones
           </p>
         </div>
-        <Button variant="primary" onClick={() => setIsModalOpen(true)}>
-          Nueva suscripción
-        </Button>
+        <div className="flex items-center gap-2">
+          <ExportDropdown subscriptions={subscriptions} />
+          <Button variant="primary" onClick={() => setIsModalOpen(true)}>
+            Nueva suscripción
+          </Button>
+        </div>
       </header>
 
       <div className="mb-6 flex justify-end">

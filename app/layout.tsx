@@ -8,6 +8,7 @@ const inter = Inter({
   display: "swap",
 });
 import { SettingsProvider } from "@/lib/contexts/SettingsContext";
+import { ToastProvider } from "@/lib/contexts/ToastContext";
 import { OfflineIndicator } from "@/components/OfflineIndicator";
 
 export const viewport: Viewport = {
@@ -44,8 +45,10 @@ export default function RootLayout({
       </head>
       <body className="min-h-screen bg-background font-sans text-foreground antialiased">
         <SettingsProvider>
-          {children}
-          <OfflineIndicator />
+          <ToastProvider>
+            {children}
+            <OfflineIndicator />
+          </ToastProvider>
         </SettingsProvider>
       </body>
     </html>

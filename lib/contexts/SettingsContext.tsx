@@ -26,17 +26,21 @@ export type CurrencyCode =
 interface SettingsState {
   theme: Theme;
   currency: CurrencyCode;
+  /** Presupuesto mensual opcional para suscripciones (null = sin límite) */
+  monthlyBudget: number | null;
 }
 
 interface SettingsContextValue extends SettingsState {
   setTheme: (theme: Theme) => void;
   setCurrency: (currency: CurrencyCode) => void;
+  setMonthlyBudget: (value: number | null) => void;
   resolvedTheme: "light" | "dark";
 }
 
 const defaultState: SettingsState = {
   theme: "system",
   currency: "EUR",
+  monthlyBudget: null,
 };
 
 function loadSettings(): SettingsState {
@@ -48,6 +52,7 @@ function loadSettings(): SettingsState {
     return {
       theme: parsed.theme ?? defaultState.theme,
       currency: parsed.currency ?? defaultState.currency,
+      monthlyBudget: parsed.monthlyBudget ?? defaultState.monthlyBudget,
     };
   } catch {
     return defaultState;
@@ -89,6 +94,14 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
+  const setMonthlyBudget = useCallback((monthlyBudget: number | null) => {
+    setState((prev) => {
+      const next = { ...prev, monthlyBudget };
+      saveSettings(next);
+      return next;
+    });
+  }, []);
+
   useEffect(() => {
     if (state.theme === "system") {
       const mq = window.matchMedia("(prefers-color-scheme: dark)");
@@ -117,6 +130,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     ...state,
     setTheme,
     setCurrency,
+    setMonthlyBudget,
     resolvedTheme,
   };
 
