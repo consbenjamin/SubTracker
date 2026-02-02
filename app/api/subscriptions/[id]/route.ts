@@ -1,12 +1,28 @@
 import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
-import { SubscriptionFormData } from "@/types";
+import {
+  isValidSubscriptionId,
+  subscriptionUpdateBodySchema,
+} from "@/lib/validations/schemas";
+import { isRateLimitedRequest } from "@/lib/rate-limit";
+
+function getClientIp(request: Request): string {
+  return (
+    request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+    request.headers.get("x-real-ip") ||
+    "unknown"
+  );
+}
 
 export async function GET(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
+  if (!isValidSubscriptionId(id)) {
+    return NextResponse.json({ error: "ID inválido" }, { status: 400 });
+  }
+
   const supabase = await createClient();
   const {
     data: { user },
@@ -35,6 +51,18 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
+  if (!isValidSubscriptionId(id)) {
+    return NextResponse.json({ error: "ID inválido" }, { status: 400 });
+  }
+
+  const ip = getClientIp(request);
+  if (isRateLimitedRequest(ip, "api")) {
+    return NextResponse.json(
+      { error: "Demasiadas peticiones. Intenta más tarde." },
+      { status: 429 }
+    );
+  }
+
   const supabase = await createClient();
   const {
     data: { user },
@@ -44,10 +72,23 @@ export async function PUT(
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const body = await request.json();
-  const { record_payment, ...formData } = body as SubscriptionFormData & {
-    record_payment?: boolean;
-  };
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: "Body JSON inválido" }, { status: 400 });
+  }
+
+  const parsed = subscriptionUpdateBodySchema.safeParse(body);
+  if (!parsed.success) {
+    const msg = parsed.error.flatten().fieldErrors;
+    return NextResponse.json(
+      { error: "Datos inválidos", details: msg },
+      { status: 400 }
+    );
+  }
+
+  const { record_payment, ...formData } = parsed.data;
 
   if (record_payment) {
     const { data: current } = await supabase
@@ -90,6 +131,9 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
+  if (!isValidSubscriptionId(id)) {
+    return NextResponse.json({ error: "ID inválido" }, { status: 400 });
+  }
   const supabase = await createClient();
   const {
     data: { user },

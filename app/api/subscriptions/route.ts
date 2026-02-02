@@ -1,6 +1,15 @@
 import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
-import { SubscriptionFormData } from "@/types";
+import { subscriptionBodySchema } from "@/lib/validations/schemas";
+import { isRateLimitedRequest } from "@/lib/rate-limit";
+
+function getClientIp(request: Request): string {
+  return (
+    request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+    request.headers.get("x-real-ip") ||
+    "unknown"
+  );
+}
 
 export async function GET() {
   const supabase = await createClient();
@@ -26,6 +35,14 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
+  const ip = getClientIp(request);
+  if (isRateLimitedRequest(ip, "api")) {
+    return NextResponse.json(
+      { error: "Demasiadas peticiones. Intenta más tarde." },
+      { status: 429 }
+    );
+  }
+
   const supabase = await createClient();
   const {
     data: { user },
@@ -35,12 +52,26 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const body: SubscriptionFormData = await request.json();
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: "Body JSON inválido" }, { status: 400 });
+  }
+
+  const parsed = subscriptionBodySchema.safeParse(body);
+  if (!parsed.success) {
+    const msg = parsed.error.flatten().fieldErrors;
+    return NextResponse.json(
+      { error: "Datos inválidos", details: msg },
+      { status: 400 }
+    );
+  }
 
   const { data, error } = await supabase
     .from("subscriptions")
     .insert({
-      ...body,
+      ...parsed.data,
       user_id: user.id,
     })
     .select()

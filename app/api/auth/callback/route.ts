@@ -1,14 +1,34 @@
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
+import { isRateLimitedRequest } from "@/lib/rate-limit";
+
+function getClientIp(request: Request): string {
+  return (
+    request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+    request.headers.get("x-real-ip") ||
+    "unknown"
+  );
+}
 
 export async function GET(request: Request) {
+  const ip = getClientIp(request);
+  if (isRateLimitedRequest(ip, "auth")) {
+    return NextResponse.redirect(new URL("/login?error=rate_limited", request.url));
+  }
+
   const requestUrl = new URL(request.url);
   const code = requestUrl.searchParams.get("code");
   const origin = requestUrl.origin;
-  const next = requestUrl.searchParams.get("next") ?? "/dashboard";
-
-  const redirectUrl = `${origin}${next.startsWith("/") ? next : `/${next}`}`;
+  const nextParam = requestUrl.searchParams.get("next") ?? "/dashboard";
+  // Evitar open redirect: solo rutas locales que empiecen por / y no por //
+  const safeNext =
+    typeof nextParam === "string" &&
+    nextParam.startsWith("/") &&
+    !nextParam.startsWith("//")
+      ? nextParam
+      : "/dashboard";
+  const redirectUrl = `${origin}${safeNext}`;
   const response = NextResponse.redirect(redirectUrl);
 
   if (!code) {

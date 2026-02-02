@@ -5,6 +5,7 @@ import { Subscription } from "@/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import { LazySubscriptionCard } from "@/components/subscriptions/LazySubscriptionCard";
 import { Pagination } from "@/components/ui/Pagination";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { Modal } from "@/components/ui/Modal";
 import { SubscriptionForm } from "@/components/subscriptions/SubscriptionForm";
 import { Button } from "@/components/ui/Button";
@@ -23,6 +24,8 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingSubscription, setEditingSubscription] = useState<Subscription | null>(null);
+  const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
   const [filter, setFilter] = useState<"all" | "active" | "upcoming">("all");
   const [page, setPage] = useState(1);
 
@@ -140,27 +143,34 @@ export default function DashboardPage() {
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm("¿Estás seguro de que quieres eliminar esta suscripción?")) {
-      return;
-    }
+  const handleDeleteClick = (id: string) => {
+    setDeleteTargetId(id);
+  };
 
-    if (isOnline) {
-      const response = await fetch(`/api/subscriptions/${id}`, {
-        method: "DELETE",
-      });
+  const handleDeleteConfirm = async () => {
+    if (!deleteTargetId) return;
+    setDeleting(true);
+    try {
+      if (isOnline) {
+        const response = await fetch(`/api/subscriptions/${deleteTargetId}`, {
+          method: "DELETE",
+        });
 
-      if (response.ok) {
-        await fetchSubscriptions();
-        toast.success("Suscripción eliminada");
+        if (response.ok) {
+          await fetchSubscriptions();
+          toast.success("Suscripción eliminada");
+        } else {
+          toast.error("Error al eliminar");
+        }
       } else {
-        toast.error("Error al eliminar");
+        const updatedList = subscriptions.filter((s) => s.id !== deleteTargetId);
+        await saveSubscriptions(updatedList);
+        setSubscriptions(updatedList);
+        toast.success("Suscripción eliminada");
       }
-    } else {
-      const updatedList = subscriptions.filter((s) => s.id !== id);
-      await saveSubscriptions(updatedList);
-      setSubscriptions(updatedList);
-      toast.success("Suscripción eliminada");
+    } finally {
+      setDeleting(false);
+      setDeleteTargetId(null);
     }
   };
 
@@ -415,7 +425,7 @@ export default function DashboardPage() {
                 key={subscription.id}
                 subscription={subscription}
                 onEdit={handleEdit}
-                onDelete={handleDelete}
+                onDelete={handleDeleteClick}
               />
             ))
           )}
@@ -429,6 +439,18 @@ export default function DashboardPage() {
           />
         )}
       </section>
+
+      <ConfirmDialog
+        isOpen={deleteTargetId != null}
+        onClose={() => setDeleteTargetId(null)}
+        onConfirm={handleDeleteConfirm}
+        title="Eliminar suscripción"
+        description="¿Estás seguro de que quieres eliminar esta suscripción? Esta acción no se puede deshacer."
+        confirmLabel="Eliminar"
+        cancelLabel="Cancelar"
+        variant="danger"
+        loading={deleting}
+      />
 
       <Modal
         isOpen={isModalOpen}

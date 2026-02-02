@@ -1,11 +1,28 @@
 import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
+import {
+  isValidSubscriptionId,
+  paymentBodySchema,
+} from "@/lib/validations/schemas";
+import { isRateLimitedRequest } from "@/lib/rate-limit";
+
+function getClientIp(request: Request): string {
+  return (
+    request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+    request.headers.get("x-real-ip") ||
+    "unknown"
+  );
+}
 
 export async function GET(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
+  if (!isValidSubscriptionId(id)) {
+    return NextResponse.json({ error: "ID inválido" }, { status: 400 });
+  }
+
   const supabase = await createClient();
   const {
     data: { user },
@@ -44,6 +61,18 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
+  if (!isValidSubscriptionId(id)) {
+    return NextResponse.json({ error: "ID inválido" }, { status: 400 });
+  }
+
+  const ip = getClientIp(request);
+  if (isRateLimitedRequest(ip, "api")) {
+    return NextResponse.json(
+      { error: "Demasiadas peticiones. Intenta más tarde." },
+      { status: 429 }
+    );
+  }
+
   const supabase = await createClient();
   const {
     data: { user },
@@ -64,19 +93,18 @@ export async function POST(
     return NextResponse.json({ error: "Suscripción no encontrada" }, { status: 404 });
   }
 
-  const body = await request.json();
-  const amount = Number(body.amount);
-  const payment_date = body.payment_date; // YYYY-MM-DD
-
-  if (amount == null || isNaN(amount) || amount < 0) {
-    return NextResponse.json(
-      { error: "Amount inválido" },
-      { status: 400 }
-    );
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: "Body JSON inválido" }, { status: 400 });
   }
-  if (!payment_date || !/^\d{4}-\d{2}-\d{2}$/.test(payment_date)) {
+
+  const parsed = paymentBodySchema.safeParse(body);
+  if (!parsed.success) {
+    const msg = parsed.error.flatten().fieldErrors;
     return NextResponse.json(
-      { error: "payment_date inválido (use YYYY-MM-DD)" },
+      { error: "Datos inválidos", details: msg },
       { status: 400 }
     );
   }
@@ -85,8 +113,8 @@ export async function POST(
     .from("payment_history")
     .insert({
       subscription_id: id,
-      amount,
-      payment_date,
+      amount: parsed.data.amount,
+      payment_date: parsed.data.payment_date,
     })
     .select()
     .single();
