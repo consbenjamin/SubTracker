@@ -31,7 +31,7 @@ export function Navbar() {
           href="/dashboard"
           className="text-lg font-semibold tracking-tight text-foreground no-underline hover:opacity-80"
         >
-          SubTracker
+          SubGhost
         </Link>
         <div className="flex items-center gap-1">
           {navLinks.map(({ href, label, icon: Icon }) => {

@@ -57,7 +57,7 @@ export function exportSubscriptionsPdf(subscriptions: Subscription[]): void {
 
   doc.setFontSize(16);
   doc.setFont("helvetica", "bold");
-  doc.text("SubTracker — Exportación de suscripciones", 14, y);
+  doc.text("SubGhost — Exportación de suscripciones", 14, y);
   y += 8;
 
   doc.setFontSize(10);
@@ -127,7 +127,7 @@ export function exportSubscriptionsPdf(subscriptions: Subscription[]): void {
 
   const blob = doc.output("blob");
   const date = new Date().toISOString().slice(0, 10);
-  triggerDownload(blob, `subtracker-suscripciones-${date}.pdf`);
+  triggerDownload(blob, `subghost-suscripciones-${date}.pdf`);
 }
 
 export function exportPaymentsPdf(
@@ -145,7 +145,7 @@ export function exportPaymentsPdf(
 
   doc.setFontSize(16);
   doc.setFont("helvetica", "bold");
-  doc.text("SubTracker — Historial de pagos", 14, y);
+  doc.text("SubGhost — Historial de pagos", 14, y);
   y += 8;
 
   doc.setFontSize(10);
@@ -195,5 +195,5 @@ export function exportPaymentsPdf(
 
   const blob = doc.output("blob");
   const date = new Date().toISOString().slice(0, 10);
-  triggerDownload(blob, `subtracker-pagos-${date}.pdf`);
+  triggerDownload(blob, `subghost-pagos-${date}.pdf`);
 }

@@ -64,7 +64,7 @@ export function exportSubscriptionsCsv(subscriptions: Subscription[]): void {
   });
 
   const lines: string[] = [];
-  lines.push(row(["SubTracker — Exportación de suscripciones"]));
+  lines.push(row(["SubGhost — Exportación de suscripciones"]));
   lines.push(row([`Exportado: ${formatDateTimeCsv(new Date())}`]));
   lines.push(row([`Total: ${sorted.length} suscripción(es)`]));
   lines.push("");
@@ -104,7 +104,7 @@ export function exportSubscriptionsCsv(subscriptions: Subscription[]): void {
   const csv = lines.join("\r\n");
   const blob = new Blob([UTF8_BOM + csv], { type: "text/csv;charset=utf-8" });
   const date = new Date().toISOString().slice(0, 10);
-  triggerDownload(blob, `subtracker-suscripciones-${date}.csv`);
+  triggerDownload(blob, `subghost-suscripciones-${date}.csv`);
 }
 
 export function exportPaymentsCsv(
@@ -116,7 +116,7 @@ export function exportPaymentsCsv(
   );
 
   const lines: string[] = [];
-  lines.push(row(["SubTracker — Historial de pagos"]));
+  lines.push(row(["SubGhost — Historial de pagos"]));
   lines.push(row([`Exportado: ${formatDateTimeCsv(new Date())}`]));
   lines.push(row([`Total: ${sorted.length} pago(s)`]));
   lines.push("");
@@ -139,5 +139,5 @@ export function exportPaymentsCsv(
   const csv = lines.join("\r\n");
   const blob = new Blob([UTF8_BOM + csv], { type: "text/csv;charset=utf-8" });
   const date = new Date().toISOString().slice(0, 10);
-  triggerDownload(blob, `subtracker-pagos-${date}.csv`);
+  triggerDownload(blob, `subghost-pagos-${date}.csv`);
 }

@@ -1,4 +1,4 @@
-# SubTracker - PWA Detector de Suscripciones Olvidadas
+# SubGhost - PWA Detector de Suscripciones Olvidadas
 
 Una Progressive Web App (PWA) para gestionar y detectar suscripciones olvidadas, construida con Next.js, Tailwind CSS y Supabase.
 
@@ -36,6 +36,10 @@ npm run dev
 ```
 
 Abre [http://localhost:3000](http://localhost:3000) en tu navegador.
+
+## Producción
+
+- **URL en vivo:** [https://subghost.vercel.app](https://subghost.vercel.app)
 
 ## Estructura del Proyecto
 

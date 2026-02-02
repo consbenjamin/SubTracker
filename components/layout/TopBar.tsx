@@ -11,7 +11,7 @@ interface Suggestion {
   value: string;
 }
 
-const RECENT_KEY = "subtracker-recent-searches";
+const RECENT_KEY = "subghost-recent-searches";
 const MAX_RECENT = 5;
 
 function getRecentSearches(): string[] {

@@ -3,8 +3,8 @@ import type { MetadataRoute } from "next";
 export default function manifest(): MetadataRoute.Manifest {
   return {
     id: "/",
-    name: "SubTracker - Detector de Suscripciones",
-    short_name: "SubTracker",
+    name: "SubGhost - Detector de Suscripciones",
+    short_name: "SubGhost",
     description: "Gestiona y detecta tus suscripciones olvidadas",
     start_url: "/dashboard",
     scope: "/",

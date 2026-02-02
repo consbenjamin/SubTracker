@@ -85,7 +85,7 @@ export function Sidebar({ isOpen = true, onClose, isMobile = false }: SidebarPro
             <CreditCard className="h-4 w-4 text-foreground" />
           </div>
           <span className="text-[17px] font-semibold tracking-tight text-foreground">
-            SubTracker
+            SubGhost
           </span>
         </Link>
         {isMobile && (

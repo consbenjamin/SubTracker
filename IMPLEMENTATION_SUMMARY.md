@@ -1,4 +1,4 @@
-# Resumen de Implementación - SubTracker PWA
+# Resumen de Implementación - SubGhost PWA
 
 ## ✅ Funcionalidades Implementadas
 
@@ -86,7 +86,7 @@
 - ✅ Tema: claro / oscuro / sistema (SettingsContext + clase en `html`)
 - ✅ Moneda: selector con CURRENCIES (EUR, USD, GBP, MXN, ARS, CLP, COP, PEN)
 - ✅ Presupuesto mensual opcional (guardar / quitar límite)
-- ✅ Persistencia en localStorage (subtracker-settings)
+- ✅ Persistencia en localStorage (subghost-settings)
 
 ### 12. Contextos y Estado
 - ✅ SettingsContext: theme, currency, monthlyBudget, setTheme, setCurrency, setMonthlyBudget, resolvedTheme
@@ -133,7 +133,7 @@
 ## 📁 Estructura de Archivos
 
 ```
-SubTracker/
+SubGhost/
 ├── app/
 │   ├── (auth)/
 │   │   └── login/

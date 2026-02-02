@@ -1,4 +1,4 @@
-# Guía de Configuración - SubTracker
+# Guía de Configuración - SubGhost
 
 ## Pasos para Configurar el Proyecto
 
@@ -22,7 +22,7 @@ npm install
 
 5. **Importante para OAuth:** Ve a **Authentication → URL Configuration** y añade en **Redirect URLs** la URL de callback de tu app:
    - Desarrollo: `http://localhost:3000/api/auth/callback`
-   - Producción: `https://tu-dominio.com/api/auth/callback`
+   - Producción: `https://subghost.vercel.app/api/auth/callback`
    Sin esta URL, después de iniciar sesión con Google/GitHub volverás a la app sin sesión.
 
 6. Obtén las credenciales de tu proyecto:

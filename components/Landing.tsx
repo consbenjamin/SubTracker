@@ -29,7 +29,7 @@ export function Landing() {
               <CreditCard className="h-5 w-5" />
             </div>
             <span className="text-lg font-semibold tracking-tight text-foreground">
-              SubTracker
+              SubGhost
             </span>
           </div>
           <Link href="/login">
@@ -101,7 +101,7 @@ export function Landing() {
       </main>
 
       <footer className="relative z-10 border-t border-border/60 py-4 text-center text-xs text-muted-foreground">
-        SubTracker · Gestiona y detecta tus suscripciones
+        SubGhost · Gestiona y detecta tus suscripciones
       </footer>
     </div>
   );

@@ -9,7 +9,7 @@ import {
   ReactNode,
 } from "react";
 
-const STORAGE_KEY = "subtracker-settings";
+const STORAGE_KEY = "subghost-settings";
 
 export type Theme = "light" | "dark" | "system";
 

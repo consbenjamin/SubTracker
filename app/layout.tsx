@@ -20,13 +20,13 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  title: "SubTracker - Detector de Suscripciones",
+  title: "SubGhost - Detector de Suscripciones",
   description: "Gestiona y detecta tus suscripciones olvidadas",
   manifest: "/manifest.webmanifest",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "SubTracker",
+    title: "SubGhost",
   },
   icons: {
     icon: "/icons/icon-192x192.png",

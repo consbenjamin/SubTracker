@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { Subscription } from "@/types";
 
-const DB_NAME = "subtracker-db";
+const DB_NAME = "subghost-db";
 const DB_VERSION = 1;
 const STORE_NAME = "subscriptions";
 

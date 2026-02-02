@@ -132,7 +132,7 @@ function LoginContent() {
             </svg>
           </div>
           <CardTitle className="text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
-            SubTracker
+            SubGhost
           </CardTitle>
           <p className="text-sm text-muted-foreground">
             Controla tus suscripciones en un solo lugar
