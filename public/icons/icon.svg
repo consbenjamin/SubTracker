@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <!-- Sin fondo: el SVG es transparente por defecto -->
+  <!-- Calendario -->
+  <rect x="80" y="72" width="352" height="368" rx="24" ry="24" fill="none" stroke="#14b8a6" stroke-width="28"/>
+  <!-- Cabecera del calendario -->
+  <rect x="80" y="72" width="352" height="88" rx="24" ry="0" fill="#14b8a6"/>
+  <!-- L?neas de d?as (lista) -->
+  <line x1="120" y1="200" x2="392" y2="200" stroke="#14b8a6" stroke-width="16" stroke-linecap="round"/>
+  <line x1="120" y1="280" x2="392" y2="280" stroke="#14b8a6" stroke-width="16" stroke-linecap="round"/>
+  <line x1="120" y1="360" x2="320" y2="360" stroke="#14b8a6" stroke-width="16" stroke-linecap="round"/>
+  <!-- S?mbolo de dinero/d?lar en un c?rculo -->
+  <circle cx="400" cy="400" r="56" fill="#14b8a6"/>
+  <text x="400" y="418" font-family="system-ui, sans-serif" font-size="52" font-weight="bold" fill="white" text-anchor="middle">$</text>
+</svg>

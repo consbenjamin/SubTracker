@@ -1,10 +1,13 @@
 "use client";
 
 import { createClient } from "@/lib/supabase/client";
+import { emailAuthSchema } from "@/lib/validations/schemas";
 import { Button } from "@/components/ui/Button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
+import { Input } from "@/components/ui/Input";
 import { useSearchParams } from "next/navigation";
-import { Suspense } from "react";
+import { Suspense, useState } from "react";
+import { useRouter } from "next/navigation";
 
 function GoogleIcon() {
   return (
@@ -29,22 +32,75 @@ function GoogleIcon() {
   );
 }
 
+function getAuthErrorMessage(error: { message?: string } | null): string {
+  if (!error?.message) return "Ha ocurrido un error";
+  const msg = error.message.toLowerCase();
+  if (msg.includes("invalid login credentials") || msg.includes("invalid_credentials"))
+    return "Email o contraseña incorrectos.";
+  if (msg.includes("email not confirmed")) return "Confirma tu email antes de iniciar sesión.";
+  if (msg.includes("user already registered")) return "Ya existe una cuenta con ese email.";
+  if (msg.includes("password")) return "La contraseña debe tener al menos 6 caracteres.";
+  return error.message;
+}
+
 function LoginContent() {
   const supabase = createClient();
+  const router = useRouter();
   const searchParams = useSearchParams();
   const error = searchParams.get("error");
+  const [mode, setMode] = useState<"login" | "signup">("login");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [formError, setFormError] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  const handleLogin = async () => {
+  const handleEmailAuth = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setFormError("");
+    const parsed = emailAuthSchema.safeParse({ email, password });
+    if (!parsed.success) {
+      setFormError(parsed.error.errors[0]?.message ?? "Revisa los datos.");
+      return;
+    }
+    setLoading(true);
+    try {
+      if (mode === "login") {
+        const { error: err } = await supabase.auth.signInWithPassword({ email, password });
+        if (err) {
+          setFormError(getAuthErrorMessage(err));
+          return;
+        }
+        router.push("/dashboard");
+        router.refresh();
+      } else {
+        const { data, error: err } = await supabase.auth.signUp({ email, password });
+        if (err) {
+          setFormError(getAuthErrorMessage(err));
+          return;
+        }
+        if (data.session) {
+          router.push("/dashboard");
+          router.refresh();
+          return;
+        }
+        setFormError("");
+        setMode("login");
+        setPassword("");
+        setFormError("Cuenta creada. Revisa tu email para confirmar tu cuenta.");
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleGoogleLogin = async () => {
     const { error: err } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
         redirectTo: `${window.location.origin}/api/auth/callback`,
       },
     });
-
-    if (err) {
-      console.error("Error logging in:", err);
-    }
+    if (err) setFormError(err.message ?? "Error al iniciar sesión con Google.");
   };
 
   return (
@@ -101,15 +157,72 @@ function LoginContent() {
             </div>
           )}
 
+          <form onSubmit={handleEmailAuth} className="space-y-4">
+            <Input
+              type="email"
+              label="Email"
+              placeholder="tu@email.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              autoComplete="email"
+              disabled={loading}
+            />
+            <Input
+              type="password"
+              label="Contraseña"
+              placeholder="••••••••"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              autoComplete={mode === "login" ? "current-password" : "new-password"}
+              disabled={loading}
+            />
+            {formError && (
+              <p className="text-sm text-amber-600 dark:text-amber-400">{formError}</p>
+            )}
+            <Button
+              type="submit"
+              variant="primary"
+              size="lg"
+              className="w-full"
+              disabled={loading}
+            >
+              {loading ? "..." : mode === "login" ? "Iniciar sesión" : "Crear cuenta"}
+            </Button>
+          </form>
+
+          <div className="relative">
+            <div className="absolute inset-0 flex items-center">
+              <span className="w-full border-t border-border" />
+            </div>
+            <div className="relative flex justify-center text-xs text-muted-foreground">
+              <span className="bg-card px-2">o continúa con</span>
+            </div>
+          </div>
+
           <Button
-            variant="primary"
+            variant="secondary"
             size="lg"
-            className="w-full gap-3 rounded-lg py-6 text-base font-medium shadow-sm transition-all hover:opacity-90 focus-visible:ring-2 focus-visible:ring-offset-2"
-            onClick={handleLogin}
+            className="w-full gap-3 rounded-lg py-6 text-base font-medium"
+            onClick={handleGoogleLogin}
+            disabled={loading}
+            type="button"
           >
             <GoogleIcon />
             Continuar con Google
           </Button>
+
+          <button
+            type="button"
+            onClick={() => {
+              setMode(mode === "login" ? "signup" : "login");
+              setFormError("");
+            }}
+            className="block w-full text-center text-sm text-muted-foreground underline hover:text-foreground"
+          >
+            {mode === "login"
+              ? "¿No tienes cuenta? Regístrate"
+              : "¿Ya tienes cuenta? Inicia sesión"}
+          </button>
 
           <p className="text-center text-xs text-muted-foreground">
             Al continuar, aceptas nuestros términos de uso y política de privacidad.
@@ -118,7 +231,7 @@ function LoginContent() {
       </Card>
 
       <p className="mt-8 text-center text-xs text-muted-foreground/80">
-        Inicio de sesión seguro con Google
+        Inicio de sesión con email o Google
       </p>
     </div>
   );

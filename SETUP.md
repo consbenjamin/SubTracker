@@ -16,7 +16,9 @@ npm install
 
 3. Ve a **SQL Editor** en el panel de Supabase y ejecuta el contenido del archivo `supabase/migrations/001_initial_schema.sql` para crear las tablas necesarias.
 
-4. Ve a **Authentication > Providers** y configura los proveedores OAuth que quieras usar (Google, GitHub, etc.).
+4. Ve a **Authentication > Providers**:
+   - **Email** está habilitado por defecto; permite login con email y contraseña. Si activas "Confirm email", los usuarios deben verificar el correo antes de entrar (en desarrollo puedes dejarlo desactivado).
+   - Configura los proveedores OAuth que quieras usar (Google, GitHub, etc.).
 
 5. **Importante para OAuth:** Ve a **Authentication → URL Configuration** y añade en **Redirect URLs** la URL de callback de tu app:
    - Desarrollo: `http://localhost:3000/api/auth/callback`
@@ -62,14 +64,14 @@ Abre [http://localhost:3000](http://localhost:3000) en tu navegador.
 
 ### 5. Probar la Aplicación
 
-1. Ve a `/login` y autentícate con OAuth
+1. Ve a `/login` y autentícate con email/contraseña o con Google (OAuth)
 2. Agrega tus primeras suscripciones
 3. Explora el dashboard y analytics
 4. Prueba el modo offline desconectando tu conexión a internet
 
 ## Características Implementadas
 
-✅ Autenticación OAuth con Supabase
+✅ Autenticación con email/contraseña y OAuth (Google) con Supabase
 ✅ CRUD completo de suscripciones
 ✅ Dashboard con estadísticas
 ✅ Página de analytics con gráficos

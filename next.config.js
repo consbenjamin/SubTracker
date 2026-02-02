@@ -9,9 +9,6 @@ const withPWA = require("next-pwa")({
 const nextConfig = {
   reactStrictMode: true,
   turbopack: {},
-  async rewrites() {
-    return [{ source: "/manifest.webmanifest", destination: "/api/manifest" }];
-  },
   async headers() {
     return [
       {

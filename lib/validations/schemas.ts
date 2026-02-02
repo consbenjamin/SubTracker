@@ -36,6 +36,12 @@ export const paymentBodySchema = z.object({
     .regex(/^\d{4}-\d{2}-\d{2}$/, "Formato fecha: YYYY-MM-DD"),
 });
 
+/** Schema para login/registro con email y contraseña */
+export const emailAuthSchema = z.object({
+  email: z.string().email("Email inválido"),
+  password: z.string().min(6, "La contraseña debe tener al menos 6 caracteres"),
+});
+
 export type SubscriptionBody = z.infer<typeof subscriptionBodySchema>;
 export type PaymentBody = z.infer<typeof paymentBodySchema>;
 
