@@ -1,6 +1,12 @@
 # PWA Icons
 
-Este directorio debe contener los iconos de la PWA en los siguientes tamaños:
+Para generar iconos placeholder (192x192 y 512x512), ejecuta:
+
+```bash
+npm run generate-pwa-icons
+```
+
+Para iconos finales, este directorio debe contener los iconos de la PWA en los siguientes tamaños:
 
 - icon-72x72.png
 - icon-96x96.png

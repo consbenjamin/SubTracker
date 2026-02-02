@@ -51,7 +51,8 @@ export function exportSubscriptionsPdf(subscriptions: Subscription[]): void {
   });
 
   const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
-  const pageW = doc.getPageWidth();
+  const pageW = 210; // A4 width in mm
+  const pageH = 297; // A4 height in mm
   let y = 18;
 
   doc.setFontSize(16);
@@ -108,7 +109,7 @@ export function exportSubscriptionsPdf(subscriptions: Subscription[]): void {
       doc.text(
         `Página ${data.pageNumber}`,
         pageW / 2,
-        doc.getPageHeight() - 10,
+        pageH - 10,
         { align: "center" }
       );
     },
@@ -138,7 +139,8 @@ export function exportPaymentsPdf(
   );
 
   const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
-  const pageW = doc.getPageWidth();
+  const pageW = 210;
+  const pageH = 297;
   let y = 18;
 
   doc.setFontSize(16);
@@ -179,7 +181,7 @@ export function exportPaymentsPdf(
       doc.text(
         `Página ${data.pageNumber}`,
         pageW / 2,
-        doc.getPageHeight() - 10,
+        pageH - 10,
         { align: "center" }
       );
     },

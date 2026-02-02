@@ -57,14 +57,14 @@ export async function PUT(
       .eq("user_id", user.id)
       .single();
 
-    if (current?.data) {
+    if (current) {
       const paymentDate =
         formData.next_payment_date != null
           ? new Date().toISOString().slice(0, 10)
-          : current.data.next_payment_date?.toString().slice(0, 10) ?? new Date().toISOString().slice(0, 10);
+          : current.next_payment_date?.toString().slice(0, 10) ?? new Date().toISOString().slice(0, 10);
       await supabase.from("payment_history").insert({
         subscription_id: id,
-        amount: current.data.price,
+        amount: current.price,
         payment_date: paymentDate,
       });
     }

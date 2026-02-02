@@ -16,6 +16,7 @@ import { useOfflineStorage } from "@/lib/hooks/useOfflineStorage";
 import { useNotifications } from "@/lib/hooks/useNotifications";
 import { useToast } from "@/lib/contexts/ToastContext";
 import { useSettings } from "@/lib/contexts/SettingsContext";
+import { UpcomingCalendar } from "@/components/dashboard/UpcomingCalendar";
 
 export default function DashboardPage() {
   const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
@@ -368,6 +369,14 @@ export default function DashboardPage() {
           </Card>
         </section>
       )}
+
+      {/* Calendario de vencimientos */}
+      <section className="mb-10">
+        <UpcomingCalendar
+          subscriptions={subscriptions}
+          onSubscriptionClick={handleEdit}
+        />
+      </section>
 
       {/* Filters + list */}
       <section>

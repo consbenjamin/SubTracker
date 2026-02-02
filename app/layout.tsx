@@ -6,6 +6,7 @@ const inter = Inter({
   subsets: ["latin"],
   variable: "--font-sans",
   display: "swap",
+  preload: false,
 });
 import { SettingsProvider } from "@/lib/contexts/SettingsContext";
 import { ToastProvider } from "@/lib/contexts/ToastContext";
@@ -21,7 +22,7 @@ export const viewport: Viewport = {
 export const metadata: Metadata = {
   title: "SubTracker - Detector de Suscripciones",
   description: "Gestiona y detecta tus suscripciones olvidadas",
-  manifest: "/manifest.json",
+  manifest: "/manifest.webmanifest",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
@@ -40,9 +41,6 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="es" className={inter.variable}>
-      <head>
-        <link rel="manifest" href="/manifest.json" />
-      </head>
       <body className="min-h-screen bg-background font-sans text-foreground antialiased">
         <SettingsProvider>
           <ToastProvider>

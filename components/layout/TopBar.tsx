@@ -41,6 +41,7 @@ export function TopBar({ onMenuClick, showMenuButton = false }: TopBarProps) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const { resolvedTheme, setTheme } = useSettings();
+  const [themeMounted, setThemeMounted] = useState(false);
   const qFromUrl = searchParams.get("q") ?? "";
   const [query, setQuery] = useState(qFromUrl);
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
@@ -48,6 +49,10 @@ export function TopBar({ onMenuClick, showMenuButton = false }: TopBarProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [highlightedIndex, setHighlightedIndex] = useState(-1);
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    setThemeMounted(true);
+  }, []);
   const containerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -167,22 +172,22 @@ export function TopBar({ onMenuClick, showMenuButton = false }: TopBarProps) {
   return (
     <header
       className={cn(
-        "sticky top-0 z-20 flex h-14 shrink-0 items-center gap-4 border-b border-border",
+        "sticky top-0 z-20 shrink-0 border-b border-border",
         "bg-background/80 backdrop-blur-xl supports-[backdrop-filter]:bg-background/70"
       )}
     >
-      <div className="flex flex-1 items-center gap-3 px-4 sm:px-6">
+      <div className="mx-auto flex h-14 w-full max-w-6xl items-center gap-3 px-4 sm:gap-4 sm:px-6 lg:px-8">
         {showMenuButton && (
           <button
             type="button"
             onClick={onMenuClick}
-            className="-ml-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-foreground/10 hover:text-foreground lg:hidden"
+            className="-ml-1 flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-foreground/10 hover:text-foreground lg:hidden"
             aria-label="Abrir menú"
           >
             <Menu className="h-5 w-5" />
           </button>
         )}
-        <div ref={containerRef} className="relative flex min-w-0 flex-1 max-w-xl">
+        <div ref={containerRef} className="relative flex min-w-0 flex-1 sm:max-w-md md:max-w-lg lg:max-w-xl">
           <form onSubmit={handleSubmit} className="relative flex w-full items-center">
             <Search
               className="absolute left-3 sm:left-4 h-[18px] w-[18px] shrink-0 text-muted-foreground pointer-events-none z-10"
@@ -281,10 +286,18 @@ export function TopBar({ onMenuClick, showMenuButton = false }: TopBarProps) {
         <button
           type="button"
           onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
-          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-foreground/10 hover:text-foreground"
-          aria-label={resolvedTheme === "dark" ? "Usar tema claro" : "Usar tema oscuro"}
+          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-foreground/10 hover:text-foreground"
+          aria-label={
+            themeMounted
+              ? resolvedTheme === "dark"
+                ? "Usar tema claro"
+                : "Usar tema oscuro"
+              : "Cambiar tema"
+          }
         >
-          {resolvedTheme === "dark" ? (
+          {!themeMounted ? (
+            <Sun className="h-5 w-5" aria-hidden />
+          ) : resolvedTheme === "dark" ? (
             <Sun className="h-5 w-5" />
           ) : (
             <Moon className="h-5 w-5" />

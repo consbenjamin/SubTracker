@@ -29,10 +29,10 @@ export function ExportDropdown({ subscriptions }: ExportDropdownProps) {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const loadSubscriptions = async () => {
+  const loadSubscriptions = async (): Promise<Subscription[]> => {
     if (subscriptions?.length) return subscriptions;
     const res = await fetch("/api/subscriptions");
-    return res.ok ? await res.json() : [];
+    return res.ok ? (await res.json()) as Subscription[] : [];
   };
 
   const handleExportSubscriptionsCsv = async () => {
