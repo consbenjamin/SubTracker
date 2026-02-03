@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
@@ -81,9 +82,14 @@ export function Sidebar({ isOpen = true, onClose, isMobile = false }: SidebarPro
           onClick={handleNavClick}
           className="flex items-center gap-2 no-underline outline-none"
         >
-          <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-foreground/10 dark:bg-foreground/15">
-            <CreditCard className="h-4 w-4 text-foreground" />
-          </div>
+          <Image
+            src="/icons/icon-192x192.png"
+            alt=""
+            width={32}
+            height={32}
+            className="h-8 w-8 shrink-0 rounded-xl object-contain"
+            aria-hidden
+          />
           <span className="text-[17px] font-semibold tracking-tight text-foreground">
             SubGhost
           </span>
