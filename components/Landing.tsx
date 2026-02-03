@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { CreditCard, BarChart3, Bell, Shield } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 
@@ -25,9 +26,14 @@ export function Landing() {
       <header className="relative z-10 border-b border-border/60 bg-background/70 px-4 py-4 backdrop-blur-md sm:px-6">
         <div className="mx-auto flex max-w-5xl items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10 text-primary">
-              <CreditCard className="h-5 w-5" />
-            </div>
+            <Image
+              src="/icons/icon-192x192.png"
+              alt=""
+              width={36}
+              height={36}
+              className="h-9 w-9 shrink-0 rounded-xl object-contain"
+              aria-hidden
+            />
             <span className="text-lg font-semibold tracking-tight text-foreground">
               SubGhost
             </span>

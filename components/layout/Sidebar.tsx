@@ -59,7 +59,7 @@ export function Sidebar({ isOpen = true, onClose, isMobile = false }: SidebarPro
     onClose?.();
     await fetch("/api/auth/logout", { method: "POST" });
     await supabase.auth.signOut();
-    router.push("/login");
+    window.location.href = "/login";
   };
 
   const handleNavClick = () => {
