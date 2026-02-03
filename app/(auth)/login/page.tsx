@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { createClient } from "@/lib/supabase/client";
 import { emailAuthSchema } from "@/lib/validations/schemas";
 import { Button } from "@/components/ui/Button";
@@ -115,21 +116,15 @@ function LoginContent() {
 
       <Card className="relative z-10 w-full max-w-[400px] border-border/80 bg-card/95 shadow-xl backdrop-blur-sm sm:px-8 sm:py-2">
         <CardHeader className="space-y-2 pb-6 pt-8 text-center sm:pt-10">
-          <div className="mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10 text-primary">
-            <svg
-              className="h-7 w-7"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
+          <div className="mx-auto mb-2 flex h-12 w-12 items-center justify-center">
+            <Image
+              src="/icons/icon-192x192.png"
+              alt=""
+              width={48}
+              height={48}
+              className="h-12 w-12 shrink-0 rounded-xl object-contain dark:invert"
               aria-hidden
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={1.8}
-                d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"
-              />
-            </svg>
+            />
           </div>
           <CardTitle className="text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
             SubGhost

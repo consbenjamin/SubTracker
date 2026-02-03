@@ -31,7 +31,7 @@ export function Landing() {
               alt=""
               width={36}
               height={36}
-              className="h-9 w-9 shrink-0 rounded-xl object-contain"
+              className="h-9 w-9 shrink-0 rounded-xl object-contain dark:invert"
               aria-hidden
             />
             <span className="text-lg font-semibold tracking-tight text-foreground">

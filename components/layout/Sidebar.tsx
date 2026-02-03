@@ -87,7 +87,7 @@ export function Sidebar({ isOpen = true, onClose, isMobile = false }: SidebarPro
             alt=""
             width={32}
             height={32}
-            className="h-8 w-8 shrink-0 rounded-xl object-contain"
+            className="h-8 w-8 shrink-0 rounded-xl object-contain dark:invert"
             aria-hidden
           />
           <span className="text-[17px] font-semibold tracking-tight text-foreground">
