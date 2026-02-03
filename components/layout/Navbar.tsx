@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useRouter, usePathname } from "next/navigation";
 import { Button } from "@/components/ui/Button";
 import { LogOut, Plus, BarChart3, LayoutDashboard, CreditCard } from "lucide-react";
@@ -29,8 +30,16 @@ export function Navbar() {
       <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-4 sm:px-6">
         <Link
           href="/dashboard"
-          className="text-lg font-semibold tracking-tight text-foreground no-underline hover:opacity-80"
+          className="flex items-center gap-2 text-lg font-semibold tracking-tight text-foreground no-underline hover:opacity-80"
         >
+          <Image
+            src="/icons/icon-192x192.png"
+            alt=""
+            width={28}
+            height={28}
+            className="h-7 w-7 shrink-0"
+            aria-hidden
+          />
           SubGhost
         </Link>
         <div className="flex items-center gap-1">
