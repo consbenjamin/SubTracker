@@ -44,3 +44,7 @@ next-env.d.ts
 **/public/worker-*.js.map
 **/public/sw.js
 **/public/sw.js.map
+
+
+IMPLEMENTATION_SUMMARY.md
+supabase/migrations/001_initial_schema.sql

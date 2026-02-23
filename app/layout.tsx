@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import { Analytics } from "@vercel/analytics/next"
 import { Inter } from "next/font/google";
 import "./globals.css";
 
@@ -42,6 +43,7 @@ export default function RootLayout({
   return (
     <html lang="es" className={inter.variable}>
       <body className="min-h-screen bg-background font-sans text-foreground antialiased">
+        <Analytics />
         <SettingsProvider>
           <ToastProvider>
             {children}
