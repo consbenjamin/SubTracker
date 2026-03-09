@@ -1,12 +1,7 @@
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
 import type { Subscription, PaymentHistory } from "@/types";
-
-const CYCLE_LABELS: Record<string, string> = {
-  monthly: "Mensual",
-  quarterly: "Trimestral",
-  yearly: "Anual",
-};
+import { getBillingCycleLabel, getMonthlyEquivalent } from "@/lib/subscriptions";
 
 const STATUS_LABELS: Record<string, string> = {
   active: "Activa",
@@ -70,7 +65,9 @@ export function exportSubscriptionsPdf(subscriptions: Subscription[]): void {
   const headers = [
     "Nombre",
     "Precio",
+    "Tipo",
     "Ciclo",
+    "Plan",
     "Próx. fecha",
     "Categoría",
     "Estado",
@@ -79,7 +76,11 @@ export function exportSubscriptionsPdf(subscriptions: Subscription[]): void {
   const body = sorted.map((s) => [
     s.name,
     formatNumber(s.price),
-    CYCLE_LABELS[s.billing_cycle] ?? s.billing_cycle,
+    s.payment_type === "installment" ? "Cuotas" : "Recurrente",
+    getBillingCycleLabel(s.billing_cycle, s.payment_type, s.installment_count),
+    s.payment_type === "installment"
+      ? `${s.installments_paid}/${s.installment_count ?? 0}`
+      : "-",
     formatDate(s.next_payment_date),
     s.category,
     STATUS_LABELS[s.status] ?? s.status,
@@ -94,13 +95,15 @@ export function exportSubscriptionsPdf(subscriptions: Subscription[]): void {
     headStyles: { fillColor: [66, 66, 66], fontSize: 9 },
     bodyStyles: { fontSize: 8 },
     columnStyles: {
-      0: { cellWidth: 35 },
-      1: { cellWidth: 18 },
-      2: { cellWidth: 22 },
-      3: { cellWidth: 25 },
-      4: { cellWidth: 28 },
+      0: { cellWidth: 28 },
+      1: { cellWidth: 16 },
+      2: { cellWidth: 16 },
+      3: { cellWidth: 20 },
+      4: { cellWidth: 14 },
       5: { cellWidth: 22 },
-      6: { cellWidth: "wrap" },
+      6: { cellWidth: 22 },
+      7: { cellWidth: 18 },
+      8: { cellWidth: "wrap" },
     },
     margin: { left: 14, right: 14 },
     didDrawPage: (data) => {
@@ -118,8 +121,7 @@ export function exportSubscriptionsPdf(subscriptions: Subscription[]): void {
   const finalY = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY ?? y;
   let totalMonthly = 0;
   for (const s of sorted) {
-    const mult = s.billing_cycle === "monthly" ? 1 : s.billing_cycle === "quarterly" ? 1 / 3 : 1 / 12;
-    totalMonthly += s.price * mult;
+    totalMonthly += getMonthlyEquivalent(s);
   }
   doc.setFontSize(9);
   doc.setFont("helvetica", "bold");

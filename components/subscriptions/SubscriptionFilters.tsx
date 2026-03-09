@@ -7,7 +7,7 @@ const STATUS_OPTIONS = [
   { value: "all", label: "Todos" },
   { value: "active", label: "Activas" },
   { value: "paused", label: "Pausadas" },
-  { value: "cancelled", label: "Canceladas" },
+  { value: "cancelled", label: "Canceladas / finalizadas" },
 ] as const;
 
 function capitalize(str: string) {
@@ -91,7 +91,7 @@ export function SubscriptionFilters({
           )}
           <p className="text-sm text-muted-foreground">
             <span className="font-medium text-foreground">{resultCount}</span>
-            {resultCount !== totalCount ? ` de ${totalCount}` : ""} suscripciones
+            {resultCount !== totalCount ? ` de ${totalCount}` : ""} gastos
           </p>
         </div>
         {hasActiveFilters && (

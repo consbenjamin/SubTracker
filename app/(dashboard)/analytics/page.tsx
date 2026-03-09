@@ -18,6 +18,12 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from "recharts";
+import {
+  getAnnualEquivalent,
+  getBillingCycleLabel,
+  getMonthlyEquivalent,
+  isSubscriptionActiveForCalculations,
+} from "@/lib/subscriptions";
 
 const CHART_COLORS = [
   "var(--chart-1)",
@@ -112,7 +118,7 @@ export default function AnalyticsPage() {
     }
   };
 
-  const activeSubscriptions = subscriptions.filter((s) => s.status === "active");
+  const activeSubscriptions = subscriptions.filter(isSubscriptionActiveForCalculations);
 
   const totalRealAllTime = payments.reduce((sum, p) => sum + p.amount, 0);
   const now = new Date();
@@ -126,13 +132,7 @@ export default function AnalyticsPage() {
   );
 
   const categoryData = activeSubscriptions.reduce((acc, sub) => {
-    const multiplier =
-      sub.billing_cycle === "monthly"
-        ? 1
-        : sub.billing_cycle === "quarterly"
-        ? 1 / 3
-        : 1 / 12;
-    const monthlyPrice = sub.price * multiplier;
+    const monthlyPrice = getMonthlyEquivalent(sub);
     const cat = sub.category ?? "Sin categoría";
     if (acc[cat]) acc[cat] += monthlyPrice;
     else acc[cat] = monthlyPrice;
@@ -162,15 +162,7 @@ export default function AnalyticsPage() {
     date.setMonth(date.getMonth() - (5 - i));
     const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
     const realGasto = monthlyExpensesReal[monthKey] ?? 0;
-    const proyeccion = activeSubscriptions.reduce((sum, sub) => {
-      const multiplier =
-        sub.billing_cycle === "monthly"
-          ? 1
-          : sub.billing_cycle === "quarterly"
-          ? 1 / 3
-          : 1 / 12;
-      return sum + sub.price * multiplier;
-    }, 0);
+    const proyeccion = activeSubscriptions.reduce((sum, sub) => sum + getMonthlyEquivalent(sub), 0);
     return {
       month: date.toLocaleDateString("es-ES", { month: "short", year: "numeric" }),
       gasto: Number((realGasto > 0 ? realGasto : proyeccion).toFixed(2)),
@@ -180,27 +172,22 @@ export default function AnalyticsPage() {
   });
 
   const billingCycleData = activeSubscriptions.reduce((acc, sub) => {
-    acc[sub.billing_cycle] = (acc[sub.billing_cycle] || 0) + 1;
+    const key = getBillingCycleLabel(sub.billing_cycle, sub.payment_type, sub.installment_count);
+    acc[key] = (acc[key] || 0) + 1;
     return acc;
   }, {} as Record<string, number>);
 
   const billingCycleChartData = Object.entries(billingCycleData).map(([name, value]) => ({
-    name:
-      name === "monthly"
-        ? "Mensual"
-        : name === "quarterly"
-        ? "Trimestral"
-        : "Anual",
+    name,
     value,
   }));
 
-  const totalMonthly = activeSubscriptions.reduce((sum, sub) => {
-    const multiplier =
-      sub.billing_cycle === "monthly" ? 1 : sub.billing_cycle === "quarterly" ? 1 / 3 : 1 / 12;
-    return sum + sub.price * multiplier;
-  }, 0);
+  const totalMonthly = activeSubscriptions.reduce((sum, sub) => sum + getMonthlyEquivalent(sub), 0);
 
-  const totalYearly = totalMonthly * 12;
+  const totalYearly = activeSubscriptions.reduce(
+    (sum, sub) => sum + getAnnualEquivalent(sub),
+    0
+  );
   const avgRealMonthly =
     paymentsLast12Months.length > 0 ? totalRealLast12Months / 12 : 0;
 
@@ -226,9 +213,9 @@ export default function AnalyticsPage() {
   }
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
-      <header className="mb-10">
-        <h1 className="text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
+    <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
+      <header className="mb-6 sm:mb-10">
+        <h1 className="text-xl font-semibold tracking-tight text-foreground sm:text-2xl lg:text-3xl">
           Analytics
         </h1>
         <p className="mt-1 text-sm text-muted-foreground">
@@ -247,7 +234,7 @@ export default function AnalyticsPage() {
         </Card>
         <Card variant="outline" className="transition-shadow duration-200 hover:shadow-[var(--card-shadow-hover)]">
           <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-            Proyección anual
+            Compromiso futuro
           </p>
           <p className="mt-1.5 text-lg font-semibold tracking-tight text-foreground sm:text-xl">
             {formatCurrency(totalYearly)}
@@ -288,7 +275,8 @@ export default function AnalyticsPage() {
               Si cancelas todas las suscripciones activas
             </CardTitle>
             <p className="mt-1 text-sm text-muted-foreground">
-              Ahorrarías {formatCurrency(totalMonthly)}/mes ({formatCurrency(totalYearly)}/año)
+              Ahorrarías {formatCurrency(totalMonthly)}/mes y evitarías hasta{" "}
+              {formatCurrency(totalYearly)} en cargos futuros
             </p>
           </CardHeader>
           <CardContent className="pt-0">
@@ -299,12 +287,7 @@ export default function AnalyticsPage() {
               {activeSubscriptions
                 .map((s) => ({
                   ...s,
-                  monthlyEquivalent:
-                    s.billing_cycle === "monthly"
-                      ? s.price
-                      : s.billing_cycle === "quarterly"
-                      ? s.price / 3
-                      : s.price / 12,
+                  monthlyEquivalent: getMonthlyEquivalent(s),
                 }))
                 .sort((a, b) => b.monthlyEquivalent - a.monthlyEquivalent)
                 .slice(0, 5)

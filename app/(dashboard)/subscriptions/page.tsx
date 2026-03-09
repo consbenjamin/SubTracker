@@ -12,6 +12,7 @@ import { SubscriptionForm } from "@/components/subscriptions/SubscriptionForm";
 import { Button } from "@/components/ui/Button";
 import { ExportDropdown } from "@/components/ui/ExportDropdown";
 import { useToast } from "@/lib/contexts/ToastContext";
+import { isSubscriptionCompleted } from "@/lib/subscriptions";
 
 const PAGE_SIZE = 12;
 
@@ -25,7 +26,7 @@ function SubscriptionsContent() {
   const [editingSubscription, setEditingSubscription] = useState<Subscription | null>(null);
   const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
-  const [searchQuery, setSearchQuery] = useState(() => searchParams.get("q") ?? "");
+  const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [page, setPage] = useState(1);
@@ -42,7 +43,8 @@ function SubscriptionsContent() {
   }, []);
 
   useEffect(() => {
-    setSearchQuery(searchParams.get("q") ?? "");
+    const q = searchParams.get("q") ?? "";
+    setSearchQuery(q);
     setPage(1);
   }, [searchParams]);
 
@@ -137,10 +139,15 @@ function SubscriptionsContent() {
     () =>
       subscriptions.filter((sub) => {
         const q = searchQuery.toLowerCase();
+        const isCompleted = isSubscriptionCompleted(sub);
         const matchesSearch =
           sub.name.toLowerCase().includes(q) ||
           (sub.category ?? "").toLowerCase().includes(q);
-        const matchesStatus = statusFilter === "all" || sub.status === statusFilter;
+        const matchesStatus =
+          statusFilter === "all" ||
+          (statusFilter === "active" && sub.status === "active" && !isCompleted) ||
+          (statusFilter === "paused" && sub.status === "paused") ||
+          (statusFilter === "cancelled" && (sub.status === "cancelled" || isCompleted));
         const matchesCategory = categoryFilter === "all" || (sub.category ?? "") === categoryFilter;
         return matchesSearch && matchesStatus && matchesCategory;
       }),
@@ -177,20 +184,20 @@ function SubscriptionsContent() {
   }
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
-      <header className="mb-10 flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
-            Suscripciones
+    <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
+      <header className="mb-6 sm:mb-10 flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+        <div className="min-w-0">
+          <h1 className="text-xl font-semibold tracking-tight text-foreground sm:text-2xl lg:text-3xl">
+            Gastos y suscripciones
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Gestiona todas tus suscripciones
+            Suscripciones recurrentes y compras en cuotas
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
           <ExportDropdown subscriptions={subscriptions} />
-          <Button variant="primary" onClick={() => setIsModalOpen(true)}>
-            Nueva suscripción
+          <Button variant="primary" onClick={() => setIsModalOpen(true)} className="w-full sm:w-auto">
+            Agregar gasto
           </Button>
         </div>
       </header>
@@ -214,8 +221,8 @@ function SubscriptionsContent() {
           <div className="col-span-full py-16 text-center">
             <p className="text-sm text-muted-foreground">
               {hasActiveFilters
-                ? "No se encontraron suscripciones con estos filtros"
-                : "No hay suscripciones. Añade tu primera suscripción."}
+                ? "No hay resultados con estos filtros"
+                : "Aún no tenés gastos cargados. Agregá una suscripción o una compra en cuotas."}
             </p>
           </div>
         ) : (
@@ -242,8 +249,8 @@ function SubscriptionsContent() {
         isOpen={deleteTargetId != null}
         onClose={() => setDeleteTargetId(null)}
         onConfirm={handleDeleteConfirm}
-        title="Eliminar suscripción"
-        description="¿Estás seguro de que quieres eliminar esta suscripción? Esta acción no se puede deshacer."
+        title="Eliminar gasto"
+        description="¿Eliminamos este gasto? No se puede deshacer."
         confirmLabel="Eliminar"
         cancelLabel="Cancelar"
         variant="danger"
@@ -253,7 +260,7 @@ function SubscriptionsContent() {
       <Modal
         isOpen={isModalOpen}
         onClose={closeModal}
-        title={editingSubscription ? "Editar Suscripción" : "Nueva Suscripción"}
+        title={editingSubscription ? "Editar gasto" : "Nuevo gasto"}
       >
         <SubscriptionForm
           subscription={editingSubscription ?? undefined}

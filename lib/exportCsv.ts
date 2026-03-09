@@ -1,4 +1,5 @@
 import type { Subscription, PaymentHistory } from "@/types";
+import { getBillingCycleLabel, getMonthlyEquivalent } from "@/lib/subscriptions";
 
 const UTF8_BOM = "\uFEFF";
 const SEP = ";";
@@ -45,12 +46,6 @@ function triggerDownload(blob: Blob, filename: string) {
   URL.revokeObjectURL(url);
 }
 
-const CYCLE_LABELS: Record<string, string> = {
-  monthly: "Mensual",
-  quarterly: "Trimestral",
-  yearly: "Anual",
-};
-
 const STATUS_LABELS: Record<string, string> = {
   active: "Activa",
   cancelled: "Cancelada",
@@ -72,7 +67,9 @@ export function exportSubscriptionsCsv(subscriptions: Subscription[]): void {
   const headers = [
     "Nombre",
     "Precio",
+    "Tipo",
     "Ciclo de facturación",
+    "Plan",
     "Próxima fecha de pago",
     "Categoría",
     "Estado",
@@ -82,14 +79,16 @@ export function exportSubscriptionsCsv(subscriptions: Subscription[]): void {
 
   let totalMonthly = 0;
   for (const s of sorted) {
-    const mult =
-      s.billing_cycle === "monthly" ? 1 : s.billing_cycle === "quarterly" ? 1 / 3 : 1 / 12;
-    totalMonthly += s.price * mult;
+    totalMonthly += getMonthlyEquivalent(s);
     lines.push(
       row([
         s.name,
         formatNumber(s.price),
-        CYCLE_LABELS[s.billing_cycle] ?? s.billing_cycle,
+        s.payment_type === "installment" ? "Cuotas" : "Recurrente",
+        getBillingCycleLabel(s.billing_cycle, s.payment_type, s.installment_count),
+        s.payment_type === "installment"
+          ? `${s.installments_paid}/${s.installment_count ?? 0} pagadas`
+          : "-",
         formatDateCsv(s.next_payment_date),
         s.category,
         STATUS_LABELS[s.status] ?? s.status,

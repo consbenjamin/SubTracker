@@ -6,6 +6,12 @@ import {
 } from "@/lib/validations/schemas";
 import { isRateLimitedRequest } from "@/lib/rate-limit";
 
+function addOneMonth(dateStr: string): string {
+  const date = new Date(dateStr);
+  date.setMonth(date.getMonth() + 1);
+  return date.toISOString().slice(0, 10);
+}
+
 function getClientIp(request: Request): string {
   return (
     request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
@@ -84,7 +90,7 @@ export async function POST(
 
   const sub = await supabase
     .from("subscriptions")
-    .select("id")
+    .select("id, payment_type, installment_count, installments_paid, next_payment_date")
     .eq("id", id)
     .eq("user_id", user.id)
     .single();
@@ -121,6 +127,28 @@ export async function POST(
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+
+  if (
+    sub.data.payment_type === "installment" &&
+    sub.data.installment_count != null
+  ) {
+    const nextPaid = Math.min(
+      (sub.data.installments_paid ?? 0) + 1,
+      sub.data.installment_count
+    );
+
+    await supabase
+      .from("subscriptions")
+      .update({
+        installments_paid: nextPaid,
+        next_payment_date:
+          nextPaid < sub.data.installment_count
+            ? addOneMonth(sub.data.next_payment_date)
+            : parsed.data.payment_date,
+      })
+      .eq("id", id)
+      .eq("user_id", user.id);
   }
 
   return NextResponse.json(data);

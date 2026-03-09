@@ -6,6 +6,34 @@ import {
 } from "@/lib/validations/schemas";
 import { isRateLimitedRequest } from "@/lib/rate-limit";
 
+function normalizeSubscriptionPayload(payload: ReturnType<typeof subscriptionUpdateBodySchema.parse>) {
+  const { record_payment, ...rest } = payload;
+
+  if (rest.payment_type === "installment") {
+    return {
+      record_payment,
+      formData: {
+        ...rest,
+        billing_cycle: "monthly" as const,
+        installment_count: rest.installment_count ?? null,
+        installments_paid: rest.installments_paid ?? 0,
+        total_amount: rest.total_amount ?? null,
+      },
+    };
+  }
+
+  return {
+    record_payment,
+    formData: {
+      ...rest,
+      payment_type: "recurring" as const,
+      installment_count: null,
+      installments_paid: 0,
+      total_amount: null,
+    },
+  };
+}
+
 function getClientIp(request: Request): string {
   return (
     request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
@@ -88,12 +116,12 @@ export async function PUT(
     );
   }
 
-  const { record_payment, ...formData } = parsed.data;
+  const { record_payment, formData } = normalizeSubscriptionPayload(parsed.data);
 
   if (record_payment) {
     const { data: current } = await supabase
       .from("subscriptions")
-      .select("price, next_payment_date")
+      .select("price, next_payment_date, payment_type, installment_count, installments_paid")
       .eq("id", id)
       .eq("user_id", user.id)
       .single();
@@ -108,6 +136,16 @@ export async function PUT(
         amount: current.price,
         payment_date: paymentDate,
       });
+
+      if (
+        current.payment_type === "installment" &&
+        current.installment_count != null
+      ) {
+        formData.installments_paid = Math.min(
+          (current.installments_paid ?? 0) + 1,
+          current.installment_count
+        );
+      }
     }
   }
 

@@ -18,6 +18,11 @@ import { useNotifications } from "@/lib/hooks/useNotifications";
 import { useToast } from "@/lib/contexts/ToastContext";
 import { useSettings } from "@/lib/contexts/SettingsContext";
 import { UpcomingCalendar } from "@/components/dashboard/UpcomingCalendar";
+import {
+  getAnnualEquivalent,
+  getMonthlyEquivalent,
+  isSubscriptionActiveForCalculations,
+} from "@/lib/subscriptions";
 
 export default function DashboardPage() {
   const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
@@ -174,19 +179,21 @@ export default function DashboardPage() {
     }
   };
 
-  const activeSubscriptions = subscriptions.filter((s) => s.status === "active");
-  const monthlyTotal = activeSubscriptions.reduce((sum, sub) => {
-    const multiplier =
-      sub.billing_cycle === "monthly" ? 1 : sub.billing_cycle === "quarterly" ? 1 / 3 : 1 / 12;
-    return sum + sub.price * multiplier;
-  }, 0);
+  const activeSubscriptions = subscriptions.filter(isSubscriptionActiveForCalculations);
+  const monthlyTotal = activeSubscriptions.reduce(
+    (sum, sub) => sum + getMonthlyEquivalent(sub),
+    0
+  );
 
-  const yearlyTotal = monthlyTotal * 12;
+  const yearlyTotal = activeSubscriptions.reduce(
+    (sum, sub) => sum + getAnnualEquivalent(sub),
+    0
+  );
 
   const upcomingPayments = subscriptions
     .filter((s) => {
       const days = differenceInDays(new Date(s.next_payment_date), new Date());
-      return s.status === "active" && days >= 0 && days <= 7;
+      return isSubscriptionActiveForCalculations(s) && days >= 0 && days <= 7;
     })
     .sort((a, b) =>
       differenceInDays(new Date(a.next_payment_date), new Date(b.next_payment_date))
@@ -197,10 +204,10 @@ export default function DashboardPage() {
     filter === "all"
       ? subscriptions
       : filter === "active"
-      ? subscriptions.filter((s) => s.status === "active")
+      ? subscriptions.filter(isSubscriptionActiveForCalculations)
       : subscriptions.filter((s) => {
           const days = differenceInDays(new Date(s.next_payment_date), new Date());
-          return s.status === "active" && days >= 0 && days <= 7;
+          return isSubscriptionActiveForCalculations(s) && days >= 0 && days <= 7;
         });
 
   const totalPages = Math.max(1, Math.ceil(filteredSubscriptions.length / PAGE_SIZE));
@@ -225,18 +232,20 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
+    <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
       {/* Header */}
-      <header className="mb-10 flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
+      <header className="mb-6 flex flex-col gap-4 sm:mb-10 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+        <div className="min-w-0">
+          <h1 className="text-xl font-semibold tracking-tight text-foreground sm:text-2xl lg:text-3xl">
             Dashboard
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">
             Resumen de tus suscripciones
           </p>
         </div>
-        <ExportDropdown subscriptions={subscriptions} />
+        <div className="w-full sm:w-auto">
+          <ExportDropdown subscriptions={subscriptions} />
+        </div>
       </header>
 
       {/* Presupuesto mensual (si está definido) */}
@@ -282,8 +291,8 @@ export default function DashboardPage() {
 
       {/* Stats */}
       <section className="mb-10 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Card variant="outline">
-          <div className="flex items-start justify-between gap-4">
+        <Card variant="outline" className="h-full">
+          <div className="flex h-full min-h-[88px] items-start justify-between gap-4">
             <div className="min-w-0">
               <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
                 Total mensual
@@ -298,11 +307,11 @@ export default function DashboardPage() {
           </div>
         </Card>
 
-        <Card variant="outline">
-          <div className="flex items-start justify-between gap-4">
+        <Card variant="outline" className="h-full">
+          <div className="flex h-full min-h-[88px] items-start justify-between gap-4">
             <div className="min-w-0">
               <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                Total anual
+                Compromiso futuro
               </p>
               <p className="mt-1.5 text-lg font-semibold tracking-tight text-foreground sm:text-xl">
                 {formatCurrency(yearlyTotal)}
@@ -314,8 +323,8 @@ export default function DashboardPage() {
           </div>
         </Card>
 
-        <Card variant="outline">
-          <div className="flex items-start justify-between gap-4">
+        <Card variant="outline" className="h-full">
+          <div className="flex h-full min-h-[88px] items-start justify-between gap-4">
             <div className="min-w-0">
               <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
                 Activas
@@ -330,8 +339,8 @@ export default function DashboardPage() {
           </div>
         </Card>
 
-        <Card variant="outline">
-          <div className="flex items-start justify-between gap-4">
+        <Card variant="outline" className="h-full">
+          <div className="flex h-full min-h-[88px] items-start justify-between gap-4">
             <div className="min-w-0">
               <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
                 Próximos pagos
@@ -389,9 +398,9 @@ export default function DashboardPage() {
       </section>
 
       {/* Filters + list */}
-      <section>
-        <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
-          <div className="flex rounded-lg border border-border p-1">
+      <section className="min-w-0">
+        <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+          <div className="flex w-full overflow-x-auto rounded-lg border border-border p-1 sm:w-auto">
             {filterTabs.map(({ key, label }) => (
               <Button
                 key={key}

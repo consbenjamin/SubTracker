@@ -42,8 +42,7 @@ export function TopBar({ onMenuClick, showMenuButton = false }: TopBarProps) {
   const searchParams = useSearchParams();
   const { resolvedTheme, setTheme } = useSettings();
   const [themeMounted, setThemeMounted] = useState(false);
-  const qFromUrl = searchParams.get("q") ?? "";
-  const [query, setQuery] = useState(qFromUrl);
+  const [query, setQuery] = useState("");
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [recentSearches, setRecentSearches] = useState<string[]>([]);
   const [isOpen, setIsOpen] = useState(false);
@@ -53,6 +52,11 @@ export function TopBar({ onMenuClick, showMenuButton = false }: TopBarProps) {
   useEffect(() => {
     setThemeMounted(true);
   }, []);
+
+  useEffect(() => {
+    setQuery(searchParams.get("q") ?? "");
+  }, [searchParams, pathname]);
+
   const containerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -63,10 +67,6 @@ export function TopBar({ onMenuClick, showMenuButton = false }: TopBarProps) {
   const showDropdown =
     isOpen &&
     (query.length >= 2 ? suggestions.length > 0 : query.length === 0 ? recentSearches.length > 0 : false);
-
-  useEffect(() => {
-    setQuery(qFromUrl);
-  }, [qFromUrl, pathname]);
 
   useEffect(() => {
     setRecentSearches(getRecentSearches());

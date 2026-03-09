@@ -23,7 +23,7 @@ export function LazySubscriptionCard({
   const { ref, inView } = useInView({ rootMargin: "120px", threshold: 0 });
 
   return (
-    <div ref={ref} className="min-h-[140px]">
+    <div ref={ref} className="flex min-h-[140px] h-full">
       {inView ? (
         <SubscriptionCard
           subscription={subscription}

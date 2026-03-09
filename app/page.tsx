@@ -5,16 +5,39 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Landing } from "@/components/Landing";
 
+const AUTH_CHECK_TIMEOUT_MS = 8000;
+
 export default function Home() {
   const router = useRouter();
   const [checking, setChecking] = useState(true);
 
   useEffect(() => {
+    let cancelled = false;
+
     const supabase = createClient();
-    supabase.auth.getUser().then(({ data: { user } }) => {
+    const timeoutId = setTimeout(() => {
+      if (cancelled) return;
       setChecking(false);
-      if (user) router.replace("/dashboard");
-    });
+    }, AUTH_CHECK_TIMEOUT_MS);
+
+    supabase.auth
+      .getUser()
+      .then(({ data: { user } }) => {
+        if (cancelled) return;
+        setChecking(false);
+        clearTimeout(timeoutId);
+        if (user) router.replace("/dashboard");
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setChecking(false);
+        clearTimeout(timeoutId);
+      });
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timeoutId);
+    };
   }, [router]);
 
   if (checking) {
