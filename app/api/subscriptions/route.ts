@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
 import { subscriptionBodySchema } from "@/lib/validations/schemas";
 import { isRateLimitedRequest } from "@/lib/rate-limit";
+import { getClientIp, unauthorizedResponse } from "@/lib/api-auth";
 
 function normalizeSubscriptionPayload(payload: ReturnType<typeof subscriptionBodySchema.parse>) {
   if (payload.payment_type === "installment") {
@@ -23,22 +24,14 @@ function normalizeSubscriptionPayload(payload: ReturnType<typeof subscriptionBod
   };
 }
 
-function getClientIp(request: Request): string {
-  return (
-    request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
-    request.headers.get("x-real-ip") ||
-    "unknown"
-  );
-}
-
-export async function GET() {
+export async function GET(request: Request) {
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return unauthorizedResponse(request, "/api/subscriptions");
   }
 
   const { data, error } = await supabase
@@ -69,7 +62,7 @@ export async function POST(request: Request) {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return unauthorizedResponse(request, "/api/subscriptions");
   }
 
   let body: unknown;

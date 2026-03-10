@@ -2,6 +2,7 @@ import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { isRateLimitedRequest } from "@/lib/rate-limit";
+import { logAuthFailure, logRateLimited } from "@/lib/security-logger";
 
 function getClientIp(request: Request): string {
   return (
@@ -14,6 +15,7 @@ function getClientIp(request: Request): string {
 export async function GET(request: Request) {
   const ip = getClientIp(request);
   if (isRateLimitedRequest(ip, "auth")) {
+    logRateLimited("/api/auth/callback", ip, "auth");
     return NextResponse.redirect(new URL("/login?error=rate_limited", request.url));
   }
 
@@ -57,7 +59,7 @@ export async function GET(request: Request) {
   const { error } = await supabase.auth.exchangeCodeForSession(code);
 
   if (error) {
-    console.error("Auth callback error:", error);
+    logAuthFailure("/api/auth/callback", ip, error.message);
     return NextResponse.redirect(`${origin}/login?error=auth_failed`);
   }
 

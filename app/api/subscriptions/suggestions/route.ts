@@ -1,5 +1,8 @@
 import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
+import { unauthorizedResponse } from "@/lib/api-auth";
+
+const MAX_QUERY_LENGTH = 100;
 
 export async function GET(request: Request) {
   const supabase = await createClient();
@@ -8,11 +11,11 @@ export async function GET(request: Request) {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return unauthorizedResponse(request, "/api/subscriptions/suggestions");
   }
 
   const { searchParams } = new URL(request.url);
-  const q = (searchParams.get("q") ?? "").trim().toLowerCase();
+  const q = (searchParams.get("q") ?? "").trim().toLowerCase().slice(0, MAX_QUERY_LENGTH);
 
   if (!q || q.length < 2) {
     return NextResponse.json({ suggestions: [] });

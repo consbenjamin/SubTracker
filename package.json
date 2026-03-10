@@ -7,7 +7,8 @@
     "dev:turbo": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "audit": "npm audit"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.3.0",
@@ -32,6 +33,7 @@
     "zustand": "^4.4.7"
   },
   "devDependencies": {
+    "@babel/types": "^7.29.0",
     "@types/node": "^20.11.0",
     "@types/react": "^18.2.0",
     "@types/react-dom": "^18.2.0",

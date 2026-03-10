@@ -5,6 +5,7 @@ import {
   subscriptionUpdateBodySchema,
 } from "@/lib/validations/schemas";
 import { isRateLimitedRequest } from "@/lib/rate-limit";
+import { getClientIp, unauthorizedResponse } from "@/lib/api-auth";
 
 function normalizeSubscriptionPayload(payload: ReturnType<typeof subscriptionUpdateBodySchema.parse>) {
   const { record_payment, ...rest } = payload;
@@ -34,14 +35,6 @@ function normalizeSubscriptionPayload(payload: ReturnType<typeof subscriptionUpd
   };
 }
 
-function getClientIp(request: Request): string {
-  return (
-    request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
-    request.headers.get("x-real-ip") ||
-    "unknown"
-  );
-}
-
 export async function GET(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
@@ -57,7 +50,7 @@ export async function GET(
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return unauthorizedResponse(request, `/api/subscriptions/${id}`);
   }
 
   const { data, error } = await supabase
@@ -97,7 +90,7 @@ export async function PUT(
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return unauthorizedResponse(request, `/api/subscriptions/${id}`);
   }
 
   let body: unknown;
@@ -172,13 +165,20 @@ export async function DELETE(
   if (!isValidSubscriptionId(id)) {
     return NextResponse.json({ error: "ID inválido" }, { status: 400 });
   }
+  const ip = getClientIp(request);
+  if (isRateLimitedRequest(ip, "api")) {
+    return NextResponse.json(
+      { error: "Demasiadas peticiones. Intenta más tarde." },
+      { status: 429 }
+    );
+  }
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return unauthorizedResponse(request, `/api/subscriptions/${id}`);
   }
 
   const { error } = await supabase

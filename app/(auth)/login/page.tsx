@@ -151,6 +151,11 @@ function LoginContent() {
               No se recibió el código. Intenta iniciar sesión de nuevo.
             </div>
           )}
+          {error === "rate_limited" && (
+            <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-900/50 dark:bg-amber-950/40 dark:text-amber-300">
+              Demasiados intentos. Espera un momento e inténtalo de nuevo.
+            </div>
+          )}
 
           <form onSubmit={handleEmailAuth} className="space-y-4">
             <Input

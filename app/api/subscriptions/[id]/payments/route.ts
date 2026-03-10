@@ -5,19 +5,12 @@ import {
   paymentBodySchema,
 } from "@/lib/validations/schemas";
 import { isRateLimitedRequest } from "@/lib/rate-limit";
+import { getClientIp, unauthorizedResponse } from "@/lib/api-auth";
 
 function addOneMonth(dateStr: string): string {
   const date = new Date(dateStr);
   date.setMonth(date.getMonth() + 1);
   return date.toISOString().slice(0, 10);
-}
-
-function getClientIp(request: Request): string {
-  return (
-    request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
-    request.headers.get("x-real-ip") ||
-    "unknown"
-  );
 }
 
 export async function GET(
@@ -35,7 +28,7 @@ export async function GET(
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return unauthorizedResponse(request, `/api/subscriptions/${id}/payments`);
   }
 
   const sub = await supabase
@@ -85,7 +78,7 @@ export async function POST(
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return unauthorizedResponse(request, `/api/subscriptions/${id}/payments`);
   }
 
   const sub = await supabase

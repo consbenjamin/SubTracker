@@ -1,14 +1,15 @@
 import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
+import { unauthorizedResponse } from "@/lib/api-auth";
 
-export async function GET() {
+export async function GET(request: Request) {
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return unauthorizedResponse(request, "/api/payments");
   }
 
   const { data: subs } = await supabase
