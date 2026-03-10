@@ -1,7 +1,7 @@
 "use client";
 
 import { useInView } from "@/lib/hooks/useInView";
-import { SubscriptionCard } from "./SubscriptionCard";
+import { SubscriptionCard, SUBSCRIPTION_CARD_MIN_HEIGHT } from "./SubscriptionCard";
 import type { Subscription } from "@/types";
 import { Card } from "@/components/ui/Card";
 import { cn } from "@/lib/utils";
@@ -23,7 +23,7 @@ export function LazySubscriptionCard({
   const { ref, inView } = useInView({ rootMargin: "120px", threshold: 0 });
 
   return (
-    <div ref={ref} className="flex min-h-[140px] h-full">
+    <div ref={ref} className="flex h-full" style={{ minHeight: SUBSCRIPTION_CARD_MIN_HEIGHT }}>
       {inView ? (
         <SubscriptionCard
           subscription={subscription}
@@ -35,8 +35,9 @@ export function LazySubscriptionCard({
           variant="outline"
           className={cn(
             "animate-pulse border-border",
-            "h-full min-h-[140px]"
+            "h-full"
           )}
+          style={{ minHeight: SUBSCRIPTION_CARD_MIN_HEIGHT }}
         >
           <div className="flex flex-col gap-3">
             <div className="h-5 w-2/3 rounded bg-muted/50" />

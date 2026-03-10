@@ -1,12 +1,13 @@
 "use client";
 
+import { useState } from "react";
 import { Subscription } from "@/types";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { formatDate } from "@/lib/utils";
 import { useFormatCurrency } from "@/lib/hooks/useFormatCurrency";
-import { Edit, Trash2, Calendar, CreditCard } from "lucide-react";
+import { Edit, Trash2, Calendar, CreditCard, ChevronDown, ChevronUp } from "lucide-react";
 import { differenceInDays } from "date-fns";
 import { cn } from "@/lib/utils";
 import {
@@ -23,11 +24,14 @@ interface SubscriptionCardProps {
   onDelete: (id: string) => void;
 }
 
+export const SUBSCRIPTION_CARD_MIN_HEIGHT = 220;
+
 export function SubscriptionCard({
   subscription,
   onEdit,
   onDelete,
 }: SubscriptionCardProps) {
+  const [expanded, setExpanded] = useState(false);
   const formatCurrency = useFormatCurrency();
   const installment = getInstallmentProgress(subscription);
   const isInstallment = isInstallmentSubscription(subscription);
@@ -69,8 +73,11 @@ export function SubscriptionCard({
   const yearlySavingsIfCancelled = subscription.status === "active" ? getAnnualEquivalent(subscription) : null;
 
   return (
-    <Card className="group flex h-full w-full min-w-0 flex-col transition-shadow hover:shadow-[var(--card-shadow)] hover:shadow-[var(--card-shadow-hover)]">
-      <div className="flex flex-1 flex-col gap-4">
+    <Card
+      className="group flex h-full w-full min-w-0 flex-col transition-shadow hover:shadow-[var(--card-shadow)] hover:shadow-[var(--card-shadow-hover)]"
+      style={{ minHeight: SUBSCRIPTION_CARD_MIN_HEIGHT }}
+    >
+      <div className="flex flex-1 flex-col gap-4 min-h-0">
         <div className="flex items-start justify-between gap-3 min-w-0">
           <div className="min-w-0 flex-1 overflow-hidden">
             <div className="flex flex-wrap items-center gap-2">
@@ -125,14 +132,34 @@ export function SubscriptionCard({
             </Button>
           </div>
         </div>
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted-foreground">
           <Calendar className="h-4 w-4 shrink-0" />
           <span>
             {isInstallment ? "Próxima cuota" : "Próximo pago"}: {formatDate(subscription.next_payment_date)}
           </span>
           <span className={cn("shrink-0", urgency.color)}>({urgency.text})</span>
+          {isInstallment && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setExpanded((e) => !e)}
+              className="h-7 gap-1 px-2 text-sm font-medium text-foreground hover:bg-primary/10 hover:text-primary"
+            >
+              {expanded ? (
+                <>
+                  <ChevronUp className="h-4 w-4" />
+                  Menos
+                </>
+              ) : (
+                <>
+                  <ChevronDown className="h-4 w-4" />
+                  Ver progreso
+                </>
+              )}
+            </Button>
+          )}
         </div>
-        {isInstallment && (
+        {isInstallment && expanded && (
           <div className="space-y-2">
             <div className="flex items-center justify-between text-xs text-muted-foreground">
               <span>Progreso del plan</span>
