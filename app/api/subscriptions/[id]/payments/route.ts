@@ -1,3 +1,4 @@
+import { addMonths } from "date-fns";
 import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
 import {
@@ -7,10 +8,15 @@ import {
 import { isRateLimitedRequest } from "@/lib/rate-limit";
 import { getClientIp, unauthorizedResponse } from "@/lib/api-auth";
 
+/** Suma un mes a una fecha YYYY-MM-DD manteniendo el día (ej. 9 mar → 9 abr). */
 function addOneMonth(dateStr: string): string {
-  const date = new Date(dateStr);
-  date.setMonth(date.getMonth() + 1);
-  return date.toISOString().slice(0, 10);
+  const [y, m, d] = dateStr.split("-").map(Number);
+  const date = new Date(y, m - 1, d);
+  const next = addMonths(date, 1);
+  const yy = next.getFullYear();
+  const mm = String(next.getMonth() + 1).padStart(2, "0");
+  const dd = String(next.getDate()).padStart(2, "0");
+  return `${yy}-${mm}-${dd}`;
 }
 
 export async function GET(

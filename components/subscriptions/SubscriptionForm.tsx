@@ -49,7 +49,15 @@ const subscriptionSchema = z
     next_payment_date: z.string().min(1, "La fecha es requerida"),
     category: z.string().trim().min(1, "La categoría es requerida"),
     status: z.enum(["active", "cancelled", "paused"]),
-    notes: z.string().optional(),
+    installments_paid: z.preprocess(
+      (v) => {
+        if (v === "" || v == null) return undefined;
+        const n = Number(v);
+        return Number.isNaN(n) ? undefined : n;
+      },
+      z.number().int().min(0).max(12).optional()
+    ),
+    notes: z.preprocess((val) => (val == null ? "" : val), z.string().max(2000).optional()),
   })
   .superRefine((data, ctx) => {
     if (data.payment_type === "installment") {
@@ -77,6 +85,18 @@ const subscriptionSchema = z
         message: "El importe debe ser mayor a 0",
       });
     }
+
+    if (
+      data.payment_type === "installment" &&
+      data.installment_count != null &&
+      (data.installments_paid ?? 0) > data.installment_count
+    ) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["installments_paid"],
+        message: `No puede ser mayor a ${data.installment_count} cuotas`,
+      });
+    }
   });
 
 type SubscriptionFormValues = {
@@ -85,6 +105,7 @@ type SubscriptionFormValues = {
   billing_cycle: BillingCycle;
   payment_type: PaymentType;
   installment_count?: 3 | 6 | 9 | 12;
+  installments_paid?: number;
   total_amount?: number;
   next_payment_date: string;
   category: string;
@@ -140,6 +161,7 @@ export function SubscriptionForm({
           billing_cycle: subscription.billing_cycle,
           payment_type: subscription.payment_type ?? "recurring",
           installment_count: subscription.installment_count ?? undefined,
+          installments_paid: subscription.installments_paid ?? 0,
           total_amount:
             subscription.total_amount ??
             (subscription.installment_count
@@ -148,7 +170,7 @@ export function SubscriptionForm({
           next_payment_date: subscription.next_payment_date.split("T")[0],
           category: subscription.category,
           status: subscription.status,
-          notes: subscription.notes,
+          notes: subscription.notes ?? "",
         }
       : {
           price: 0,
@@ -156,6 +178,7 @@ export function SubscriptionForm({
           payment_type: "recurring",
           status: "active",
           category: "",
+          installments_paid: 0,
         },
   });
 
@@ -190,7 +213,7 @@ export function SubscriptionForm({
             billing_cycle: "monthly",
             payment_type: "installment",
             installment_count: values.installment_count ?? null,
-            installments_paid: subscription?.installments_paid ?? 0,
+            installments_paid: values.installments_paid ?? 0,
             total_amount: Number((values.total_amount ?? 0).toFixed(2)),
             next_payment_date: values.next_payment_date,
             category: values.category.trim(),
@@ -397,7 +420,7 @@ export function SubscriptionForm({
               </p>
             )}
           </div>
-          {installmentAmountPreview != null && (
+            {installmentAmountPreview != null && (
             <div className="rounded-lg bg-[var(--card)] p-3 text-center">
               <p className="text-xs text-muted-foreground">Pagás</p>
               <p className="text-lg font-semibold text-foreground">
@@ -406,6 +429,21 @@ export function SubscriptionForm({
               <p className="text-xs text-muted-foreground">cada una</p>
             </div>
           )}
+          <div className="space-y-2">
+            <Input
+              label="Cuotas ya pagadas"
+              type="number"
+              min={0}
+              max={installmentCount ?? 12}
+              step={1}
+              {...register("installments_paid", { valueAsNumber: true })}
+              error={errors.installments_paid?.message}
+              placeholder="0"
+            />
+            <p className="text-xs text-muted-foreground">
+              Algunas veces te cobran la primera cuota en el momento (ej. hoy compraste, hoy pagaste 1). Otras veces la primera cuota se cobra el mes siguiente. Indicá cuántas ya pagaste para llevar el control.
+            </p>
+          </div>
         </div>
       )}
 
@@ -478,7 +516,15 @@ export function SubscriptionForm({
           Cancelar
         </Button>
         <Button type="submit" variant="primary" disabled={isSubmitting} className="w-full sm:w-auto">
-          {isSubmitting ? "Guardando..." : subscription ? "Actualizar" : "Crear"}
+          {isSubmitting
+            ? "Guardando..."
+            : subscription
+              ? paymentType === "installment" && installmentCount
+                ? `Actualizar (${installmentCount} cuotas)`
+                : "Actualizar"
+              : paymentType === "installment" && installmentCount
+                ? `Crear en ${installmentCount} cuotas`
+                : "Crear"}
         </Button>
       </div>
     </form>

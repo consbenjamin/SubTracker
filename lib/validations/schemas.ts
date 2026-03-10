@@ -33,7 +33,7 @@ const subscriptionFields = {
     .min(1, "La categoría es requerida")
     .max(100),
   status: z.enum(["active", "cancelled", "paused"]),
-  notes: z.string().max(2000).optional(),
+  notes: z.string().max(2000).optional().nullable(),
 };
 
 function withInstallmentValidation<T extends z.ZodRawShape>(schema: z.ZodObject<T>) {
