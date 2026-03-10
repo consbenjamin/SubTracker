@@ -28,11 +28,10 @@ export function Landing() {
           <div className="flex items-center gap-2">
             <Image
               src="/icons/icon-192x192.png"
-              alt=""
+              alt="SubGhost"
               width={36}
               height={36}
-              className="h-9 w-9 shrink-0 rounded-xl object-contain dark:invert"
-              aria-hidden
+              className="h-9 w-9 shrink-0 rounded-xl object-contain"
             />
             <span className="text-lg font-semibold tracking-tight text-foreground">
               SubGhost
