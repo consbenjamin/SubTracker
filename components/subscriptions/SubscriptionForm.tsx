@@ -38,7 +38,11 @@ const subscriptionSchema = z
     billing_cycle: z.enum(["monthly", "yearly", "quarterly"]),
     payment_type: z.enum(["recurring", "installment"]),
     installment_count: z.preprocess(
-      (value) => (typeof value === "number" && Number.isNaN(value) ? undefined : value),
+      (value) => {
+        if (value === undefined || value === null || value === "") return undefined;
+        const num = Number(value);
+        return Number.isNaN(num) ? undefined : num;
+      },
       installmentCountSchema.optional()
     ),
     total_amount: optionalNumber,

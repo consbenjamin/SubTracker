@@ -17,7 +17,10 @@ const subscriptionFields = {
   price: z.coerce.number().min(0, "El precio debe ser >= 0").max(999999.99),
   billing_cycle: z.enum(["monthly", "yearly", "quarterly"]),
   payment_type: z.enum(["recurring", "installment"]).default("recurring"),
-  installment_count: installmentCountSchema.nullable().optional(),
+  installment_count: z.preprocess(
+    (val) => (val === "" || val == null ? null : Number(val)),
+    installmentCountSchema.nullable().optional()
+  ),
   installments_paid: z.coerce.number().int().min(0).max(999).optional(),
   total_amount: z.coerce.number().min(0).max(999999.99).nullable().optional(),
   next_payment_date: z
