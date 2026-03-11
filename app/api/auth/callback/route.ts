@@ -12,56 +12,65 @@ function getClientIp(request: Request): string {
   );
 }
 
-export async function GET(request: Request) {
-  const ip = getClientIp(request);
-  if (isRateLimitedRequest(ip, "auth")) {
-    logRateLimited("/api/auth/callback", ip, "auth");
-    return NextResponse.redirect(new URL("/login?error=rate_limited", request.url));
-  }
+function redirectTo(url: string) {
+  return NextResponse.redirect(url, 302);
+}
 
+export async function GET(request: Request) {
   const requestUrl = new URL(request.url);
-  const code = requestUrl.searchParams.get("code");
   const origin = requestUrl.origin;
+  const code = requestUrl.searchParams.get("code");
   const nextParam = requestUrl.searchParams.get("next") ?? "/dashboard";
-  // Evitar open redirect: solo rutas locales que empiecen por / y no por //
   const safeNext =
     typeof nextParam === "string" &&
     nextParam.startsWith("/") &&
     !nextParam.startsWith("//")
       ? nextParam
       : "/dashboard";
-  const redirectUrl = `${origin}${safeNext}`;
-  const response = NextResponse.redirect(redirectUrl);
+  const successRedirectUrl = `${origin}${safeNext}`;
 
-  if (!code) {
-    return NextResponse.redirect(`${origin}/login?error=no_code`);
-  }
-
-  const cookieStore = await cookies();
-
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll() {
-          return cookieStore.getAll();
-        },
-        setAll(cookiesToSet: { name: string; value: string; options: Record<string, unknown> }[]) {
-          cookiesToSet.forEach(({ name, value, options }) =>
-            response.cookies.set(name, value, options as Parameters<typeof response.cookies.set>[2])
-          );
-        },
-      },
+  try {
+    const ip = getClientIp(request);
+    if (isRateLimitedRequest(ip, "auth")) {
+      logRateLimited("/api/auth/callback", ip, "auth");
+      return redirectTo(`${origin}/login?error=rate_limited`);
     }
-  );
 
-  const { error } = await supabase.auth.exchangeCodeForSession(code);
+    if (!code) {
+      return redirectTo(`${origin}/login?error=no_code`);
+    }
 
-  if (error) {
-    logAuthFailure("/api/auth/callback", ip, error.message);
-    return NextResponse.redirect(`${origin}/login?error=auth_failed`);
+    const cookieStore = await cookies();
+
+    const response = redirectTo(successRedirectUrl);
+
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          getAll() {
+            return cookieStore.getAll();
+          },
+          setAll(cookiesToSet: { name: string; value: string; options: Record<string, unknown> }[]) {
+            cookiesToSet.forEach(({ name, value, options }) =>
+              response.cookies.set(name, value, options as Parameters<typeof response.cookies.set>[2])
+            );
+          },
+        },
+      }
+    );
+
+    const { error } = await supabase.auth.exchangeCodeForSession(code);
+
+    if (error) {
+      logAuthFailure("/api/auth/callback", ip, error.message);
+      return redirectTo(`${origin}/login?error=auth_failed`);
+    }
+
+    return response;
+  } catch (err) {
+    console.error("[auth/callback]", err);
+    return redirectTo(`${origin}/login?error=auth_failed`);
   }
-
-  return response;
 }

@@ -4,7 +4,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { useRouter, usePathname } from "next/navigation";
 import { Button } from "@/components/ui/Button";
-import { LogOut, Plus, BarChart3, LayoutDashboard, CreditCard } from "lucide-react";
+import { LogOut, Plus, BarChart3, LayoutDashboard, CreditCard, ShoppingBag } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 
@@ -21,6 +21,7 @@ export function Navbar() {
 
   const navLinks = [
     { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+    { href: "/purchases", label: "Compras", icon: ShoppingBag },
     { href: "/subscriptions", label: "Suscripciones", icon: CreditCard },
     { href: "/analytics", label: "Analytics", icon: BarChart3 },
   ];

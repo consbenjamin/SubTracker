@@ -90,3 +90,41 @@ export type PaymentBody = z.infer<typeof paymentBodySchema>;
 export function isValidSubscriptionId(id: unknown): id is string {
   return uuidSchema.safeParse(id).success;
 }
+
+// --- Compras planeadas ---
+const plannedPurchasePaymentMethod = z.enum(["card", "transfer", "cash"]);
+
+const optionalUrl = z
+  .string()
+  .transform((s) => (s?.trim() === "" ? undefined : s))
+  .optional()
+  .refine((s) => s === undefined || z.string().url().safeParse(s).success, "URL inválida");
+
+export const plannedPurchaseBodySchema = z
+  .object({
+    name: z.string().min(1, "El nombre es requerido").max(200, "Nombre demasiado largo"),
+    link: optionalUrl,
+    image_url: optionalUrl,
+    planned_month: z.coerce.number().int().min(1).max(12),
+    planned_year: z.coerce.number().int().min(2000).max(2100),
+    bought: z.boolean().default(false),
+    payment_method: plannedPurchasePaymentMethod.nullable().optional(),
+    card_name: z.string().max(100).nullable().optional(),
+    bought_with_installments: z.boolean().optional().default(false),
+    notes: z.string().max(1000).nullable().optional(),
+  })
+  .superRefine((data, ctx) => {
+    if (data.bought && data.payment_method === "card" && !data.card_name?.trim()) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["card_name"],
+        message: "Indicá con qué tarjeta pagaste",
+      });
+    }
+  });
+
+export type PlannedPurchaseBody = z.infer<typeof plannedPurchaseBodySchema>;
+
+export function isValidPlannedPurchaseId(id: unknown): id is string {
+  return uuidSchema.safeParse(id).success;
+}
