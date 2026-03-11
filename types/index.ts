@@ -50,13 +50,16 @@ export interface PlannedPurchase {
   user_id: string;
   name: string;
   link: string | null;
-  image_url: string | null;
   planned_month: number;
   planned_year: number;
   bought: boolean;
+  bought_date: string | null;
   payment_method: PurchasePaymentMethod | null;
   card_name: string | null;
   bought_with_installments: boolean;
+  installment_count: 3 | 6 | 9 | 12 | null;
+  installments_paid: number;
+  installments_start_next_month: boolean;
   notes: string | null;
   created_at: string;
   updated_at: string;
@@ -65,12 +68,15 @@ export interface PlannedPurchase {
 export interface PlannedPurchaseFormData {
   name: string;
   link?: string;
-  image_url?: string;
   planned_month: number;
   planned_year: number;
   bought: boolean;
+  bought_date?: string | null;
   payment_method?: PurchasePaymentMethod | null;
   card_name?: string | null;
   bought_with_installments?: boolean;
+  installment_count?: 3 | 6 | 9 | 12 | null;
+  installments_paid?: number;
+  installments_start_next_month?: boolean;
   notes?: string | null;
 }

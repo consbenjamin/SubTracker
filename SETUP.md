@@ -25,6 +25,15 @@ npm install
    - Producción: `https://subghost.vercel.app/api/auth/callback`
    Sin esta URL, después de iniciar sesión con Google/GitHub volverás a la app sin sesión.
 
+5b. **Login con Google en localhost (checklist):**
+   - **Supabase:** Authentication → URL Configuration → **Redirect URLs** debe incluir exactamente `http://localhost:3000/api/auth/callback`.
+   - **Google Cloud Console** (APIs & Services → Credentials → tu cliente OAuth):
+     - **Orígenes autorizados de JavaScript:** `http://localhost:3000`
+     - **URIs de redireccionamiento autorizados:** la URL de Supabase (ej. `https://XXXXXXXX.supabase.co/auth/v1/callback`). No pongas la URL de tu app aquí; Google redirige a Supabase, no a localhost.
+   - **Variables de entorno:** `.env.local` con `NEXT_PUBLIC_SUPABASE_URL` y `NEXT_PUBLIC_SUPABASE_ANON_KEY` correctos.
+   - Reinicia el servidor (`npm run dev`) y prueba en una ventana de incógnito para evitar caché.
+   - Si ves `[]` o la petición a `api/auth/callback` sale **200 (ServiceWorker)**: el Service Worker está interceptando el callback. **Solución:** en Chrome/Edge: F12 → Application → Service Workers → "Unregister" para localhost. O Application → Storage → "Clear site data". Luego recarga y vuelve a probar el login con Google. En producción, el callback ya está configurado para no ser cacheado por el SW.
+
 6. Obtén las credenciales de tu proyecto:
    - Ve a **Settings > API**
    - Copia la **Project URL**

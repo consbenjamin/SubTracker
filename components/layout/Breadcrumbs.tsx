@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils";
 
 const SEGMENT_LABELS: Record<string, string> = {
   dashboard: "Dashboard",
-  purchases: "Compras planeadas",
+  purchases: "Compras",
   subscriptions: "Suscripciones",
   new: "Nueva suscripción",
   analytics: "Analytics",

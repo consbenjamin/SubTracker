@@ -22,7 +22,7 @@ const navGroups = [
     label: "Principal",
     items: [
       { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-      { href: "/purchases", label: "Compras planeadas", icon: ShoppingBag },
+      { href: "/purchases", label: "Compras", icon: ShoppingBag },
     ],
   },
   {

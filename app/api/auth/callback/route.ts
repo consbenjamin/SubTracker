@@ -1,8 +1,11 @@
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
-import { NextResponse } from "next/server";
 import { isRateLimitedRequest } from "@/lib/rate-limit";
 import { logAuthFailure, logRateLimited } from "@/lib/security-logger";
+
+// Evitar que Next.js cachee esta ruta GET (sino puede devolver respuesta vieja o []).
+export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
 
 function getClientIp(request: Request): string {
   return (
@@ -12,8 +15,23 @@ function getClientIp(request: Request): string {
   );
 }
 
-function redirectTo(url: string) {
-  return NextResponse.redirect(url, 302);
+/**
+ * Build a 302 redirect with optional Set-Cookie.
+ * Incluye HTML de respaldo por si el navegador no sigue el 302 (evita ver []).
+ */
+function redirectResponse(
+  location: string,
+  setCookieHeaders: string[] = []
+): Response {
+  const headers = new Headers();
+  headers.set("Location", location);
+  headers.set("Cache-Control", "no-store, no-cache, must-revalidate");
+  headers.set("Content-Type", "text/html; charset=utf-8");
+  headers.set("X-Auth-Callback", "1");
+  setCookieHeaders.forEach((value) => headers.append("Set-Cookie", value));
+
+  const html = `<!DOCTYPE html><html><head><meta http-equiv="refresh" content="0;url=${encodeURI(location)}"><title>Redirigiendo</title></head><body><p>Redirigiendo...</p><script>window.location.replace(${JSON.stringify(location)});</script></body></html>`;
+  return new Response(html, { status: 302, headers });
 }
 
 export async function GET(request: Request) {
@@ -33,16 +51,15 @@ export async function GET(request: Request) {
     const ip = getClientIp(request);
     if (isRateLimitedRequest(ip, "auth")) {
       logRateLimited("/api/auth/callback", ip, "auth");
-      return redirectTo(`${origin}/login?error=rate_limited`);
+      return redirectResponse(`${origin}/login?error=rate_limited`);
     }
 
     if (!code) {
-      return redirectTo(`${origin}/login?error=no_code`);
+      return redirectResponse(`${origin}/login?error=no_code`);
     }
 
     const cookieStore = await cookies();
-
-    const response = redirectTo(successRedirectUrl);
+    const setCookieHeaders: string[] = [];
 
     const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -53,9 +70,16 @@ export async function GET(request: Request) {
             return cookieStore.getAll();
           },
           setAll(cookiesToSet: { name: string; value: string; options: Record<string, unknown> }[]) {
-            cookiesToSet.forEach(({ name, value, options }) =>
-              response.cookies.set(name, value, options as Parameters<typeof response.cookies.set>[2])
-            );
+            cookiesToSet.forEach(({ name, value, options }) => {
+              const opts = options as { maxAge?: number; path?: string; sameSite?: string; httpOnly?: boolean; secure?: boolean };
+              const parts = [`${name}=${encodeURIComponent(value)}`];
+              if (opts?.maxAge != null) parts.push(`Max-Age=${opts.maxAge}`);
+              if (opts?.path) parts.push(`Path=${opts.path}`);
+              if (opts?.sameSite) parts.push(`SameSite=${opts.sameSite}`);
+              if (opts?.httpOnly) parts.push("HttpOnly");
+              if (opts?.secure) parts.push("Secure");
+              setCookieHeaders.push(parts.join("; "));
+            });
           },
         },
       }
@@ -65,12 +89,12 @@ export async function GET(request: Request) {
 
     if (error) {
       logAuthFailure("/api/auth/callback", ip, error.message);
-      return redirectTo(`${origin}/login?error=auth_failed`);
+      return redirectResponse(`${origin}/login?error=auth_failed`);
     }
 
-    return response;
+    return redirectResponse(successRedirectUrl, setCookieHeaders);
   } catch (err) {
     console.error("[auth/callback]", err);
-    return redirectTo(`${origin}/login?error=auth_failed`);
+    return redirectResponse(`${origin}/login?error=auth_failed`);
   }
 }

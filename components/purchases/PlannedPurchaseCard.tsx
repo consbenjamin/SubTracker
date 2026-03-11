@@ -1,12 +1,10 @@
 "use client";
 
-import Image from "next/image";
 import { PlannedPurchase } from "@/types";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Edit, Trash2, ExternalLink, CreditCard, Banknote, Wallet } from "lucide-react";
-import { cn } from "@/lib/utils";
 
 const MONTH_NAMES: Record<number, string> = {
   1: "Ene", 2: "Feb", 3: "Mar", 4: "Abr", 5: "May", 6: "Jun",
@@ -35,20 +33,6 @@ export function PlannedPurchaseCard({
   return (
     <Card className="group flex h-full min-w-0 flex-col overflow-hidden transition-shadow hover:shadow-[var(--card-shadow-hover)]">
       <div className="flex flex-1 flex-col gap-3 min-h-0">
-        {/* Imagen opcional */}
-        {purchase.image_url && (
-          <div className="relative -mx-5 -mt-5 mb-0 h-32 w-[calc(100%+2.5rem)] overflow-hidden bg-muted">
-            <Image
-              src={purchase.image_url}
-              alt=""
-              fill
-              className="object-cover"
-              sizes="(max-width: 400px) 100vw, 340px"
-              unoptimized
-            />
-          </div>
-        )}
-
         <div className="flex flex-1 flex-col gap-2 min-w-0">
           <div className="flex items-start justify-between gap-2">
             <h3 className="truncate text-base font-semibold text-foreground">
@@ -105,8 +89,14 @@ export function PlannedPurchaseCard({
                       : "Efectivo"}
                 </span>
               )}
-              {purchase.bought_with_installments && (
-                <Badge variant="info">Cuotas</Badge>
+              {purchase.bought_with_installments && purchase.installment_count != null && (
+                <Badge variant="info">
+                  {purchase.installments_paid >= purchase.installment_count
+                    ? `Completado (${purchase.installment_count}/${purchase.installment_count}) ✓`
+                    : `Pagadas ${purchase.installments_paid}/${purchase.installment_count}${
+                        purchase.installments_start_next_month ? " · arranca el mes que viene" : ""
+                      }`}
+                </Badge>
               )}
             </div>
           ) : (

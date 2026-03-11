@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/Button";
 import { Select } from "@/components/ui/Select";
 import { useToast } from "@/lib/contexts/ToastContext";
 import type { PlannedPurchaseBody } from "@/lib/validations/schemas";
-import { ShoppingBag, Plus } from "lucide-react";
+import { ShoppingBag, Plus, Calendar } from "lucide-react";
 
 const MONTHS = [
   { value: "1", label: "Enero" },
@@ -152,14 +152,16 @@ function PurchasesContent() {
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
-      <header className="mb-6 sm:mb-10 flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+      <header className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="min-w-0">
           <h1 className="text-xl font-semibold tracking-tight text-foreground sm:text-2xl lg:text-3xl flex items-center gap-2">
-            <ShoppingBag className="h-7 w-7 sm:h-8 sm:w-8 text-primary" />
-            Compras planeadas
+            <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 text-primary sm:h-10 sm:w-10">
+              <ShoppingBag className="h-5 w-5 sm:h-6 sm:w-6" />
+            </span>
+            Compras
           </h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Anotá lo que querés comprar este mes y marcá cuando lo compraste
+          <p className="mt-1.5 text-sm text-muted-foreground">
+            Anotá lo que querés comprar y marcá cuando lo compraste
           </p>
         </div>
         <Button
@@ -168,47 +170,57 @@ function PurchasesContent() {
             setEditingPurchase(null);
             setIsModalOpen(true);
           }}
-          className="w-full sm:w-auto gap-2"
+          className="w-full sm:w-auto gap-2 shrink-0"
         >
           <Plus className="h-4 w-4" />
           Agregar compra
         </Button>
       </header>
 
-      <div className="mb-6 flex flex-wrap items-center gap-3">
-        <Select
-          label="Mes"
-          options={MONTHS}
-          value={String(month)}
-          onChange={(e) => setMonth(Number(e.target.value))}
-        />
-        <Select
-          label="Año"
-          options={yearOptions}
-          value={String(year)}
-          onChange={(e) => setYear(Number(e.target.value))}
-        />
+      <div className="mb-8 flex flex-wrap items-center gap-3 rounded-xl border border-border bg-card px-4 py-3 shadow-[var(--card-shadow)]">
+        <Calendar className="h-4 w-4 text-muted-foreground shrink-0" aria-hidden />
+        <span className="text-sm font-medium text-muted-foreground">Ver:</span>
+        <div className="flex items-center gap-2">
+          <Select
+            id="filter-month"
+            options={MONTHS}
+            value={String(month)}
+            onChange={(e) => setMonth(Number(e.target.value))}
+            className="min-w-[130px]"
+            aria-label="Mes"
+          />
+          <Select
+            id="filter-year"
+            options={yearOptions}
+            value={String(year)}
+            onChange={(e) => setYear(Number(e.target.value))}
+            className="min-w-[95px]"
+            aria-label="Año"
+          />
+        </div>
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {purchases.length === 0 ? (
-          <div className="col-span-full rounded-xl border border-dashed border-border bg-muted/20 py-16 text-center">
-            <ShoppingBag className="mx-auto h-12 w-12 text-muted-foreground/50" />
-            <p className="mt-3 text-sm font-medium text-foreground">
-              No hay compras anotadas para este mes
-            </p>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Agregá ropa, juegos o lo que tengas planeado comprar
+          <div className="col-span-full flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-border bg-muted/10 py-20 px-6 text-center">
+            <span className="flex h-16 w-16 items-center justify-center rounded-2xl bg-muted/50 text-muted-foreground">
+              <ShoppingBag className="h-8 w-8" />
+            </span>
+            <h2 className="mt-4 text-base font-semibold text-foreground">
+              No hay compras para este mes
+            </h2>
+            <p className="mt-1 max-w-sm text-sm text-muted-foreground">
+              Agregá lo que tengas planeado comprar y marcalo cuando lo compres
             </p>
             <Button
-              variant="outline"
-              className="mt-4"
+              variant="primary"
+              className="mt-6 gap-2"
               onClick={() => {
                 setEditingPurchase(null);
                 setIsModalOpen(true);
               }}
             >
-              <Plus className="h-4 w-4 mr-2" />
+              <Plus className="h-4 w-4" />
               Agregar compra
             </Button>
           </div>
@@ -239,7 +251,7 @@ function PurchasesContent() {
       <Modal
         isOpen={isModalOpen}
         onClose={closeModal}
-        title={editingPurchase ? "Editar compra" : "Nueva compra planeada"}
+        title={editingPurchase ? "Editar compra" : "Nueva compra"}
         size="md"
       >
         <PlannedPurchaseForm

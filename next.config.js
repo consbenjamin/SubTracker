@@ -3,6 +3,14 @@ const withPWA = require("next-pwa")({
   register: true,
   skipWaiting: true,
   disable: process.env.NODE_ENV === "development",
+  // Que el SW nunca cachee ni intercepte el callback de OAuth (evita ver "[]").
+  runtimeCaching: [
+    {
+      urlPattern: /^https?:\/\/[^/]*\/api\/auth\/.*/i,
+      handler: "NetworkOnly",
+      options: { cacheName: "auth-bypass" },
+    },
+  ],
 });
 
 /** @type {import('next').NextConfig} */

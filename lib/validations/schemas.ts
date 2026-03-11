@@ -100,17 +100,34 @@ const optionalUrl = z
   .optional()
   .refine((s) => s === undefined || z.string().url().safeParse(s).success, "URL inválida");
 
+const plannedPurchaseInstallmentCount = z.union([
+  z.literal(3),
+  z.literal(6),
+  z.literal(9),
+  z.literal(12),
+]);
+
 export const plannedPurchaseBodySchema = z
   .object({
     name: z.string().min(1, "El nombre es requerido").max(200, "Nombre demasiado largo"),
     link: optionalUrl,
-    image_url: optionalUrl,
     planned_month: z.coerce.number().int().min(1).max(12),
     planned_year: z.coerce.number().int().min(2000).max(2100),
     bought: z.boolean().default(false),
+    bought_date: z
+      .string()
+      .regex(/^\d{4}-\d{2}-\d{2}$/, "Formato fecha: YYYY-MM-DD")
+      .nullable()
+      .optional(),
     payment_method: plannedPurchasePaymentMethod.nullable().optional(),
     card_name: z.string().max(100).nullable().optional(),
     bought_with_installments: z.boolean().optional().default(false),
+    installment_count: z.preprocess(
+      (val) => (val === "" || val == null ? null : Number(val)),
+      plannedPurchaseInstallmentCount.nullable().optional()
+    ),
+    installments_paid: z.coerce.number().int().min(0).max(12).optional(),
+    installments_start_next_month: z.boolean().optional(),
     notes: z.string().max(1000).nullable().optional(),
   })
   .superRefine((data, ctx) => {
@@ -119,6 +136,38 @@ export const plannedPurchaseBodySchema = z
         code: z.ZodIssueCode.custom,
         path: ["card_name"],
         message: "Indicá con qué tarjeta pagaste",
+      });
+    }
+    if (data.bought && data.bought_with_installments) {
+      if (data.payment_method !== "card") {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["bought_with_installments"],
+          message: "Las cuotas solo aplican si pagaste con tarjeta",
+        });
+      }
+      if (data.installment_count == null) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["installment_count"],
+          message: "Seleccioná en cuántas cuotas pagaste",
+        });
+      } else if (
+        data.installments_paid != null &&
+        data.installments_paid > data.installment_count
+      ) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["installments_paid"],
+          message: "La cuota actual no puede ser mayor al total de cuotas",
+        });
+      }
+    }
+    if (!data.bought && data.bought_date) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["bought_date"],
+        message: "La fecha de compra solo aplica si está marcado como comprado",
       });
     }
   });
