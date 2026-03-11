@@ -105,7 +105,7 @@ function LoginContent() {
         <CardHeader className="space-y-2 pb-6 pt-8 text-center sm:pt-10">
           <div className="mx-auto mb-2 flex h-12 w-12 items-center justify-center">
             <Image
-              src="/icons/icon-192x192.png"
+              src="/icons/subghost-logo.svg"
               alt="SubGhost"
               width={48}
               height={48}

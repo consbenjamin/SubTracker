@@ -83,12 +83,11 @@ export function Sidebar({ isOpen = true, onClose, isMobile = false }: SidebarPro
           className="flex items-center gap-2 no-underline outline-none"
         >
           <Image
-            src="/icons/icon-192x192.png"
-            alt=""
+            src="/icons/subghost-logo.svg"
+            alt="SubGhost"
             width={32}
             height={32}
-            className="h-8 w-8 shrink-0 rounded-xl object-contain dark:invert"
-            aria-hidden
+            className="h-8 w-8 shrink-0 rounded-xl object-contain"
           />
           <span className="text-[17px] font-semibold tracking-tight text-foreground">
             SubGhost

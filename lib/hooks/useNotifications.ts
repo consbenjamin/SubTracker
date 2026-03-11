@@ -44,7 +44,7 @@ export function useNotifications() {
         );
         new Notification(`Pago próximo: ${sub.name}`, {
           body: `El pago de ${sub.name} vence en ${days} día${days !== 1 ? "s" : ""}`,
-          icon: "/icons/icon-192x192.png",
+          icon: "/icons/subghost-logo.svg",
           tag: `payment-${sub.id}`,
         });
       });
@@ -66,7 +66,7 @@ export function useNotifications() {
           if (permission === "granted") {
             new Notification(`Recordatorio: ${sub.name}`, {
               body: `El pago de ${sub.name} vence pronto`,
-              icon: "/icons/icon-192x192.png",
+              icon: "/icons/subghost-logo.svg",
               tag: `reminder-${sub.id}`,
             });
           }

@@ -10,10 +10,10 @@ const manifest = {
   theme_color: "#0a0a0a",
   orientation: "portrait-primary",
   icons: [
-    { src: "/icons/icon-192x192.png", sizes: "192x192", type: "image/png", purpose: "any" },
-    { src: "/icons/icon-192x192.png", sizes: "192x192", type: "image/png", purpose: "maskable" },
-    { src: "/icons/icon-512x512.png", sizes: "512x512", type: "image/png", purpose: "any" },
-    { src: "/icons/icon-512x512.png", sizes: "512x512", type: "image/png", purpose: "maskable" },
+    { src: "/icons/subghost-logo.svg", sizes: "192x192", type: "image/svg+xml", purpose: "any" },
+    { src: "/icons/subghost-logo.svg", sizes: "192x192", type: "image/svg+xml", purpose: "maskable" },
+    { src: "/icons/subghost-logo.svg", sizes: "512x512", type: "image/svg+xml", purpose: "any" },
+    { src: "/icons/subghost-logo.svg", sizes: "512x512", type: "image/svg+xml", purpose: "maskable" },
   ],
 };
 

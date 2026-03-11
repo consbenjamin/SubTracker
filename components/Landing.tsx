@@ -27,7 +27,7 @@ export function Landing() {
         <div className="mx-auto flex max-w-5xl items-center justify-between">
           <div className="flex items-center gap-2">
             <Image
-              src="/icons/icon-192x192.png"
+              src="/icons/subghost-logo.svg"
               alt="SubGhost"
               width={36}
               height={36}

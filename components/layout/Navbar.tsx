@@ -33,12 +33,11 @@ export function Navbar() {
           className="flex items-center gap-2 text-lg font-semibold tracking-tight text-foreground no-underline hover:opacity-80"
         >
           <Image
-            src="/icons/icon-192x192.png"
-            alt=""
+            src="/icons/subghost-logo.svg"
+            alt="SubGhost"
             width={28}
             height={28}
-            className="h-7 w-7 shrink-0 dark:invert"
-            aria-hidden
+            className="h-7 w-7 shrink-0"
           />
           SubGhost
         </Link>
