@@ -35,7 +35,7 @@ export function Landing() {
       />
 
       <header className="relative z-10 border-b border-border/60 bg-background/70 px-4 py-4 backdrop-blur-md sm:px-6">
-        <div className="mx-auto flex max-w-5xl items-center justify-between">
+        <div className="mx-auto flex max-w-5xl items-center justify-between gap-3">
           <div className="flex items-center gap-2">
             <Image
               src="/icons/subghost-logo.svg"
@@ -48,13 +48,13 @@ export function Landing() {
               {tCommon("appName")}
             </span>
           </div>
-          <div className="flex items-center gap-3">
-            <LocaleSwitcher />
+          <div className="flex flex-col-reverse items-end gap-2 sm:flex-row sm:items-center sm:gap-3">
             <Link href="/login">
               <Button variant="ghost" size="sm">
                 {t("login")}
               </Button>
             </Link>
+            <LocaleSwitcher />
           </div>
         </div>
       </header>
