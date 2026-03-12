@@ -1,13 +1,14 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/Button";
 
-const STATUS_OPTIONS = [
-  { value: "all", label: "Todos" },
-  { value: "active", label: "Activas" },
-  { value: "paused", label: "Pausadas" },
-  { value: "cancelled", label: "Canceladas / finalizadas" },
+const STATUS_KEYS = [
+  { value: "all", labelKey: "statusAll" as const },
+  { value: "active", labelKey: "statusActive" as const },
+  { value: "paused", labelKey: "statusPaused" as const },
+  { value: "cancelled", labelKey: "statusCancelled" as const },
 ] as const;
 
 function capitalize(str: string) {
@@ -37,14 +38,15 @@ export function SubscriptionFilters({
   hasActiveFilters,
   onClearFilters,
 }: SubscriptionFiltersProps) {
+  const t = useTranslations("subscriptions");
   return (
     <div className="rounded-xl border border-[var(--border)] bg-[var(--card)] p-3 shadow-[var(--card-shadow)] sm:p-4 lg:p-5">
       <div className="mb-4 sm:mb-5">
         <p className="mb-2 text-xs font-medium uppercase tracking-wider text-muted-foreground">
-          Estado
+          {t("status")}
         </p>
         <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
-          {STATUS_OPTIONS.map((opt) => (
+          {STATUS_KEYS.map((opt) => (
             <button
               key={opt.value}
               type="button"
@@ -56,7 +58,7 @@ export function SubscriptionFilters({
                   : "bg-muted/60 text-muted-foreground hover:bg-muted hover:text-foreground"
               )}
             >
-              {opt.label}
+              {t(opt.labelKey)}
             </button>
           ))}
         </div>
@@ -69,7 +71,7 @@ export function SubscriptionFilters({
                 htmlFor="filter-category"
                 className="shrink-0 text-xs font-medium uppercase tracking-wider text-muted-foreground"
               >
-                Categoría
+                {t("category")}
               </label>
               <select
                 id="filter-category"
@@ -80,7 +82,7 @@ export function SubscriptionFilters({
                   "focus:outline-none focus:ring-2 focus:ring-[var(--input-focus-ring)] focus:border-foreground/30"
                 )}
               >
-                <option value="all">Todas</option>
+                <option value="all">{t("statusAll")}</option>
                 {categories.map((cat) => (
                   <option key={cat} value={cat}>
                     {capitalize(cat)}
@@ -91,7 +93,7 @@ export function SubscriptionFilters({
           )}
           <p className="text-sm text-muted-foreground">
             <span className="font-medium text-foreground">{resultCount}</span>
-            {resultCount !== totalCount ? ` de ${totalCount}` : ""} gastos
+            {resultCount !== totalCount ? ` ${t("of")} ${totalCount} ` : ""} {t("results")}
           </p>
         </div>
         {hasActiveFilters && (
@@ -102,7 +104,7 @@ export function SubscriptionFilters({
             onClick={onClearFilters}
             className="h-10 w-full shrink-0 text-muted-foreground hover:text-foreground sm:h-9 sm:w-auto sm:min-h-[36px]"
           >
-            Limpiar filtros
+            {t("clearFilters")}
           </Button>
         )}
       </div>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useTranslations } from "next-intl";
 import { Subscription } from "@/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import { LazySubscriptionCard } from "@/components/subscriptions/LazySubscriptionCard";
@@ -25,6 +26,8 @@ import {
 } from "@/lib/subscriptions";
 
 export default function DashboardPage() {
+  const t = useTranslations("dashboard");
+  const tCommon = useTranslations("common");
   const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -93,9 +96,9 @@ export default function DashboardPage() {
         const newSub = await response.json();
         await fetchSubscriptions();
         setIsModalOpen(false);
-        toast.success("Suscripción creada");
+        toast.success(t("subscriptionCreated"));
       } else {
-        toast.error("Error al crear la suscripción");
+        toast.error(t("errorCreate"));
       }
     } else {
       const newSub: Subscription = {
@@ -108,7 +111,7 @@ export default function DashboardPage() {
       await saveSubscriptions([...subscriptions, newSub]);
       setSubscriptions([...subscriptions, newSub]);
       setIsModalOpen(false);
-      toast.success("Suscripción creada (guardada localmente)");
+      toast.success(t("subscriptionCreatedOffline"));
     }
   };
 
@@ -131,9 +134,9 @@ export default function DashboardPage() {
         await fetchSubscriptions();
         setIsModalOpen(false);
         setEditingSubscription(null);
-        toast.success("Suscripción actualizada");
+        toast.success(t("subscriptionUpdated"));
       } else {
-        toast.error("Error al actualizar");
+        toast.error(t("errorUpdate"));
       }
     } else {
       const updated = { ...editingSubscription, ...data, updated_at: new Date().toISOString() };
@@ -144,7 +147,7 @@ export default function DashboardPage() {
       setSubscriptions(updatedList);
       setIsModalOpen(false);
       setEditingSubscription(null);
-      toast.success("Suscripción actualizada (guardada localmente)");
+      toast.success(t("subscriptionUpdatedOffline"));
     }
   };
 
@@ -163,15 +166,15 @@ export default function DashboardPage() {
 
         if (response.ok) {
           await fetchSubscriptions();
-          toast.success("Suscripción eliminada");
+          toast.success(t("subscriptionDeleted"));
         } else {
-          toast.error("Error al eliminar");
+          toast.error(t("errorDelete"));
         }
       } else {
         const updatedList = subscriptions.filter((s) => s.id !== deleteTargetId);
         await saveSubscriptions(updatedList);
         setSubscriptions(updatedList);
-        toast.success("Suscripción eliminada");
+        toast.success(t("subscriptionDeleted"));
       }
     } finally {
       setDeleting(false);
@@ -217,16 +220,16 @@ export default function DashboardPage() {
   );
 
   const filterTabs: { key: "all" | "active" | "upcoming"; label: string }[] = [
-    { key: "all", label: "Todas" },
-    { key: "active", label: "Activas" },
-    { key: "upcoming", label: "Próximas" },
+    { key: "all", label: t("filterAll") },
+    { key: "active", label: t("filterActive") },
+    { key: "upcoming", label: t("filterUpcoming") },
   ];
 
   if (loading) {
     return (
       <div className="flex min-h-[60vh] flex-col items-center justify-center gap-4">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-        <p className="text-sm text-muted-foreground">Cargando suscripciones...</p>
+        <p className="text-sm text-muted-foreground">{t("loadingSubscriptions")}</p>
       </div>
     );
   }
@@ -237,10 +240,10 @@ export default function DashboardPage() {
       <header className="mb-6 flex flex-col gap-4 sm:mb-10 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
         <div className="min-w-0">
           <h1 className="text-xl font-semibold tracking-tight text-foreground sm:text-2xl lg:text-3xl">
-            Dashboard
+            {t("title")}
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Resumen de tus suscripciones
+            {t("summary")}
           </p>
         </div>
         <div className="w-full sm:w-auto">
@@ -256,10 +259,10 @@ export default function DashboardPage() {
               <div className="flex flex-wrap items-center justify-between gap-4">
                 <div>
                   <p className="text-sm font-medium text-foreground">
-                    Presupuesto mensual
+                    {t("monthlyBudget")}
                   </p>
                   <p className="mt-0.5 text-sm text-muted-foreground">
-                    {formatCurrency(monthlyTotal)} de {formatCurrency(monthlyBudget)} usado
+                    {formatCurrency(monthlyTotal)} {t("usedOf")} {formatCurrency(monthlyBudget)} {t("used")}
                   </p>
                 </div>
                 <div className="min-w-[160px] flex-1 max-w-xs">
@@ -279,8 +282,8 @@ export default function DashboardPage() {
                   </div>
                   <p className="mt-1.5 text-xs font-medium text-muted-foreground">
                     {monthlyTotal > monthlyBudget
-                      ? `${formatCurrency(monthlyTotal - monthlyBudget)} por encima del presupuesto`
-                      : `${((monthlyTotal / monthlyBudget) * 100).toFixed(0)}% usado`}
+                      ? `${formatCurrency(monthlyTotal - monthlyBudget)} ${t("overBudget")}`
+                      : `${((monthlyTotal / monthlyBudget) * 100).toFixed(0)}% ${t("usedPercent")}`}
                   </p>
                 </div>
               </div>
@@ -295,7 +298,7 @@ export default function DashboardPage() {
           <div className="flex h-full min-h-[88px] items-start justify-between gap-4">
             <div className="min-w-0">
               <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                Total mensual
+                {t("monthlyTotal")}
               </p>
               <p className="mt-1.5 text-lg font-semibold tracking-tight text-foreground sm:text-xl">
                 {formatCurrency(monthlyTotal)}
@@ -311,7 +314,7 @@ export default function DashboardPage() {
           <div className="flex h-full min-h-[88px] items-start justify-between gap-4">
             <div className="min-w-0">
               <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                Compromiso futuro
+                {t("futureCommitment")}
               </p>
               <p className="mt-1.5 text-lg font-semibold tracking-tight text-foreground sm:text-xl">
                 {formatCurrency(yearlyTotal)}
@@ -327,7 +330,7 @@ export default function DashboardPage() {
           <div className="flex h-full min-h-[88px] items-start justify-between gap-4">
             <div className="min-w-0">
               <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                Activas
+                {t("active")}
               </p>
               <p className="mt-1.5 text-lg font-semibold tracking-tight text-foreground sm:text-xl">
                 {activeSubscriptions.length}
@@ -343,7 +346,7 @@ export default function DashboardPage() {
           <div className="flex h-full min-h-[88px] items-start justify-between gap-4">
             <div className="min-w-0">
               <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                Próximos pagos
+                {t("upcomingPayments")}
               </p>
               <p className="mt-1.5 text-lg font-semibold tracking-tight text-foreground sm:text-xl">
                 {upcomingPayments.length}
@@ -361,7 +364,7 @@ export default function DashboardPage() {
         <section className="mb-10">
           <Card variant="outline">
             <CardHeader className="pb-3">
-              <CardTitle className="text-base">Próximos pagos (7 días)</CardTitle>
+              <CardTitle className="text-base">{t("upcomingPayments7")}</CardTitle>
             </CardHeader>
             <CardContent>
               <ul className="divide-y divide-border">
@@ -423,8 +426,8 @@ export default function DashboardPage() {
             <Card variant="outline" className="col-span-full py-16 text-center">
               <CardContent>
                 <p className="text-sm text-muted-foreground">
-                  No hay suscripciones
-                  {filter !== "all" ? " que coincidan con el filtro." : ". Añade tu primera suscripción."}
+                  {t("noSubscriptions")}
+                  {filter !== "all" ? ` ${t("noSubscriptionsFilter")}` : `. ${t("addFirst")}`}
                 </p>
               </CardContent>
             </Card>
@@ -453,10 +456,10 @@ export default function DashboardPage() {
         isOpen={deleteTargetId != null}
         onClose={() => setDeleteTargetId(null)}
         onConfirm={handleDeleteConfirm}
-        title="Eliminar suscripción"
-        description="¿Estás seguro de que quieres eliminar esta suscripción? Esta acción no se puede deshacer."
-        confirmLabel="Eliminar"
-        cancelLabel="Cancelar"
+        title={t("deleteSubscription")}
+        description={t("deleteConfirm")}
+        confirmLabel={tCommon("delete")}
+        cancelLabel={tCommon("cancel")}
         variant="danger"
         loading={deleting}
       />
@@ -467,7 +470,7 @@ export default function DashboardPage() {
           setIsModalOpen(false);
           setEditingSubscription(null);
         }}
-        title={editingSubscription ? "Editar suscripción" : "Nueva suscripción"}
+        title={editingSubscription ? t("editSubscription") : t("newSubscription")}
       >
         <SubscriptionForm
           subscription={editingSubscription || undefined}

@@ -2,26 +2,30 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-const SEGMENT_LABELS: Record<string, string> = {
-  dashboard: "Dashboard",
-  purchases: "Compras",
-  subscriptions: "Suscripciones",
-  new: "Nueva suscripción",
-  analytics: "Analytics",
-  settings: "Configuración",
+const NAV_SEGMENT_KEYS: Record<string, string> = {
+  dashboard: "dashboard",
+  purchases: "purchases",
+  subscriptions: "subscriptions",
+  new: "newSubscription",
+  analytics: "analytics",
+  settings: "settings",
 };
 
-function getBreadcrumbs(pathname: string): { href: string; label: string }[] {
+function getBreadcrumbs(
+  pathname: string,
+  getLabel: (seg: string) => string
+): { href: string; label: string }[] {
   if (pathname === "/dashboard") {
-    return [{ href: "/dashboard", label: "Dashboard" }];
+    return [{ href: "/dashboard", label: getLabel("dashboard") }];
   }
 
   const segments = pathname.split("/").filter(Boolean);
   const crumbs: { href: string; label: string }[] = [
-    { href: "/dashboard", label: "Dashboard" },
+    { href: "/dashboard", label: getLabel("dashboard") },
   ];
 
   let href = "";
@@ -29,8 +33,11 @@ function getBreadcrumbs(pathname: string): { href: string; label: string }[] {
     const seg = segments[i];
     href += `/${seg}`;
     const label =
-      SEGMENT_LABELS[seg] ??
-      (seg.length === 36 ? "Detalle" : seg.charAt(0).toUpperCase() + seg.slice(1));
+      NAV_SEGMENT_KEYS[seg] !== undefined
+        ? getLabel(NAV_SEGMENT_KEYS[seg])
+        : seg.length === 36
+          ? getLabel("detail")
+          : seg.charAt(0).toUpperCase() + seg.slice(1);
     crumbs.push({ href, label });
   }
 
@@ -39,7 +46,11 @@ function getBreadcrumbs(pathname: string): { href: string; label: string }[] {
 
 export function Breadcrumbs() {
   const pathname = usePathname();
-  const crumbs = getBreadcrumbs(pathname);
+  const tNav = useTranslations("nav");
+  const tCommon = useTranslations("common");
+  const getLabel = (seg: string) =>
+    seg === "detail" ? tCommon("detail") : tNav(NAV_SEGMENT_KEYS[seg] ?? seg);
+  const crumbs = getBreadcrumbs(pathname, getLabel);
 
   if (crumbs.length <= 1) return null;
 

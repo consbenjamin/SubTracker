@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 import {
@@ -17,35 +18,6 @@ import {
   ShoppingBag,
 } from "lucide-react";
 
-const navGroups = [
-  {
-    label: "Principal",
-    items: [
-      { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-      { href: "/purchases", label: "Compras", icon: ShoppingBag },
-    ],
-  },
-  {
-    label: "Suscripciones",
-    items: [
-      { href: "/subscriptions", label: "Todas", icon: CreditCard },
-      { href: "/subscriptions/new", label: "Nueva suscripción", icon: PlusCircle },
-    ],
-  },
-  {
-    label: "Insights",
-    items: [
-      { href: "/analytics", label: "Analytics", icon: BarChart3 },
-    ],
-  },
-  {
-    label: "Sistema",
-    items: [
-      { href: "/settings", label: "Configuración", icon: Settings },
-    ],
-  },
-];
-
 interface SidebarProps {
   isOpen?: boolean;
   onClose?: () => void;
@@ -54,8 +26,36 @@ interface SidebarProps {
 
 export function Sidebar({ isOpen = true, onClose, isMobile = false }: SidebarProps) {
   const pathname = usePathname();
-  const router = useRouter();
   const supabase = createClient();
+  const t = useTranslations("nav");
+  const navGroups = [
+    {
+      label: t("main"),
+      items: [
+        { href: "/dashboard", label: t("dashboard"), icon: LayoutDashboard },
+        { href: "/purchases", label: t("purchases"), icon: ShoppingBag },
+      ],
+    },
+    {
+      label: t("subscriptions"),
+      items: [
+        { href: "/subscriptions", label: t("all"), icon: CreditCard },
+        { href: "/subscriptions/new", label: t("newSubscription"), icon: PlusCircle },
+      ],
+    },
+    {
+      label: t("insights"),
+      items: [
+        { href: "/analytics", label: t("analytics"), icon: BarChart3 },
+      ],
+    },
+    {
+      label: t("system"),
+      items: [
+        { href: "/settings", label: t("settings"), icon: Settings },
+      ],
+    },
+  ];
 
   const handleLogout = async () => {
     onClose?.();
@@ -100,7 +100,7 @@ export function Sidebar({ isOpen = true, onClose, isMobile = false }: SidebarPro
             type="button"
             onClick={onClose}
             className="-mr-1 flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-foreground/10 hover:text-foreground"
-            aria-label="Cerrar menú"
+            aria-label={t("closeMenu")}
           >
             <X className="h-5 w-5" />
           </button>
@@ -168,7 +168,7 @@ export function Sidebar({ isOpen = true, onClose, isMobile = false }: SidebarPro
           )}
         >
           <LogOut className="h-[22px] w-[22px] shrink-0" />
-          Cerrar sesión
+          {t("logout")}
         </button>
       </div>
     </aside>

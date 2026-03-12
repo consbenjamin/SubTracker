@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useTranslations } from "next-intl";
 import { useSettings } from "@/lib/contexts/SettingsContext";
 import type { Theme } from "@/lib/contexts/SettingsContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
@@ -10,16 +11,19 @@ import { Button } from "@/components/ui/Button";
 import { CURRENCIES } from "@/lib/constants/currencies";
 import { Sun, Moon, Monitor, DollarSign, Target, X } from "lucide-react";
 import { cn } from "@/lib/utils";
-
-const THEMES: { value: Theme; label: string; icon: typeof Sun }[] = [
-  { value: "light", label: "Claro", icon: Sun },
-  { value: "dark", label: "Oscuro", icon: Moon },
-  { value: "system", label: "Sistema", icon: Monitor },
-];
+import { LocaleSwitcher } from "@/components/LocaleSwitcher";
 
 export default function SettingsPage() {
+  const t = useTranslations("settings");
+  const tCommon = useTranslations("common");
   const { theme, setTheme, currency, setCurrency, monthlyBudget, setMonthlyBudget } = useSettings();
   const [budgetInput, setBudgetInput] = useState(monthlyBudget?.toString() ?? "");
+
+  const THEMES: { value: Theme; label: string; icon: typeof Sun }[] = [
+    { value: "light", label: t("light"), icon: Sun },
+    { value: "dark", label: t("dark"), icon: Moon },
+    { value: "system", label: t("system"), icon: Monitor },
+  ];
 
   useEffect(() => {
     setBudgetInput(monthlyBudget?.toString() ?? "");
@@ -38,13 +42,16 @@ export default function SettingsPage() {
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
-      <header className="mb-6 sm:mb-10">
-        <h1 className="text-xl font-semibold tracking-tight text-foreground sm:text-2xl lg:text-3xl">
-          Configuración
-        </h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Apariencia y preferencias
-        </p>
+      <header className="mb-6 sm:mb-10 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <h1 className="text-xl font-semibold tracking-tight text-foreground sm:text-2xl lg:text-3xl">
+            {t("title")}
+          </h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {t("subtitle")}
+          </p>
+        </div>
+        <LocaleSwitcher />
       </header>
 
       <div className="space-y-8">
@@ -52,12 +59,12 @@ export default function SettingsPage() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-base">
               <Sun className="h-4 w-4 text-muted-foreground" />
-              Apariencia
+              {t("appearance")}
             </CardTitle>
           </CardHeader>
           <CardContent>
             <p className="mb-4 text-sm text-muted-foreground">
-              Elige el modo claro, oscuro o sigue la preferencia del sistema.
+              {t("appearanceHint")}
             </p>
             <div className="flex flex-wrap gap-2 rounded-lg border border-border p-1">
               {THEMES.map(({ value, label, icon: Icon }) => (
@@ -85,12 +92,12 @@ export default function SettingsPage() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-base">
               <Target className="h-4 w-4 text-muted-foreground" />
-              Presupuesto mensual
+              {t("monthlyBudget")}
             </CardTitle>
           </CardHeader>
           <CardContent>
             <p className="mb-4 text-sm text-muted-foreground">
-              Opcional. Si lo defines, en el Dashboard verás cuánto llevas gastado respecto a tu límite.
+              {t("monthlyBudgetHint")}
             </p>
             <div className="flex flex-wrap items-end gap-2">
               <div className="min-w-[140px] max-w-[200px]">
@@ -98,21 +105,21 @@ export default function SettingsPage() {
                   type="number"
                   min={0}
                   step={1}
-                  placeholder="Sin límite"
+                  placeholder={tCommon("noLimit")}
                   value={budgetInput}
                   onChange={(e) => setBudgetInput(e.target.value)}
                   onBlur={handleBudgetSubmit}
                   onKeyDown={(e) => e.key === "Enter" && handleBudgetSubmit()}
-                  label="Importe"
+                  label={tCommon("amount")}
                 />
               </div>
               <Button variant="secondary" size="sm" onClick={handleBudgetSubmit}>
-                Guardar
+                {tCommon("save")}
               </Button>
               {monthlyBudget != null && (
                 <Button variant="ghost" size="sm" onClick={clearBudget} className="gap-1">
                   <X className="h-4 w-4" />
-                  Quitar límite
+                  {tCommon("removeLimit")}
                 </Button>
               )}
             </div>
@@ -123,16 +130,16 @@ export default function SettingsPage() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-base">
               <DollarSign className="h-4 w-4 text-muted-foreground" />
-              Moneda
+              {t("currency")}
             </CardTitle>
           </CardHeader>
           <CardContent>
             <p className="mb-4 text-sm text-muted-foreground">
-              Moneda para mostrar importes en toda la aplicación.
+              {t("currencyHint")}
             </p>
             <div className="max-w-xs">
               <Select
-                label="Moneda"
+                label={t("currency")}
                 options={CURRENCIES}
                 value={currency}
                 onChange={(e) =>

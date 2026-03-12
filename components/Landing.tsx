@@ -2,13 +2,24 @@
 
 import Link from "next/link";
 import Image from "next/image";
+import { useTranslations } from "next-intl";
 import { CreditCard, BarChart3, Bell, Shield } from "lucide-react";
 import { Button } from "@/components/ui/Button";
+import { LocaleSwitcher } from "@/components/LocaleSwitcher";
 
 export function Landing() {
+  const t = useTranslations("landing");
+  const tCommon = useTranslations("common");
+
+  const features = [
+    { icon: CreditCard, titleKey: "allInOne", descKey: "allInOneDesc" },
+    { icon: BarChart3, titleKey: "analytics", descKey: "analyticsDesc" },
+    { icon: Bell, titleKey: "alerts", descKey: "alertsDesc" },
+    { icon: Shield, titleKey: "privateSecure", descKey: "privateSecureDesc" },
+  ] as const;
+
   return (
     <div className="relative flex min-h-screen flex-col overflow-hidden bg-[var(--background)]">
-      {/* Fondo sutil */}
       <div
         className="pointer-events-none absolute inset-0 opacity-[0.03] dark:opacity-[0.05]"
         style={{
@@ -28,85 +39,67 @@ export function Landing() {
           <div className="flex items-center gap-2">
             <Image
               src="/icons/subghost-logo.svg"
-              alt="SubGhost"
+              alt={tCommon("appName")}
               width={36}
               height={36}
               className="h-9 w-9 shrink-0 rounded-xl object-contain"
             />
             <span className="text-lg font-semibold tracking-tight text-foreground">
-              SubGhost
+              {tCommon("appName")}
             </span>
           </div>
-          <Link href="/login">
-            <Button variant="ghost" size="sm">
-              Iniciar sesión
-            </Button>
-          </Link>
+          <div className="flex items-center gap-3">
+            <LocaleSwitcher />
+            <Link href="/login">
+              <Button variant="ghost" size="sm">
+                {t("login")}
+              </Button>
+            </Link>
+          </div>
         </div>
       </header>
 
       <main className="relative z-10 flex flex-1 flex-col items-center justify-center px-4 py-16 sm:py-24">
         <div className="mx-auto max-w-2xl text-center">
           <h1 className="text-4xl font-bold tracking-tight text-foreground sm:text-5xl md:text-6xl">
-            Controla tus{" "}
+            {t("controlSubscriptions")}{" "}
             <span className="bg-gradient-to-r from-[var(--chart-1)] to-[var(--chart-2)] bg-clip-text text-transparent">
-              suscripciones
+              {t("subscriptions")}
             </span>
           </h1>
           <p className="mt-6 text-lg text-muted-foreground sm:text-xl">
-            Un solo lugar para ver gastos, próximos pagos y ahorrar. Sin olvidos.
+            {t("tagline")}
           </p>
           <div className="mt-10 flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
             <Link href="/login">
               <Button variant="primary" size="lg" className="min-w-[180px] gap-2">
-                Empezar gratis
+                {t("getStarted")}
               </Button>
             </Link>
             <p className="text-sm text-muted-foreground">
-              Inicio de sesión con Google · Sin tarjeta
+              {t("loginGoogleNoCard")}
             </p>
           </div>
         </div>
 
         <section className="mt-20 grid w-full max-w-4xl grid-cols-1 gap-6 px-4 sm:grid-cols-2 lg:grid-cols-4">
-          {[
-            {
-              icon: CreditCard,
-              title: "Todo en un lugar",
-              desc: "Todas tus suscripciones con precio, ciclo y próxima fecha.",
-            },
-            {
-              icon: BarChart3,
-              title: "Analytics",
-              desc: "Gráficos por categoría, ciclo y gasto mensual.",
-            },
-            {
-              icon: Bell,
-              title: "Avisos",
-              desc: "Notificaciones antes de cada pago para no olvidar.",
-            },
-            {
-              icon: Shield,
-              title: "Privado y seguro",
-              desc: "Tus datos en Supabase, tú decides qué guardas.",
-            },
-          ].map(({ icon: Icon, title, desc }) => (
+          {features.map(({ icon: Icon, titleKey, descKey }) => (
             <div
-              key={title}
+              key={titleKey}
               className="rounded-2xl border border-border bg-card/80 p-5 shadow-[var(--card-shadow)] backdrop-blur-sm transition-shadow hover:shadow-[var(--card-shadow-hover)]"
             >
               <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
                 <Icon className="h-5 w-5" />
               </div>
-              <h3 className="mt-3 font-semibold text-foreground">{title}</h3>
-              <p className="mt-1 text-sm text-muted-foreground">{desc}</p>
+              <h3 className="mt-3 font-semibold text-foreground">{t(titleKey)}</h3>
+              <p className="mt-1 text-sm text-muted-foreground">{t(descKey)}</p>
             </div>
           ))}
         </section>
       </main>
 
       <footer className="relative z-10 border-t border-border/60 py-4 text-center text-xs text-muted-foreground">
-        SubGhost · Gestiona y detecta tus suscripciones
+        {t("footer")}
       </footer>
     </div>
   );

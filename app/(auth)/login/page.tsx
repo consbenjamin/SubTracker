@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import { useTranslations } from "next-intl";
 import { createClient } from "@/lib/supabase/client";
 import { emailAuthSchema } from "@/lib/validations/schemas";
 import { Button } from "@/components/ui/Button";
@@ -9,6 +10,7 @@ import { Input } from "@/components/ui/Input";
 import { useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
 import { useRouter } from "next/navigation";
+import { LocaleSwitcher } from "@/components/LocaleSwitcher";
 
 function GoogleIcon() {
   return (
@@ -20,18 +22,27 @@ function GoogleIcon() {
   );
 }
 
-function getAuthErrorMessage(error: { message?: string } | null): string {
-  if (!error?.message) return "Ha ocurrido un error";
+type AuthErrorKey =
+  | "errorGeneric"
+  | "invalidCredentials"
+  | "confirmEmail"
+  | "userExists"
+  | "passwordMin";
+
+function getAuthErrorKey(error: { message?: string } | null): AuthErrorKey | null {
+  if (!error?.message) return "errorGeneric";
   const msg = error.message.toLowerCase();
   if (msg.includes("invalid login credentials") || msg.includes("invalid_credentials"))
-    return "Email o contraseña incorrectos.";
-  if (msg.includes("email not confirmed")) return "Confirma tu email antes de iniciar sesión.";
-  if (msg.includes("user already registered")) return "Ya existe una cuenta con ese email.";
-  if (msg.includes("password")) return "La contraseña debe tener al menos 6 caracteres.";
-  return error.message;
+    return "invalidCredentials";
+  if (msg.includes("email not confirmed")) return "confirmEmail";
+  if (msg.includes("user already registered")) return "userExists";
+  if (msg.includes("password")) return "passwordMin";
+  return null;
 }
 
 function LoginContent() {
+  const t = useTranslations("auth");
+  const tCommon = useTranslations("common");
   const supabase = createClient();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -47,7 +58,7 @@ function LoginContent() {
     setFormError("");
     const parsed = emailAuthSchema.safeParse({ email, password });
     if (!parsed.success) {
-      setFormError(parsed.error.errors[0]?.message ?? "Revisa los datos.");
+      setFormError(parsed.error.errors[0]?.message ?? t("checkData"));
       return;
     }
     setLoading(true);
@@ -55,7 +66,8 @@ function LoginContent() {
       if (mode === "login") {
         const { error: err } = await supabase.auth.signInWithPassword({ email, password });
         if (err) {
-          setFormError(getAuthErrorMessage(err));
+          const key = getAuthErrorKey(err);
+          setFormError(key ? t(key) : err.message);
           return;
         }
         router.push("/dashboard");
@@ -63,7 +75,8 @@ function LoginContent() {
       } else {
         const { data, error: err } = await supabase.auth.signUp({ email, password });
         if (err) {
-          setFormError(getAuthErrorMessage(err));
+          const key = getAuthErrorKey(err);
+          setFormError(key ? t(key) : err.message);
           return;
         }
         if (data.session) {
@@ -74,7 +87,7 @@ function LoginContent() {
         setFormError("");
         setMode("login");
         setPassword("");
-        setFormError("Cuenta creada. Revisa tu email para confirmar tu cuenta.");
+        setFormError(t("accountCreated"));
       }
     } finally {
       setLoading(false);
@@ -88,12 +101,14 @@ function LoginContent() {
         redirectTo: `${window.location.origin}/api/auth/callback`,
       },
     });
-    if (err) setFormError(err.message ?? "Error al iniciar sesión con Google.");
+    if (err) setFormError(err.message ?? t("googleError"));
   };
 
   return (
     <div className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden bg-[var(--background)] px-4 py-12">
-      {/* Subtle background pattern */}
+      <div className="absolute right-4 top-4 z-10">
+        <LocaleSwitcher />
+      </div>
       <div
         className="pointer-events-none absolute inset-0 opacity-[0.03] dark:opacity-[0.04]"
         style={{
@@ -106,26 +121,26 @@ function LoginContent() {
           <div className="mx-auto mb-2 flex h-12 w-12 items-center justify-center">
             <Image
               src="/icons/subghost-logo.svg"
-              alt="SubGhost"
+              alt={tCommon("appName")}
               width={48}
               height={48}
               className="h-12 w-12 shrink-0 rounded-xl object-contain"
             />
           </div>
           <CardTitle className="text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
-            SubGhost
+            {tCommon("appName")}
           </CardTitle>
           <p className="text-sm text-muted-foreground">
-            Controla tus suscripciones en un solo lugar
+            {t("tagline")}
           </p>
         </CardHeader>
 
         <CardContent className="space-y-5 pb-10 sm:pb-12">
           {error === "auth_failed" && (
             <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-left text-sm text-red-800 dark:border-red-900/50 dark:bg-red-950/40 dark:text-red-300">
-              <p className="font-medium">Error al iniciar sesión</p>
+              <p className="font-medium">{t("authFailed")}</p>
               <p className="mt-1 text-red-700/90 dark:text-red-400/90">
-                Comprueba en Supabase (Authentication → URL Configuration) que la Redirect URL incluya{" "}
+                {t("authFailedHint")}{" "}
                 <code className="rounded bg-red-200/60 px-1 py-0.5 font-mono text-xs dark:bg-red-900/40">
                   /api/auth/callback
                 </code>
@@ -134,20 +149,20 @@ function LoginContent() {
           )}
           {error === "no_code" && (
             <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-900/50 dark:bg-amber-950/40 dark:text-amber-300">
-              No se recibió el código. Intenta iniciar sesión de nuevo.
+              {t("noCode")}
             </div>
           )}
           {error === "rate_limited" && (
             <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-900/50 dark:bg-amber-950/40 dark:text-amber-300">
-              Demasiados intentos. Espera un momento e inténtalo de nuevo.
+              {t("rateLimited")}
             </div>
           )}
 
           <form onSubmit={handleEmailAuth} className="space-y-4">
             <Input
               type="email"
-              label="Email"
-              placeholder="tu@email.com"
+              label={t("email")}
+              placeholder={t("emailPlaceholder")}
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               autoComplete="email"
@@ -155,7 +170,7 @@ function LoginContent() {
             />
             <Input
               type="password"
-              label="Contraseña"
+              label={t("password")}
               placeholder="••••••••"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
@@ -172,7 +187,7 @@ function LoginContent() {
               className="w-full"
               disabled={loading}
             >
-              {loading ? "..." : mode === "login" ? "Iniciar sesión" : "Crear cuenta"}
+              {loading ? "..." : mode === "login" ? t("login") : t("signUp")}
             </Button>
           </form>
 
@@ -181,7 +196,7 @@ function LoginContent() {
               <span className="w-full border-t border-border" />
             </div>
             <div className="relative flex justify-center text-xs text-muted-foreground">
-              <span className="bg-card px-2">o continúa con</span>
+              <span className="bg-card px-2">{t("continueWith")}</span>
             </div>
           </div>
 
@@ -194,7 +209,7 @@ function LoginContent() {
             type="button"
           >
             <GoogleIcon />
-            Continuar con Google
+            {t("continueWithGoogle")}
           </Button>
 
           <button
@@ -205,19 +220,17 @@ function LoginContent() {
             }}
             className="block w-full text-center text-sm text-muted-foreground underline hover:text-foreground"
           >
-            {mode === "login"
-              ? "¿No tienes cuenta? Regístrate"
-              : "¿Ya tienes cuenta? Inicia sesión"}
+            {mode === "login" ? t("noAccount") : t("hasAccount")}
           </button>
 
           <p className="text-center text-xs text-muted-foreground">
-            Al continuar, aceptas nuestros términos de uso y política de privacidad.
+            {t("terms")}
           </p>
         </CardContent>
       </Card>
 
       <p className="mt-8 text-center text-xs text-muted-foreground/80">
-        Inicio de sesión con email o Google
+        {t("loginEmailOrGoogle")}
       </p>
     </div>
   );

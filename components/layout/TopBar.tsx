@@ -5,6 +5,7 @@ import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { Search, Menu, Clock, Tag, X, Sun, Moon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useSettings } from "@/lib/contexts/SettingsContext";
+import { LocaleSwitcher } from "@/components/LocaleSwitcher";
 
 interface Suggestion {
   type: "name" | "category";
@@ -283,26 +284,29 @@ export function TopBar({ onMenuClick, showMenuButton = false }: TopBarProps) {
             </div>
           )}
         </div>
-        <button
-          type="button"
-          onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
-          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-foreground/10 hover:text-foreground"
-          aria-label={
-            themeMounted
-              ? resolvedTheme === "dark"
-                ? "Usar tema claro"
-                : "Usar tema oscuro"
-              : "Cambiar tema"
-          }
-        >
-          {!themeMounted ? (
-            <Sun className="h-5 w-5" aria-hidden />
-          ) : resolvedTheme === "dark" ? (
-            <Sun className="h-5 w-5" />
-          ) : (
-            <Moon className="h-5 w-5" />
-          )}
-        </button>
+        <div className="flex items-center gap-2">
+          <LocaleSwitcher />
+          <button
+            type="button"
+            onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-foreground/10 hover:text-foreground"
+            aria-label={
+              themeMounted
+                ? resolvedTheme === "dark"
+                  ? "Usar tema claro"
+                  : "Usar tema oscuro"
+                : "Cambiar tema"
+            }
+          >
+            {!themeMounted ? (
+              <Sun className="h-5 w-5" aria-hidden />
+            ) : resolvedTheme === "dark" ? (
+              <Sun className="h-5 w-5" />
+            ) : (
+              <Moon className="h-5 w-5" />
+            )}
+          </button>
+        </div>
       </div>
     </header>
   );

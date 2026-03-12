@@ -1,10 +1,12 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { SubscriptionForm } from "@/components/subscriptions/SubscriptionForm";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 
 export default function NewSubscriptionPage() {
+  const t = useTranslations("subscriptions");
   const router = useRouter();
 
   const handleSubmit = async (data: any) => {
@@ -27,7 +29,7 @@ export default function NewSubscriptionPage() {
     <div className="mx-auto max-w-2xl px-4 py-8 sm:px-6 lg:px-8">
       <Card>
         <CardHeader>
-          <CardTitle>Nueva Suscripción</CardTitle>
+          <CardTitle>{t("newSubscriptionPageTitle")}</CardTitle>
         </CardHeader>
         <CardContent>
           <SubscriptionForm onSubmit={handleSubmit} onCancel={handleCancel} />

@@ -2,6 +2,7 @@
 
 import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { Subscription, SubscriptionFormData } from "@/types";
 import { LazySubscriptionCard } from "@/components/subscriptions/LazySubscriptionCard";
 import { SubscriptionFilters } from "@/components/subscriptions/SubscriptionFilters";
@@ -17,6 +18,8 @@ import { isSubscriptionCompleted } from "@/lib/subscriptions";
 const PAGE_SIZE = 12;
 
 function SubscriptionsContent() {
+  const t = useTranslations("subscriptions");
+  const tCommon = useTranslations("common");
   const router = useRouter();
   const searchParams = useSearchParams();
   const toast = useToast();
@@ -71,9 +74,9 @@ function SubscriptionsContent() {
       if (res.ok) {
         await fetchSubscriptions();
         closeModal();
-        toast.success("Suscripción creada");
+        toast.success(t("subscriptionCreated"));
       } else {
-        toast.error("Error al crear la suscripción");
+        toast.error(t("errorCreate"));
       }
     },
     [fetchSubscriptions, closeModal, toast]
@@ -95,9 +98,9 @@ function SubscriptionsContent() {
       if (res.ok) {
         await fetchSubscriptions();
         closeModal();
-        toast.success("Suscripción actualizada");
+        toast.success(t("subscriptionUpdated"));
       } else {
-        toast.error("Error al actualizar");
+        toast.error(t("errorUpdate"));
       }
     },
     [editingSubscription, fetchSubscriptions, closeModal, toast]
@@ -115,9 +118,9 @@ function SubscriptionsContent() {
         const res = await fetch(`/api/subscriptions/${deleteTargetId}`, { method: "DELETE" });
         if (res.ok) {
           await fetchSubscriptions();
-          toast.success("Suscripción eliminada");
+          toast.success(t("subscriptionDeleted"));
         } else {
-          toast.error("Error al eliminar");
+          toast.error(t("errorDelete"));
         }
       } finally {
         setDeleting(false);
@@ -178,7 +181,7 @@ function SubscriptionsContent() {
     return (
       <div className="flex min-h-[40vh] flex-col items-center justify-center gap-4">
         <div className="h-8 w-8 animate-spin rounded-full border-2 border-muted-foreground border-t-transparent" />
-        <p className="text-sm text-muted-foreground">Cargando suscripciones...</p>
+        <p className="text-sm text-muted-foreground">{t("loading")}</p>
       </div>
     );
   }
@@ -188,16 +191,16 @@ function SubscriptionsContent() {
       <header className="mb-6 sm:mb-10 flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
         <div className="min-w-0">
           <h1 className="text-xl font-semibold tracking-tight text-foreground sm:text-2xl lg:text-3xl">
-            Gastos y suscripciones
+            {t("titleExpenses")}
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Suscripciones recurrentes y compras en cuotas
+            {t("subtitleExpenses")}
           </p>
         </div>
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
           <ExportDropdown subscriptions={subscriptions} />
           <Button variant="primary" onClick={() => setIsModalOpen(true)} className="w-full sm:w-auto">
-            Agregar gasto
+            {t("addExpense")}
           </Button>
         </div>
       </header>
@@ -221,8 +224,8 @@ function SubscriptionsContent() {
           <div className="col-span-full py-16 text-center">
             <p className="text-sm text-muted-foreground">
               {hasActiveFilters
-                ? "No hay resultados con estos filtros"
-                : "Aún no tenés gastos cargados. Agregá una suscripción o una compra en cuotas."}
+                ? t("noResultsFilters")
+                : t("noExpensesYet")}
             </p>
           </div>
         ) : (
@@ -249,10 +252,10 @@ function SubscriptionsContent() {
         isOpen={deleteTargetId != null}
         onClose={() => setDeleteTargetId(null)}
         onConfirm={handleDeleteConfirm}
-        title="Eliminar gasto"
-        description="¿Eliminamos este gasto? No se puede deshacer."
-        confirmLabel="Eliminar"
-        cancelLabel="Cancelar"
+        title={t("deleteExpense")}
+        description={t("deleteExpenseConfirm")}
+        confirmLabel={tCommon("delete")}
+        cancelLabel={tCommon("cancel")}
         variant="danger"
         loading={deleting}
       />
@@ -260,7 +263,7 @@ function SubscriptionsContent() {
       <Modal
         isOpen={isModalOpen}
         onClose={closeModal}
-        title={editingSubscription ? "Editar gasto" : "Nuevo gasto"}
+        title={editingSubscription ? t("editExpense") : t("newExpense")}
       >
         <SubscriptionForm
           subscription={editingSubscription ?? undefined}
@@ -278,7 +281,7 @@ export default function SubscriptionsPage() {
       fallback={
         <div className="flex min-h-[40vh] flex-col items-center justify-center gap-4">
           <div className="h-8 w-8 animate-spin rounded-full border-2 border-muted-foreground border-t-transparent" />
-          <p className="text-sm text-muted-foreground">Cargando...</p>
+          <p className="text-sm text-muted-foreground">...</p>
         </div>
       }
     >

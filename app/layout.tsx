@@ -1,6 +1,8 @@
 import type { Metadata, Viewport } from "next";
 import { Analytics } from "@vercel/analytics/next"
 import { Inter } from "next/font/google";
+import { NextIntlClientProvider } from "next-intl";
+import { getLocale, getMessages } from "next-intl/server";
 import "./globals.css";
 
 const inter = Inter({
@@ -35,21 +37,26 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const locale = await getLocale();
+  const messages = await getMessages();
+
   return (
-    <html lang="es" className={inter.variable}>
+    <html lang={locale} className={inter.variable}>
       <body className="min-h-screen bg-background font-sans text-foreground antialiased">
         <Analytics />
-        <SettingsProvider>
-          <ToastProvider>
-            {children}
-            <OfflineIndicator />
-          </ToastProvider>
-        </SettingsProvider>
+        <NextIntlClientProvider messages={messages}>
+          <SettingsProvider>
+            <ToastProvider>
+              {children}
+              <OfflineIndicator />
+            </ToastProvider>
+          </SettingsProvider>
+        </NextIntlClientProvider>
       </body>
     </html>
   );
