@@ -32,7 +32,6 @@ const ToastContext = createContext<ToastContextValue | null>(null);
 const AUTO_DISMISS_MS = 4500;
 
 export function ToastProvider({ children }: { children: ReactNode }) {
-  const t = useTranslations("common");
   const [toasts, setToasts] = useState<ToastItem[]>([]);
   const timeoutsRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
 
@@ -76,6 +75,7 @@ function ToastList({
   toasts: ToastItem[];
   onRemove: (id: string) => void;
 }) {
+  const t = useTranslations("common");
   if (toasts.length === 0) return null;
   return (
     <div
