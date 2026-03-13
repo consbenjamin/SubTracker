@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useTranslations } from "next-intl";
 import { Subscription, PaymentHistory } from "@/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import { useFormatCurrency } from "@/lib/hooks/useFormatCurrency";
@@ -59,11 +60,15 @@ function CustomTooltipBar({
   payload,
   formatter,
   labelKey = "month",
+  shownLabel,
+  realLabel,
 }: {
   active?: boolean;
   payload?: { payload: Record<string, unknown> }[];
   formatter: (v: number) => string;
   labelKey?: string;
+  shownLabel: string;
+  realLabel: string;
 }) {
   if (!active || !payload?.length) return null;
   const p = payload[0].payload;
@@ -71,11 +76,11 @@ function CustomTooltipBar({
     <div className="rounded-xl border border-border bg-card px-4 py-3 shadow-lg backdrop-blur-sm">
       <p className="font-semibold text-foreground">{String(p[labelKey])}</p>
       <p className="mt-0.5 text-sm text-muted-foreground">
-        Mostrado: {formatter(p.gasto as number)}
+        {shownLabel}: {formatter(p.gasto as number)}
       </p>
       {((p.real as number) ?? 0) > 0 && (
         <p className="mt-0.5 text-xs text-muted-foreground/80">
-          Real: {formatter(p.real as number)}
+          {realLabel}: {formatter(p.real as number)}
         </p>
       )}
     </div>
@@ -83,6 +88,8 @@ function CustomTooltipBar({
 }
 
 export default function AnalyticsPage() {
+  const t = useTranslations("analytics");
+  const tCommon = useTranslations("common");
   const formatCurrency = useFormatCurrency();
   const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
   const [payments, setPayments] = useState<PaymentHistory[]>([]);
@@ -133,7 +140,7 @@ export default function AnalyticsPage() {
 
   const categoryData = activeSubscriptions.reduce((acc, sub) => {
     const monthlyPrice = getMonthlyEquivalent(sub);
-    const cat = sub.category ?? "Sin categoría";
+    const cat = sub.category ?? tCommon("uncategorized");
     if (acc[cat]) acc[cat] += monthlyPrice;
     else acc[cat] = monthlyPrice;
     return acc;
@@ -207,7 +214,7 @@ export default function AnalyticsPage() {
     return (
       <div className="flex min-h-[40vh] flex-col items-center justify-center gap-4">
         <div className="h-8 w-8 animate-spin rounded-full border-2 border-muted-foreground border-t-transparent" />
-        <p className="text-sm text-muted-foreground">Cargando analytics...</p>
+        <p className="text-sm text-muted-foreground">{t("loading")}</p>
       </div>
     );
   }
@@ -216,17 +223,17 @@ export default function AnalyticsPage() {
     <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
       <header className="mb-6 sm:mb-10">
         <h1 className="text-xl font-semibold tracking-tight text-foreground sm:text-2xl lg:text-3xl">
-          Analytics
+          {t("title")}
         </h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          Análisis detallado de tus gastos en suscripciones
+          {t("subtitle")}
         </p>
       </header>
 
       <div className="mb-10 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Card variant="outline" className="transition-shadow duration-200 hover:shadow-[var(--card-shadow-hover)]">
           <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-            Total mensual (proyección)
+            {t("monthlyTotalProjection")}
           </p>
           <p className="mt-1.5 text-lg font-semibold tracking-tight text-foreground sm:text-xl">
             {formatCurrency(totalMonthly)}
@@ -234,7 +241,7 @@ export default function AnalyticsPage() {
         </Card>
         <Card variant="outline" className="transition-shadow duration-200 hover:shadow-[var(--card-shadow-hover)]">
           <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-            Compromiso futuro
+            {t("futureCommitment")}
           </p>
           <p className="mt-1.5 text-lg font-semibold tracking-tight text-foreground sm:text-xl">
             {formatCurrency(totalYearly)}
@@ -242,27 +249,27 @@ export default function AnalyticsPage() {
         </Card>
         <Card variant="outline" className="transition-shadow duration-200 hover:shadow-[var(--card-shadow-hover)]">
           <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-            Gasto real (últimos 12 meses)
+            {t("realSpendLast12Months")}
           </p>
           <p className="mt-1.5 text-lg font-semibold tracking-tight text-foreground sm:text-xl">
             {formatCurrency(totalRealLast12Months)}
           </p>
           {paymentsLast12Months.length > 0 && (
             <p className="mt-0.5 text-xs text-muted-foreground">
-              ~{formatCurrency(avgRealMonthly)}/mes · {paymentsLast12Months.length} pagos
+              {t("perMonthPayments", { amount: formatCurrency(avgRealMonthly), count: paymentsLast12Months.length })}
             </p>
           )}
         </Card>
         <Card variant="outline" className="transition-shadow duration-200 hover:shadow-[var(--card-shadow-hover)]">
           <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-            Total histórico
+            {t("totalHistorical")}
           </p>
           <p className="mt-1.5 text-lg font-semibold tracking-tight text-foreground sm:text-xl">
             {formatCurrency(totalRealAllTime)}
           </p>
           {payments.length > 0 && (
             <p className="mt-0.5 text-xs text-muted-foreground">
-              {payments.length} transacciones
+              {t("transactions", { count: payments.length })}
             </p>
           )}
         </Card>
@@ -272,16 +279,15 @@ export default function AnalyticsPage() {
         <Card variant="outline" className="mb-10">
           <CardHeader>
             <CardTitle className="text-base font-semibold">
-              Si cancelas todas las suscripciones activas
+              {t("ifYouCancelAll")}
             </CardTitle>
             <p className="mt-1 text-sm text-muted-foreground">
-              Ahorrarías {formatCurrency(totalMonthly)}/mes y evitarías hasta{" "}
-              {formatCurrency(totalYearly)} en cargos futuros
+              {t("youWouldSave", { amount: formatCurrency(totalMonthly), yearly: formatCurrency(totalYearly) })}
             </p>
           </CardHeader>
           <CardContent className="pt-0">
             <p className="text-xs text-muted-foreground mb-3">
-              Suscripciones activas más caras (mensual):
+              {t("mostExpensiveActive")}
             </p>
             <ul className="divide-y divide-border">
               {activeSubscriptions
@@ -298,7 +304,7 @@ export default function AnalyticsPage() {
                   >
                     <span className="font-medium text-foreground">{s.name}</span>
                     <span className="text-sm text-muted-foreground">
-                      {formatCurrency(s.monthlyEquivalent)}/mes
+                      {formatCurrency(s.monthlyEquivalent)}{t("perMonth")}
                     </span>
                   </li>
                 ))}
@@ -311,7 +317,7 @@ export default function AnalyticsPage() {
         {/* Gastos por categoría - Donut profesional */}
         <Card variant="outline" className="overflow-hidden">
           <CardHeader>
-            <CardTitle className="text-base font-semibold">Gastos por categoría</CardTitle>
+            <CardTitle className="text-base font-semibold">{t("expensesByCategory")}</CardTitle>
           </CardHeader>
           <CardContent className="pt-0">
             {categoryChartData.length > 0 ? (
@@ -365,7 +371,7 @@ export default function AnalyticsPage() {
               </ResponsiveContainer>
             ) : (
               <p className="py-12 text-center text-sm text-muted-foreground">
-                No hay datos para mostrar
+                {t("noDataToShow")}
               </p>
             )}
           </CardContent>
@@ -374,7 +380,7 @@ export default function AnalyticsPage() {
         {/* Distribución por ciclo - Barras modernas */}
         <Card variant="outline" className="overflow-hidden">
           <CardHeader>
-            <CardTitle className="text-base font-semibold">Distribución por ciclo de facturación</CardTitle>
+            <CardTitle className="text-base font-semibold">{t("byBillingCycle")}</CardTitle>
           </CardHeader>
           <CardContent className="pt-0">
             {billingCycleChartData.length > 0 ? (
@@ -413,7 +419,7 @@ export default function AnalyticsPage() {
                         <div className="rounded-xl border border-border bg-card px-4 py-3 shadow-lg backdrop-blur-sm">
                           <p className="font-semibold text-foreground">{payload[0].payload.name}</p>
                           <p className="mt-0.5 text-sm text-muted-foreground">
-                            {payload[0].value} suscripción{(payload[0].value as number) !== 1 ? "es" : ""}
+                            {t("subscriptionCount", { count: payload[0].value as number })}
                           </p>
                         </div>
                       ) : null
@@ -427,13 +433,13 @@ export default function AnalyticsPage() {
                     maxBarSize={56}
                     animationBegin={0}
                     animationDuration={500}
-                    name="Suscripciones"
+                    name={t("subscriptionsLabel")}
                   />
                 </BarChart>
               </ResponsiveContainer>
             ) : (
               <p className="py-12 text-center text-sm text-muted-foreground">
-                No hay datos para mostrar
+                {t("noDataToShow")}
               </p>
             )}
           </CardContent>
@@ -443,9 +449,9 @@ export default function AnalyticsPage() {
       {/* Gastos mensuales - Area chart con gradiente */}
       <Card variant="outline" className="overflow-hidden">
         <CardHeader>
-          <CardTitle className="text-base font-semibold">Gastos mensuales (últimos 6 meses)</CardTitle>
+          <CardTitle className="text-base font-semibold">{t("monthlyExpenses")}</CardTitle>
           <p className="text-xs font-normal text-muted-foreground mt-1">
-            Datos reales del historial cuando hay pagos; si no, proyección.
+            {t("monthlyExpensesHint")}
           </p>
         </CardHeader>
         <CardContent className="pt-0">
@@ -478,7 +484,15 @@ export default function AnalyticsPage() {
                   width={90}
                 />
                 <Tooltip
-                  content={<CustomTooltipBar formatter={formatCurrency} labelKey="month" />}
+                  content={(props) => (
+                    <CustomTooltipBar
+                      {...props}
+                      formatter={formatCurrency}
+                      labelKey="month"
+                      shownLabel={t("shown")}
+                      realLabel={t("real")}
+                    />
+                  )}
                   cursor={{ stroke: "var(--chart-3)", strokeWidth: 1, strokeDasharray: "4 4" }}
                 />
                 <Area
@@ -489,13 +503,13 @@ export default function AnalyticsPage() {
                   fill="url(#areaGrad)"
                   animationBegin={0}
                   animationDuration={700}
-                  name="Gasto"
+                  name={t("chartSpend")}
                 />
               </AreaChart>
             </ResponsiveContainer>
           ) : (
             <p className="py-12 text-center text-sm text-muted-foreground">
-              No hay datos para mostrar
+              {t("noDataToShow")}
             </p>
           )}
         </CardContent>

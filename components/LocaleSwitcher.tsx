@@ -34,8 +34,9 @@ export function LocaleSwitcher({ className }: { className?: string }) {
   return (
     <div
       className={cn(
-        "inline-flex items-center gap-1 rounded-full bg-muted/60 px-1.5 py-1 text-[11px] sm:text-xs",
+        "inline-flex shrink-0 items-center gap-0.5 rounded-full bg-muted/60 px-1 py-0.5 text-[11px] sm:gap-1 sm:px-1.5 sm:py-1 sm:text-xs",
         "border border-border/60 shadow-sm",
+        "min-h-[2.25rem] sm:min-h-0",
         className
       )}
     >
@@ -47,7 +48,7 @@ export function LocaleSwitcher({ className }: { className?: string }) {
           onClick={() => handleChange(value)}
           disabled={pending}
           className={cn(
-            "min-w-[2.1rem] rounded-full px-2 py-1 font-semibold tracking-tight transition-colors",
+            "min-h-[2rem] min-w-[2rem] rounded-full px-2 py-1 font-semibold tracking-tight transition-colors sm:min-w-[2.1rem]",
             locale === value
               ? "bg-background text-foreground shadow-sm"
               : "text-muted-foreground hover:bg-foreground/5 hover:text-foreground"

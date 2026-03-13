@@ -11,8 +11,6 @@ import { Button } from "@/components/ui/Button";
 import { CURRENCIES } from "@/lib/constants/currencies";
 import { Sun, Moon, Monitor, DollarSign, Target, X } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { LocaleSwitcher } from "@/components/LocaleSwitcher";
-
 export default function SettingsPage() {
   const t = useTranslations("settings");
   const tCommon = useTranslations("common");
@@ -51,7 +49,6 @@ export default function SettingsPage() {
             {t("subtitle")}
           </p>
         </div>
-        <LocaleSwitcher />
       </header>
 
       <div className="space-y-8">

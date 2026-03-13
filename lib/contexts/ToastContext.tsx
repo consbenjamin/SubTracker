@@ -8,6 +8,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import { useTranslations } from "next-intl";
 
 export type ToastType = "success" | "error" | "info";
 
@@ -31,14 +32,15 @@ const ToastContext = createContext<ToastContextValue | null>(null);
 const AUTO_DISMISS_MS = 4500;
 
 export function ToastProvider({ children }: { children: ReactNode }) {
+  const t = useTranslations("common");
   const [toasts, setToasts] = useState<ToastItem[]>([]);
   const timeoutsRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
 
   const remove = useCallback((id: string) => {
-    const t = timeoutsRef.current[id];
-    if (t) clearTimeout(t);
+    const tid = timeoutsRef.current[id];
+    if (tid) clearTimeout(tid);
     delete timeoutsRef.current[id];
-    setToasts((prev) => prev.filter((t) => t.id !== id));
+    setToasts((prev) => prev.filter((toast) => toast.id !== id));
   }, []);
 
   const add = useCallback((message: string, type: ToastType = "info") => {
@@ -107,7 +109,7 @@ function ToastList({
             type="button"
             onClick={() => onRemove(item.id)}
             className="shrink-0 rounded p-1 text-current opacity-70 transition-opacity hover:opacity-100"
-            aria-label="Cerrar"
+            aria-label={t("close")}
           >
             <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />

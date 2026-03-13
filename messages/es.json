@@ -1,4 +1,8 @@
 {
+  "app": {
+    "title": "SubGhost - Detector de Suscripciones",
+    "description": "Gestiona y detecta tus suscripciones olvidadas"
+  },
   "common": {
     "appName": "SubGhost",
     "loading": "Cargando…",
@@ -14,9 +18,13 @@
     "amount": "Importe",
     "noLimit": "Sin límite",
     "removeLimit": "Quitar límite",
+    "uncategorized": "Sin categoría",
     "language": "Idioma",
     "spanish": "Español",
-    "english": "English"
+    "english": "English",
+    "themeLight": "Usar tema claro",
+    "themeDark": "Usar tema oscuro",
+    "changeTheme": "Cambiar tema"
   },
   "nav": {
     "main": "Principal",
@@ -30,7 +38,8 @@
     "system": "Sistema",
     "settings": "Configuración",
     "logout": "Cerrar sesión",
-    "closeMenu": "Cerrar menú"
+    "closeMenu": "Cerrar menú",
+    "openMenu": "Abrir menú"
   },
   "landing": {
     "login": "Iniciar sesión",
@@ -150,6 +159,9 @@
     "categoryRequired": "La categoría es requerida",
     "selectInstallments": "Selecciona la cantidad de cuotas",
     "totalAmountMin": "El monto total debe ser mayor a 0",
+    "priceMin": "El importe debe ser mayor a 0",
+    "installmentsPaidMax": "No puede ser mayor a {count} cuotas",
+    "nameTooLong": "Nombre demasiado largo",
     "name": "Nombre",
     "price": "Precio",
     "billingCycle": "Ciclo",
@@ -160,6 +172,7 @@
     "recurring": "Recurrente",
     "installment": "Cuotas",
     "nextPayment": "Próximo pago",
+    "nextInstallment": "Próxima cuota",
     "category": "Categoría",
     "status": "Estado",
     "active": "Activa",
@@ -170,7 +183,73 @@
     "totalAmount": "Monto total",
     "installmentsPaid": "Cuotas pagadas",
     "submit": "Guardar",
-    "cancel": "Cancelar"
+    "cancel": "Cancelar",
+    "whatIsThisExpense": "¿Qué es este gasto?",
+    "namePlaceholder": "Ej: Netflix, Notebook, Ropa...",
+    "expenseType": "Tipo de gasto",
+    "recurringHint": "Se repite cada mes, trimestre o año (ej. Netflix, gym)",
+    "installmentLabel": "En cuotas",
+    "installmentHint": "Una compra que pagás en 3, 6, 9 o 12 pagos (ej. celular, muebles)",
+    "howMuchPay": "¿Cuánto pagás?",
+    "amountLabel": "Importe",
+    "howOften": "Cada cuánto",
+    "installmentPlanTitle": "Plan en cuotas",
+    "installmentPlanHint": "Ingresá el monto total de la compra y en cuántas cuotas lo pagás.",
+    "totalAmountLabel": "Monto total de la compra",
+    "howManyInstallments": "¿En cuántas cuotas?",
+    "youPay": "Pagás",
+    "installmentsOf": "{count} cuotas de {amount}",
+    "each": "cada una",
+    "installmentsPaidHint": "Algunas veces te cobran la primera cuota en el momento (ej. hoy compraste, hoy pagaste 1). Otras veces la primera cuota se cobra el mes siguiente. Indicá cuántas ya pagaste para llevar el control.",
+    "nextPaymentDateLabel": "Próxima fecha de pago",
+    "nextInstallmentDateLabel": "Fecha de la próxima cuota",
+    "categoryAndStatus": "Categoría y estado",
+    "categoryPlaceholder": "Ej: Ropa, Streaming...",
+    "notesOptional": "Notas (opcional)",
+    "notesPlaceholder": "Información adicional...",
+    "recordPaymentLabel": "Registrar pago realizado (añadir al historial)",
+    "saving": "Guardando…",
+    "update": "Actualizar",
+    "updateWithInstallments": "Actualizar ({count} cuotas)",
+    "create": "Crear",
+    "createWithInstallments": "Crear en {count} cuotas",
+    "cycleMonth": "mes",
+    "cycleQuarter": "trimestre",
+    "cycleYear": "año",
+    "cycleInstallment": "cuota",
+    "completed": "Finalizado",
+    "noInstallmentsLeft": "Sin cuotas pendientes",
+    "overdue": "Vencida",
+    "upcoming": "Próxima",
+    "soon": "Pronto",
+    "days": "días",
+    "perInstallment": "por cuota",
+    "totalPaidOf": "Total: {total} · {paid} de {count} pagadas",
+    "showLess": "Menos",
+    "showProgress": "Ver progreso",
+    "planProgress": "Progreso del plan",
+    "nextInstallmentOf": "Siguiente: cuota {current} de {count}",
+    "balanceRemaining": "Saldo pendiente: {amount}",
+    "yearlySavingsIfCancel": "Ahorro anual si cancelas: {amount}",
+    "categorySuggestions": "Streaming,Software,Fitness,Música,Noticias,Cloud,Gaming,Educación,Hogar,Comida,Transporte,Ropa,Salud,Otro",
+    "templateGym": "Gimnasio",
+    "templateNewspaper": "Periódico / Revista",
+    "templateCourse": "Curso online",
+    "shortcuts": "Atajos"
+  },
+  "calendar": {
+    "upcomingDue": "Próximos vencimientos",
+    "noDueThisDay": "No hay vencimientos este día",
+    "prevMonth": "Mes anterior",
+    "nextMonth": "Mes siguiente",
+    "dueCount": "{count} vencimientos",
+    "weekdayMon": "Lun",
+    "weekdayTue": "Mar",
+    "weekdayWed": "Mié",
+    "weekdayThu": "Jue",
+    "weekdayFri": "Vie",
+    "weekdaySat": "Sáb",
+    "weekdaySun": "Dom"
   },
   "purchases": {
     "title": "Compras",
@@ -204,7 +283,12 @@
     "monthsShort": {
       "1": "Ene", "2": "Feb", "3": "Mar", "4": "Abr", "5": "May", "6": "Jun",
       "7": "Jul", "8": "Ago", "9": "Sep", "10": "Oct", "11": "Nov", "12": "Dic"
-    }
+    },
+    "statusBought": "Comprado",
+    "statusPending": "Pendiente",
+    "installmentsCompleted": "Completado ({count}/{count}) ✓",
+    "installmentsPaid": "Pagadas {paid}/{count}",
+    "installmentsStartsNextMonth": "· arranca el mes que viene"
   },
   "plannedPurchaseForm": {
     "namePlaceholder": "Ej: remera negra, juego Steam, auriculares",
@@ -234,13 +318,44 @@
   },
   "analytics": {
     "title": "Analytics",
+    "subtitle": "Análisis detallado de tus gastos en suscripciones",
+    "loading": "Cargando analytics…",
     "shown": "Mostrado",
-    "real": "Real"
+    "real": "Real",
+    "monthlyTotalProjection": "Total mensual (proyección)",
+    "futureCommitment": "Compromiso futuro",
+    "realSpendLast12Months": "Gasto real (últimos 12 meses)",
+    "perMonthPayments": "~{amount}/mes · {count} pagos",
+    "totalHistorical": "Total histórico",
+    "transactions": "{count} transacciones",
+    "ifYouCancelAll": "Si cancelas todas las suscripciones activas",
+    "youWouldSave": "Ahorrarías {amount}/mes y evitarías hasta {yearly} en cargos futuros",
+    "mostExpensiveActive": "Suscripciones activas más caras (mensual):",
+    "expensesByCategory": "Gastos por categoría",
+    "noDataToShow": "No hay datos para mostrar",
+    "byBillingCycle": "Distribución por ciclo de facturación",
+    "subscriptionCount": "{count} suscripción",
+    "subscriptionCount_plural": "{count} suscripciones",
+    "monthlyExpenses": "Gastos mensuales (últimos 6 meses)",
+    "monthlyExpensesHint": "Datos reales del historial cuando hay pagos; si no, proyección.",
+    "chartSpend": "Gasto",
+    "subscriptionsLabel": "Suscripciones",
+    "perMonth": "/mes"
+  },
+  "search": {
+    "placeholder": "Buscar suscripciones…",
+    "ariaLabel": "Buscar suscripciones",
+    "recentSearches": "Búsquedas recientes",
+    "clear": "Limpiar búsqueda",
+    "categoryLabel": "Categoría"
   },
   "export": {
     "export": "Exportar",
+    "exporting": "Exportando…",
     "pdf": "PDF",
-    "csv": "CSV"
+    "csv": "CSV",
+    "subscriptions": "Suscripciones",
+    "paymentHistory": "Historial de pagos"
   },
   "pagination": {
     "prev": "Anterior",

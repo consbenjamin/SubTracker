@@ -5,11 +5,7 @@ import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Edit, Trash2, ExternalLink, CreditCard, Banknote, Wallet } from "lucide-react";
-
-const MONTH_NAMES: Record<number, string> = {
-  1: "Ene", 2: "Feb", 3: "Mar", 4: "Abr", 5: "May", 6: "Jun",
-  7: "Jul", 8: "Ago", 9: "Sep", 10: "Oct", 11: "Nov", 12: "Dic",
-};
+import { useTranslations } from "next-intl";
 
 interface PlannedPurchaseCardProps {
   purchase: PlannedPurchase;
@@ -22,6 +18,9 @@ export function PlannedPurchaseCard({
   onEdit,
   onDelete,
 }: PlannedPurchaseCardProps) {
+  const tPurchases = useTranslations("purchases");
+  const tForm = useTranslations("plannedPurchaseForm");
+
   const paymentIcon =
     purchase.payment_method === "card"
       ? CreditCard
@@ -29,6 +28,31 @@ export function PlannedPurchaseCard({
         ? Banknote
         : Wallet;
   const PaymentIcon = paymentIcon;
+
+  const monthLabel = tPurchases(`monthsShort.${purchase.planned_month}` as any);
+
+  const paymentMethodLabel =
+    purchase.payment_method === "card"
+      ? purchase.card_name || tForm("card")
+      : purchase.payment_method === "transfer"
+        ? tForm("transfer")
+        : tForm("cash");
+
+  const installmentsBadgeText =
+    purchase.bought_with_installments && purchase.installment_count != null
+      ? purchase.installments_paid >= purchase.installment_count
+        ? tPurchases("installmentsCompleted", {
+            count: purchase.installment_count,
+          })
+        : `${tPurchases("installmentsPaid", {
+            paid: purchase.installments_paid,
+            count: purchase.installment_count,
+          })}${
+            purchase.installments_start_next_month
+              ? ` ${tPurchases("installmentsStartsNextMonth")}`
+              : ""
+          }`
+      : null;
 
   return (
     <Card className="group flex h-full min-w-0 flex-col overflow-hidden transition-shadow hover:shadow-[var(--card-shadow-hover)]">
@@ -44,7 +68,7 @@ export function PlannedPurchaseCard({
                 size="sm"
                 className="h-8 w-8 p-0"
                 onClick={() => onEdit(purchase)}
-                aria-label="Editar"
+                aria-label={tPurchases("editPurchase")}
               >
                 <Edit className="h-4 w-4" />
               </Button>
@@ -53,7 +77,7 @@ export function PlannedPurchaseCard({
                 size="sm"
                 className="h-8 w-8 p-0 text-red-600 hover:text-red-700"
                 onClick={() => onDelete(purchase.id)}
-                aria-label="Eliminar"
+                aria-label={tPurchases("deletePurchase")}
               >
                 <Trash2 className="h-4 w-4" />
               </Button>
@@ -61,7 +85,7 @@ export function PlannedPurchaseCard({
           </div>
 
           <p className="text-xs text-muted-foreground">
-            {MONTH_NAMES[purchase.planned_month]} {purchase.planned_year}
+            {monthLabel} {purchase.planned_year}
           </p>
 
           {purchase.link && (
@@ -72,35 +96,27 @@ export function PlannedPurchaseCard({
               className="inline-flex items-center gap-1.5 text-sm text-primary hover:underline"
             >
               <ExternalLink className="h-3.5 w-3.5" />
-              Ver link
+              {tForm("link")}
             </a>
           )}
 
           {purchase.bought ? (
             <div className="mt-2 flex flex-wrap items-center gap-2">
-              <Badge variant="success">Comprado</Badge>
+              <Badge variant="success">{tPurchases("statusBought")}</Badge>
               {purchase.payment_method && (
                 <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
                   <PaymentIcon className="h-3.5 w-3.5" />
-                  {purchase.payment_method === "card"
-                    ? purchase.card_name || "Tarjeta"
-                    : purchase.payment_method === "transfer"
-                      ? "Transferencia"
-                      : "Efectivo"}
+                  {paymentMethodLabel}
                 </span>
               )}
-              {purchase.bought_with_installments && purchase.installment_count != null && (
+              {installmentsBadgeText && (
                 <Badge variant="info">
-                  {purchase.installments_paid >= purchase.installment_count
-                    ? `Completado (${purchase.installment_count}/${purchase.installment_count}) ✓`
-                    : `Pagadas ${purchase.installments_paid}/${purchase.installment_count}${
-                        purchase.installments_start_next_month ? " · arranca el mes que viene" : ""
-                      }`}
+                  {installmentsBadgeText}
                 </Badge>
               )}
             </div>
           ) : (
-            <Badge variant="default">Pendiente</Badge>
+            <Badge variant="default">{tPurchases("statusPending")}</Badge>
           )}
 
           {purchase.notes && (

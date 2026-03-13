@@ -17,6 +17,7 @@ import {
   X,
   ShoppingBag,
 } from "lucide-react";
+import { SearchBar } from "@/components/layout/SearchBar";
 
 interface SidebarProps {
   isOpen?: boolean;
@@ -107,8 +108,15 @@ export function Sidebar({ isOpen = true, onClose, isMobile = false }: SidebarPro
         )}
       </div>
 
+      {/* En móvil: search en el sidebar para que no se rompa la TopBar */}
+      {isMobile && (
+        <div className="shrink-0 border-b border-border px-3 py-3">
+          <SearchBar variant="sidebar" onNavigate={onClose} className="w-full" />
+        </div>
+      )}
+
       {/* Nav groups */}
-      <nav className="flex-1 overflow-y-auto px-2 py-3">
+      <nav className="min-h-0 flex-1 overflow-y-auto px-2 py-3">
         {navGroups.map((group) => (
           <div key={group.label} className="mb-6">
             <p className="mb-1.5 px-3 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
@@ -156,8 +164,8 @@ export function Sidebar({ isOpen = true, onClose, isMobile = false }: SidebarPro
         ))}
       </nav>
 
-      {/* Footer */}
-      <div className="shrink-0 border-t border-border p-2">
+      {/* Footer: Cerrar sesión abajo del todo (desktop y móvil) */}
+      <div className="mt-auto shrink-0 border-t border-border p-2">
         <button
           type="button"
           onClick={handleLogout}

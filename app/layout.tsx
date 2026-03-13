@@ -2,7 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Analytics } from "@vercel/analytics/next"
 import { Inter } from "next/font/google";
 import { NextIntlClientProvider } from "next-intl";
-import { getLocale, getMessages } from "next-intl/server";
+import { getLocale, getMessages, getTranslations } from "next-intl/server";
 import "./globals.css";
 
 const inter = Inter({
@@ -22,20 +22,23 @@ export const viewport: Viewport = {
   themeColor: "#0a0a0a",
 };
 
-export const metadata: Metadata = {
-  title: "SubGhost - Detector de Suscripciones",
-  description: "Gestiona y detecta tus suscripciones olvidadas",
-  manifest: "/manifest.webmanifest",
-  appleWebApp: {
-    capable: true,
-    statusBarStyle: "default",
-    title: "SubGhost",
-  },
-  icons: {
-    icon: "/icons/subghost-logo.svg",
-    apple: "/icons/subghost-logo.svg",
-  },
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("app");
+  return {
+    title: t("title"),
+    description: t("description"),
+    manifest: "/manifest.webmanifest",
+    appleWebApp: {
+      capable: true,
+      statusBarStyle: "default",
+      title: "SubGhost",
+    },
+    icons: {
+      icon: "/icons/subghost-logo.svg",
+      apple: "/icons/subghost-logo.svg",
+    },
+  };
+}
 
 export default async function RootLayout({
   children,

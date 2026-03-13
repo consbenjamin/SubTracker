@@ -1,12 +1,14 @@
 "use client";
 
 import { useState, Suspense } from "react";
+import { useTranslations } from "next-intl";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { TopBar } from "@/components/layout/TopBar";
 import { Breadcrumbs } from "@/components/layout/Breadcrumbs";
 import { useIsMobile } from "@/lib/hooks/useMediaQuery";
 
 export function DashboardShell({ children }: { children: React.ReactNode }) {
+  const t = useTranslations("nav");
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const isMobile = useIsMobile();
 
@@ -26,7 +28,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
           type="button"
           onClick={closeSidebar}
           className="fixed inset-0 z-20 bg-foreground/40 backdrop-blur-sm lg:hidden"
-          aria-label="Cerrar menú"
+          aria-label={t("closeMenu")}
         />
       )}
       <div className="flex min-h-screen flex-col bg-background pl-0 lg:pl-[240px]">

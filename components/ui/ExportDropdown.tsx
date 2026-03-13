@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import { useTranslations } from "next-intl";
 import type { Subscription, PaymentHistory } from "@/types";
 import { Button } from "@/components/ui/Button";
 import { exportSubscriptionsCsv, exportPaymentsCsv } from "@/lib/exportCsv";
@@ -15,6 +16,7 @@ interface ExportDropdownProps {
 }
 
 export function ExportDropdown({ subscriptions }: ExportDropdownProps) {
+  const t = useTranslations("export");
   const [open, setOpen] = useState(false);
   const [exporting, setExporting] = useState<Exporting>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -97,7 +99,7 @@ export function ExportDropdown({ subscriptions }: ExportDropdownProps) {
         aria-haspopup="true"
       >
         <Download className="h-4 w-4" />
-        Exportar
+        {t("export")}
         <ChevronDown
           className={cn("h-4 w-4 transition-transform", open && "rotate-180")}
         />
@@ -109,7 +111,7 @@ export function ExportDropdown({ subscriptions }: ExportDropdownProps) {
         >
           <div className="px-3 py-1.5">
             <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
-              Suscripciones
+              {t("subscriptions")}
             </p>
           </div>
           <button
@@ -119,7 +121,7 @@ export function ExportDropdown({ subscriptions }: ExportDropdownProps) {
             disabled={exporting !== null}
             className="w-full px-4 py-2 text-left text-sm text-foreground hover:bg-muted disabled:opacity-50"
           >
-            {exporting === "subs-csv" ? "Exportando…" : "CSV"}
+            {exporting === "subs-csv" ? t("exporting") : t("csv")}
           </button>
           <button
             type="button"
@@ -128,12 +130,12 @@ export function ExportDropdown({ subscriptions }: ExportDropdownProps) {
             disabled={exporting !== null}
             className="w-full px-4 py-2 text-left text-sm text-foreground hover:bg-muted disabled:opacity-50"
           >
-            {exporting === "subs-pdf" ? "Exportando…" : "PDF"}
+            {exporting === "subs-pdf" ? t("exporting") : t("pdf")}
           </button>
           <div className="my-1 border-t border-border" />
           <div className="px-3 py-1.5">
             <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
-              Historial de pagos
+              {t("paymentHistory")}
             </p>
           </div>
           <button
@@ -143,7 +145,7 @@ export function ExportDropdown({ subscriptions }: ExportDropdownProps) {
             disabled={exporting !== null}
             className="w-full px-4 py-2 text-left text-sm text-foreground hover:bg-muted disabled:opacity-50"
           >
-            {exporting === "payments-csv" ? "Exportando…" : "CSV"}
+            {exporting === "payments-csv" ? t("exporting") : t("csv")}
           </button>
           <button
             type="button"
@@ -152,7 +154,7 @@ export function ExportDropdown({ subscriptions }: ExportDropdownProps) {
             disabled={exporting !== null}
             className="w-full px-4 py-2 text-left text-sm text-foreground hover:bg-muted disabled:opacity-50"
           >
-            {exporting === "payments-pdf" ? "Exportando…" : "PDF"}
+            {exporting === "payments-pdf" ? t("exporting") : t("pdf")}
           </button>
         </div>
       )}

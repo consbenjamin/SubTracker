@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useLocale, useTranslations } from "next-intl";
 import {
   addMonths,
   subMonths,
@@ -16,7 +17,7 @@ import {
   isBefore,
   startOfDay,
 } from "date-fns";
-import { es } from "date-fns/locale";
+import { es, enUS } from "date-fns/locale";
 import { Subscription } from "@/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
@@ -24,7 +25,7 @@ import { useFormatCurrency } from "@/lib/hooks/useFormatCurrency";
 import { ChevronLeft, ChevronRight, CalendarDays } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-const WEEKDAY_LABELS = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"];
+const WEEKDAY_KEYS = ["weekdayMon", "weekdayTue", "weekdayWed", "weekdayThu", "weekdayFri", "weekdaySat", "weekdaySun"] as const;
 
 interface UpcomingCalendarProps {
   subscriptions: Subscription[];
@@ -35,9 +36,13 @@ export function UpcomingCalendar({
   subscriptions,
   onSubscriptionClick,
 }: UpcomingCalendarProps) {
+  const t = useTranslations("calendar");
+  const locale = useLocale();
+  const dateFnsLocale = locale === "es" ? es : enUS;
   const [viewDate, setViewDate] = useState(() => new Date());
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const formatCurrency = useFormatCurrency();
+  const weekdayLabels = useMemo(() => WEEKDAY_KEYS.map((key) => t(key)), [t]);
 
   const activeWithDueDate = useMemo(
     () =>
@@ -92,7 +97,7 @@ export function UpcomingCalendar({
       <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-3 pb-4 sm:pb-3">
         <CardTitle className="flex items-center gap-2 text-base sm:text-[15px]">
           <CalendarDays className="h-4 w-4 text-muted-foreground" />
-          Próximos vencimientos
+          {t("upcomingDue")}
         </CardTitle>
         <div className="flex items-center gap-1">
           <Button
@@ -100,19 +105,19 @@ export function UpcomingCalendar({
             size="sm"
             onClick={() => setViewDate((d) => subMonths(d, 1))}
             className="h-8 w-8 p-0"
-            aria-label="Mes anterior"
+            aria-label={t("prevMonth")}
           >
             <ChevronLeft className="h-4 w-4" />
           </Button>
           <span className="min-w-[140px] text-center text-sm font-medium text-foreground sm:min-w-[160px]">
-            {format(viewDate, "MMMM yyyy", { locale: es })}
+            {format(viewDate, "MMMM yyyy", { locale: dateFnsLocale })}
           </span>
           <Button
             variant="ghost"
             size="sm"
             onClick={() => setViewDate((d) => addMonths(d, 1))}
             className="h-8 w-8 p-0"
-            aria-label="Mes siguiente"
+            aria-label={t("nextMonth")}
           >
             <ChevronRight className="h-4 w-4" />
           </Button>
@@ -120,7 +125,7 @@ export function UpcomingCalendar({
       </CardHeader>
       <CardContent className="pt-0">
         <div className="grid grid-cols-7 gap-0.5 text-center sm:gap-1">
-          {WEEKDAY_LABELS.map((label) => (
+          {weekdayLabels.map((label) => (
             <div
               key={label}
               className="py-1 text-[10px] font-medium uppercase tracking-wider text-muted-foreground sm:text-xs"
@@ -170,7 +175,7 @@ export function UpcomingCalendar({
                 {count > 1 && !selected && (
                   <span
                     className="absolute -right-0.5 -top-0.5 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-[var(--chart-5)] text-[9px] font-bold text-white sm:-right-1 sm:-top-1 sm:h-4 sm:w-4 sm:text-[10px]"
-                    aria-label={`${count} vencimientos`}
+                    aria-label={t("dueCount", { count })}
                   >
                     {count}
                   </span>
@@ -183,11 +188,13 @@ export function UpcomingCalendar({
         {selectedDate && (
           <div className="mt-4 rounded-lg border border-border bg-muted/30 p-3">
             <p className="mb-2 text-xs font-medium uppercase tracking-wider text-muted-foreground">
-              {format(selectedDate, "EEEE d 'de' MMMM", { locale: es })}
+              {locale === "es"
+                ? format(selectedDate, "EEEE d 'de' MMMM", { locale: dateFnsLocale })
+                : format(selectedDate, "EEEE, MMMM d", { locale: dateFnsLocale })}
             </p>
             {selectedPayments.length === 0 ? (
               <p className="text-sm text-muted-foreground">
-                No hay vencimientos este día
+                {t("noDueThisDay")}
               </p>
             ) : (
               <ul className="space-y-2">

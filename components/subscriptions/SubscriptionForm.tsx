@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import { useTranslations } from "next-intl";
 import {
   Subscription,
   SubscriptionFormData,
@@ -31,73 +32,75 @@ const optionalNumber = z.preprocess(
   z.number().optional()
 );
 
-const subscriptionSchema = z
-  .object({
-    name: z.string().min(1, "El nombre es requerido"),
-    price: optionalNumber,
-    billing_cycle: z.enum(["monthly", "yearly", "quarterly"]),
-    payment_type: z.enum(["recurring", "installment"]),
-    installment_count: z.preprocess(
-      (value) => {
-        if (value === undefined || value === null || value === "") return undefined;
-        const num = Number(value);
-        return Number.isNaN(num) ? undefined : num;
-      },
-      installmentCountSchema.optional()
-    ),
-    total_amount: optionalNumber,
-    next_payment_date: z.string().min(1, "La fecha es requerida"),
-    category: z.string().trim().min(1, "La categoría es requerida"),
-    status: z.enum(["active", "cancelled", "paused"]),
-    installments_paid: z.preprocess(
-      (v) => {
-        if (v === "" || v == null) return undefined;
-        const n = Number(v);
-        return Number.isNaN(n) ? undefined : n;
-      },
-      z.number().int().min(0).max(12).optional()
-    ),
-    notes: z.preprocess((val) => (val == null ? "" : val), z.string().max(2000).optional()),
-  })
-  .superRefine((data, ctx) => {
-    if (data.payment_type === "installment") {
-      if (!data.installment_count) {
+function buildSubscriptionSchema(t: (key: string, values?: Record<string, number>) => string) {
+  return z
+    .object({
+      name: z.string().min(1, t("nameRequired")),
+      price: optionalNumber,
+      billing_cycle: z.enum(["monthly", "yearly", "quarterly"]),
+      payment_type: z.enum(["recurring", "installment"]),
+      installment_count: z.preprocess(
+        (value) => {
+          if (value === undefined || value === null || value === "") return undefined;
+          const num = Number(value);
+          return Number.isNaN(num) ? undefined : num;
+        },
+        installmentCountSchema.optional()
+      ),
+      total_amount: optionalNumber,
+      next_payment_date: z.string().min(1, t("dateRequired")),
+      category: z.string().trim().min(1, t("categoryRequired")),
+      status: z.enum(["active", "cancelled", "paused"]),
+      installments_paid: z.preprocess(
+        (v) => {
+          if (v === "" || v == null) return undefined;
+          const n = Number(v);
+          return Number.isNaN(n) ? undefined : n;
+        },
+        z.number().int().min(0).max(12).optional()
+      ),
+      notes: z.preprocess((val) => (val == null ? "" : val), z.string().max(2000).optional()),
+    })
+    .superRefine((data, ctx) => {
+      if (data.payment_type === "installment") {
+        if (!data.installment_count) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ["installment_count"],
+            message: t("selectInstallments"),
+          });
+        }
+
+        if (!data.total_amount || data.total_amount <= 0) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ["total_amount"],
+            message: t("totalAmountMin"),
+          });
+        }
+      }
+
+      if (data.payment_type === "recurring" && (!data.price || data.price <= 0)) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
-          path: ["installment_count"],
-          message: "Selecciona la cantidad de cuotas",
+          path: ["price"],
+          message: t("priceMin"),
         });
       }
 
-      if (!data.total_amount || data.total_amount <= 0) {
+      if (
+        data.payment_type === "installment" &&
+        data.installment_count != null &&
+        (data.installments_paid ?? 0) > data.installment_count
+      ) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
-          path: ["total_amount"],
-          message: "El monto total debe ser mayor a 0",
+          path: ["installments_paid"],
+          message: t("installmentsPaidMax", { count: data.installment_count }),
         });
       }
-    }
-
-    if (data.payment_type === "recurring" && (!data.price || data.price <= 0)) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ["price"],
-        message: "El importe debe ser mayor a 0",
-      });
-    }
-
-    if (
-      data.payment_type === "installment" &&
-      data.installment_count != null &&
-      (data.installments_paid ?? 0) > data.installment_count
-    ) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ["installments_paid"],
-        message: `No puede ser mayor a ${data.installment_count} cuotas`,
-      });
-    }
-  });
+    });
+}
 
 type SubscriptionFormValues = {
   name: string;
@@ -123,29 +126,17 @@ interface SubscriptionFormProps {
   onCancel: () => void;
 }
 
-const categorySuggestions = [
-  "Streaming",
-  "Software",
-  "Fitness",
-  "Música",
-  "Noticias",
-  "Cloud",
-  "Gaming",
-  "Educación",
-  "Hogar",
-  "Comida",
-  "Transporte",
-  "Ropa",
-  "Salud",
-  "Otro",
-];
-
 export function SubscriptionForm({
   subscription,
   onSubmit,
   onSubmitWithRecordPayment,
   onCancel,
 }: SubscriptionFormProps) {
+  const t = useTranslations("subscriptionForm");
+  const subscriptionSchema = useMemo(
+    () => buildSubscriptionSchema((key, values) => (values ? t(key, values) : t(key))),
+    [t]
+  );
   const {
     register,
     handleSubmit,
@@ -267,37 +258,40 @@ export function SubscriptionForm({
       {!subscription && SUBSCRIPTION_TEMPLATES.length > 0 && (
         <div className="space-y-2">
           <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-            Atajos
+            {t("shortcuts")}
           </p>
           <div className="flex flex-wrap gap-2">
-            {SUBSCRIPTION_TEMPLATES.map((t) => (
-              <button
-                key={t.id}
-                type="button"
-                onClick={() => applyTemplate(t.name, t.category, t.billing_cycle)}
-                className="rounded-full border border-border bg-muted/40 px-3 py-1.5 text-sm text-foreground transition-colors hover:bg-muted hover:border-foreground/20"
-              >
-                {t.name}
-              </button>
-            ))}
+            {SUBSCRIPTION_TEMPLATES.map((template) => {
+              const label = template.id === "gym" ? t("templateGym") : template.id === "newspaper" ? t("templateNewspaper") : template.id === "course" ? t("templateCourse") : template.name;
+              return (
+                <button
+                  key={template.id}
+                  type="button"
+                  onClick={() => applyTemplate(template.name, template.category, template.billing_cycle)}
+                  className="rounded-full border border-border bg-muted/40 px-3 py-1.5 text-sm text-foreground transition-colors hover:bg-muted hover:border-foreground/20"
+                >
+                  {label}
+                </button>
+              );
+            })}
           </div>
         </div>
       )}
 
       <div className="space-y-2">
         <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-          ¿Qué es este gasto?
+          {t("whatIsThisExpense")}
         </p>
         <Input
           {...register("name")}
           error={errors.name?.message}
-          placeholder="Ej: Netflix, Notebook, Ropa..."
+          placeholder={t("namePlaceholder")}
         />
       </div>
 
       <div className="space-y-3">
         <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-          Tipo de gasto
+          {t("expenseType")}
         </p>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <label
@@ -316,10 +310,10 @@ export function SubscriptionForm({
             />
             <span className="flex items-center gap-2 font-medium text-foreground">
               <Repeat className="h-4 w-4" />
-              Recurrente
+              {t("recurring")}
             </span>
             <span className="text-xs text-muted-foreground">
-              Se repite cada mes, trimestre o año (ej. Netflix, gym)
+              {t("recurringHint")}
             </span>
           </label>
           <label
@@ -338,10 +332,10 @@ export function SubscriptionForm({
             />
             <span className="flex items-center gap-2 font-medium text-foreground">
               <CreditCard className="h-4 w-4" />
-              En cuotas
+              {t("installmentLabel")}
             </span>
             <span className="text-xs text-muted-foreground">
-              Una compra que pagás en 3, 6, 9 o 12 pagos (ej. celular, muebles)
+              {t("installmentHint")}
             </span>
           </label>
         </div>
@@ -351,11 +345,11 @@ export function SubscriptionForm({
         <>
           <div className="space-y-2">
             <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-              ¿Cuánto pagás?
+              {t("howMuchPay")}
             </p>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <Input
-                label="Importe"
+                label={t("amountLabel")}
                 type="number"
                 step="0.01"
                 {...register("price", { valueAsNumber: true })}
@@ -363,11 +357,11 @@ export function SubscriptionForm({
                 placeholder="0.00"
               />
               <Select
-                label="Cada cuánto"
+                label={t("howOften")}
                 options={[
-                  { value: "monthly", label: "Mensual" },
-                  { value: "quarterly", label: "Trimestral" },
-                  { value: "yearly", label: "Anual" },
+                  { value: "monthly", label: t("monthly") },
+                  { value: "quarterly", label: t("quarterly") },
+                  { value: "yearly", label: t("yearly") },
                 ]}
                 {...register("billing_cycle")}
                 error={errors.billing_cycle?.message}
@@ -377,22 +371,22 @@ export function SubscriptionForm({
         </>
       ) : (
         <div className="space-y-4 rounded-xl border border-border bg-muted/20 p-3 sm:p-4">
-          <p className="text-sm font-medium text-foreground">Plan en cuotas</p>
+          <p className="text-sm font-medium text-foreground">{t("installmentPlanTitle")}</p>
           <p className="text-xs text-muted-foreground">
-            Ingresá el monto total de la compra y en cuántas cuotas lo pagás.
+            {t("installmentPlanHint")}
           </p>
           <div className="space-y-2">
             <Input
-              label="Monto total de la compra"
+              label={t("totalAmountLabel")}
               type="number"
               step="0.01"
               {...register("total_amount", { valueAsNumber: true })}
               error={errors.total_amount?.message}
-              placeholder="Ej: 93631"
+              placeholder="0"
             />
           </div>
           <div className="space-y-2">
-            <p className="text-sm font-medium text-foreground">¿En cuántas cuotas?</p>
+            <p className="text-sm font-medium text-foreground">{t("howManyInstallments")}</p>
             <div className="flex flex-wrap gap-2">
               {INSTALLMENT_OPTIONS.map((option) => (
                 <label
@@ -422,16 +416,16 @@ export function SubscriptionForm({
           </div>
             {installmentAmountPreview != null && (
             <div className="rounded-lg bg-[var(--card)] p-3 text-center">
-              <p className="text-xs text-muted-foreground">Pagás</p>
+              <p className="text-xs text-muted-foreground">{t("youPay")}</p>
               <p className="text-lg font-semibold text-foreground">
-                {installmentCount} cuotas de {formatCurrency(installmentAmountPreview)}
+                {t("installmentsOf", { count: installmentCount ?? 0, amount: formatCurrency(installmentAmountPreview) })}
               </p>
-              <p className="text-xs text-muted-foreground">cada una</p>
+              <p className="text-xs text-muted-foreground">{t("each")}</p>
             </div>
           )}
           <div className="space-y-2">
             <Input
-              label="Cuotas ya pagadas"
+              label={t("installmentsPaid")}
               type="number"
               min={0}
               max={installmentCount ?? 12}
@@ -441,7 +435,7 @@ export function SubscriptionForm({
               placeholder="0"
             />
             <p className="text-xs text-muted-foreground">
-              Algunas veces te cobran la primera cuota en el momento (ej. hoy compraste, hoy pagaste 1). Otras veces la primera cuota se cobra el mes siguiente. Indicá cuántas ya pagaste para llevar el control.
+              {t("installmentsPaidHint")}
             </p>
           </div>
         </div>
@@ -449,7 +443,7 @@ export function SubscriptionForm({
 
       <div className="space-y-2">
         <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-          {paymentType === "installment" ? "Fecha de la próxima cuota" : "Próxima fecha de pago"}
+          {paymentType === "installment" ? t("nextInstallmentDateLabel") : t("nextPaymentDateLabel")}
         </p>
         <Input
           type="date"
@@ -460,29 +454,29 @@ export function SubscriptionForm({
 
       <div className="space-y-2">
         <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-          Categoría y estado
+          {t("categoryAndStatus")}
         </p>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div>
             <Input
-              label="Categoría"
+              label={t("category")}
               list="category-suggestions"
               {...register("category")}
               error={errors.category?.message}
-              placeholder="Ej: Ropa, Streaming..."
+              placeholder={t("categoryPlaceholder")}
             />
             <datalist id="category-suggestions">
-              {categorySuggestions.map((category) => (
-                <option key={category} value={category} />
+              {t("categorySuggestions").split(",").map((category) => (
+                <option key={category} value={category.trim()} />
               ))}
             </datalist>
           </div>
           <Select
-            label="Estado"
+            label={t("status")}
             options={[
-              { value: "active", label: "Activa" },
-              { value: "paused", label: "Pausada" },
-              { value: "cancelled", label: "Cancelada" },
+              { value: "active", label: t("active") },
+              { value: "paused", label: t("paused") },
+              { value: "cancelled", label: t("cancelled") },
             ]}
             {...register("status")}
             error={errors.status?.message}
@@ -491,10 +485,10 @@ export function SubscriptionForm({
       </div>
 
       <Input
-        label="Notas (opcional)"
+        label={t("notesOptional")}
         {...register("notes")}
         error={errors.notes?.message}
-        placeholder="Información adicional..."
+        placeholder={t("notesPlaceholder")}
       />
 
       {showRecordPayment && (
@@ -506,25 +500,25 @@ export function SubscriptionForm({
             className="h-4 w-4 rounded border-border accent-[var(--primary)]"
           />
           <span className="text-sm text-foreground">
-            Registrar pago realizado (añadir al historial)
+            {t("recordPaymentLabel")}
           </span>
         </label>
       )}
 
       <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
         <Button type="button" variant="secondary" onClick={onCancel} className="w-full sm:w-auto">
-          Cancelar
+          {t("cancel")}
         </Button>
         <Button type="submit" variant="primary" disabled={isSubmitting} className="w-full sm:w-auto">
           {isSubmitting
-            ? "Guardando..."
+            ? t("saving")
             : subscription
               ? paymentType === "installment" && installmentCount
-                ? `Actualizar (${installmentCount} cuotas)`
-                : "Actualizar"
+                ? t("updateWithInstallments", { count: installmentCount })
+                : t("update")
               : paymentType === "installment" && installmentCount
-                ? `Crear en ${installmentCount} cuotas`
-                : "Crear"}
+                ? t("createWithInstallments", { count: installmentCount })
+                : t("create")}
         </Button>
       </div>
     </form>

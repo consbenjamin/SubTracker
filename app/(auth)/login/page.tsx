@@ -105,10 +105,7 @@ function LoginContent() {
   };
 
   return (
-    <div className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden bg-[var(--background)] px-4 py-12">
-      <div className="absolute right-4 top-4 z-10">
-        <LocaleSwitcher />
-      </div>
+    <div className="relative flex min-h-screen flex-col overflow-hidden bg-[var(--background)]">
       <div
         className="pointer-events-none absolute inset-0 opacity-[0.03] dark:opacity-[0.04]"
         style={{
@@ -116,8 +113,14 @@ function LoginContent() {
         }}
       />
 
-      <Card className="relative z-10 w-full max-w-[400px] border-border/80 bg-card/95 shadow-xl backdrop-blur-sm sm:px-8 sm:py-2">
-        <CardHeader className="space-y-2 pb-6 pt-8 text-center sm:pt-10">
+      {/* Barra superior: selector de idioma fuera del container de login, sin superponerse */}
+      <div className="relative z-10 flex shrink-0 justify-end px-4 py-3 sm:px-6 sm:py-4">
+        <LocaleSwitcher className="shrink-0" />
+      </div>
+
+      <div className="relative z-10 flex flex-1 flex-col items-center justify-center px-3 py-6 sm:px-4 sm:py-8">
+        <Card className="w-full max-w-[400px] border-border/80 bg-card/95 shadow-xl backdrop-blur-sm sm:px-8 sm:py-2">
+          <CardHeader className="space-y-2 pb-6 pt-8 text-center sm:pt-10">
           <div className="mx-auto mb-2 flex h-12 w-12 items-center justify-center">
             <Image
               src="/icons/subghost-logo.svg"
@@ -227,11 +230,12 @@ function LoginContent() {
             {t("terms")}
           </p>
         </CardContent>
-      </Card>
+        </Card>
 
-      <p className="mt-8 text-center text-xs text-muted-foreground/80">
-        {t("loginEmailOrGoogle")}
-      </p>
+        <p className="mt-8 text-center text-xs text-muted-foreground/80">
+          {t("loginEmailOrGoogle")}
+        </p>
+      </div>
     </div>
   );
 }

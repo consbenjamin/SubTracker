@@ -1,4 +1,8 @@
 {
+  "app": {
+    "title": "SubGhost - Subscription Tracker",
+    "description": "Manage and track your subscriptions in one place"
+  },
   "common": {
     "appName": "SubGhost",
     "loading": "Loading…",
@@ -14,9 +18,13 @@
     "amount": "Amount",
     "noLimit": "No limit",
     "removeLimit": "Remove limit",
+    "uncategorized": "Uncategorized",
     "language": "Language",
     "spanish": "Español",
-    "english": "English"
+    "english": "English",
+    "themeLight": "Use light theme",
+    "themeDark": "Use dark theme",
+    "changeTheme": "Change theme"
   },
   "nav": {
     "main": "Main",
@@ -30,7 +38,8 @@
     "system": "System",
     "settings": "Settings",
     "logout": "Log out",
-    "closeMenu": "Close menu"
+    "closeMenu": "Close menu",
+    "openMenu": "Open menu"
   },
   "landing": {
     "login": "Log in",
@@ -150,6 +159,9 @@
     "categoryRequired": "Category is required",
     "selectInstallments": "Select number of installments",
     "totalAmountMin": "Total amount must be greater than 0",
+    "priceMin": "Amount must be greater than 0",
+    "installmentsPaidMax": "Cannot be greater than {count} installments",
+    "nameTooLong": "Name is too long",
     "name": "Name",
     "price": "Price",
     "billingCycle": "Billing cycle",
@@ -160,6 +172,7 @@
     "recurring": "Recurring",
     "installment": "Installments",
     "nextPayment": "Next payment",
+    "nextInstallment": "Next installment",
     "category": "Category",
     "status": "Status",
     "active": "Active",
@@ -170,7 +183,73 @@
     "totalAmount": "Total amount",
     "installmentsPaid": "Installments paid",
     "submit": "Save",
-    "cancel": "Cancel"
+    "cancel": "Cancel",
+    "whatIsThisExpense": "What is this expense?",
+    "namePlaceholder": "e.g. Netflix, Laptop, Clothes...",
+    "expenseType": "Expense type",
+    "recurringHint": "Repeats every month, quarter or year (e.g. Netflix, gym)",
+    "installmentLabel": "Installments",
+    "installmentHint": "A purchase you pay in 3, 6, 9 or 12 payments (e.g. phone, furniture)",
+    "howMuchPay": "How much do you pay?",
+    "amountLabel": "Amount",
+    "howOften": "How often",
+    "installmentPlanTitle": "Installment plan",
+    "installmentPlanHint": "Enter the total purchase amount and how many installments you pay.",
+    "totalAmountLabel": "Total purchase amount",
+    "howManyInstallments": "How many installments?",
+    "youPay": "You pay",
+    "installmentsOf": "{count} installments of {amount}",
+    "each": "each",
+    "installmentsPaidHint": "Sometimes the first installment is charged immediately (e.g. bought today, paid 1 today). Other times the first installment is charged next month. Say how many you've already paid to keep track.",
+    "nextPaymentDateLabel": "Next payment date",
+    "nextInstallmentDateLabel": "Next installment date",
+    "categoryAndStatus": "Category and status",
+    "categoryPlaceholder": "e.g. Clothes, Streaming...",
+    "notesOptional": "Notes (optional)",
+    "notesPlaceholder": "Additional information...",
+    "recordPaymentLabel": "Record payment made (add to history)",
+    "saving": "Saving…",
+    "update": "Update",
+    "updateWithInstallments": "Update ({count} installments)",
+    "create": "Create",
+    "createWithInstallments": "Create with {count} installments",
+    "cycleMonth": "mo",
+    "cycleQuarter": "qtr",
+    "cycleYear": "yr",
+    "cycleInstallment": "installment",
+    "completed": "Completed",
+    "noInstallmentsLeft": "No installments left",
+    "overdue": "Overdue",
+    "upcoming": "Upcoming",
+    "soon": "Soon",
+    "days": "days",
+    "perInstallment": "per installment",
+    "totalPaidOf": "Total: {total} · {paid} of {count} paid",
+    "showLess": "Less",
+    "showProgress": "View progress",
+    "planProgress": "Plan progress",
+    "nextInstallmentOf": "Next: installment {current} of {count}",
+    "balanceRemaining": "Balance remaining: {amount}",
+    "yearlySavingsIfCancel": "Annual savings if you cancel: {amount}",
+    "categorySuggestions": "Streaming,Software,Fitness,Music,News,Cloud,Gaming,Education,Home,Food,Transport,Clothes,Health,Other",
+    "templateGym": "Gym",
+    "templateNewspaper": "Newspaper / Magazine",
+    "templateCourse": "Online course",
+    "shortcuts": "Shortcuts"
+  },
+  "calendar": {
+    "upcomingDue": "Upcoming due dates",
+    "noDueThisDay": "No payments due on this day",
+    "prevMonth": "Previous month",
+    "nextMonth": "Next month",
+    "dueCount": "{count} due",
+    "weekdayMon": "Mon",
+    "weekdayTue": "Tue",
+    "weekdayWed": "Wed",
+    "weekdayThu": "Thu",
+    "weekdayFri": "Fri",
+    "weekdaySat": "Sat",
+    "weekdaySun": "Sun"
   },
   "purchases": {
     "title": "Purchases",
@@ -204,7 +283,12 @@
     "monthsShort": {
       "1": "Jan", "2": "Feb", "3": "Mar", "4": "Apr", "5": "May", "6": "Jun",
       "7": "Jul", "8": "Aug", "9": "Sep", "10": "Oct", "11": "Nov", "12": "Dec"
-    }
+    },
+    "statusBought": "Bought",
+    "statusPending": "Pending",
+    "installmentsCompleted": "Completed ({count}/{count}) ✓",
+    "installmentsPaid": "Paid {paid}/{count}",
+    "installmentsStartsNextMonth": "· starts next month"
   },
   "plannedPurchaseForm": {
     "namePlaceholder": "e.g. black t-shirt, Steam game, headphones",
@@ -234,13 +318,44 @@
   },
   "analytics": {
     "title": "Analytics",
+    "subtitle": "Detailed analysis of your subscription spending",
+    "loading": "Loading analytics…",
     "shown": "Shown",
-    "real": "Real"
+    "real": "Real",
+    "monthlyTotalProjection": "Monthly total (projection)",
+    "futureCommitment": "Future commitment",
+    "realSpendLast12Months": "Real spend (last 12 months)",
+    "perMonthPayments": "~{amount}/mo · {count} payments",
+    "totalHistorical": "All-time total",
+    "transactions": "{count} transactions",
+    "ifYouCancelAll": "If you cancel all active subscriptions",
+    "youWouldSave": "You would save {amount}/mo and avoid up to {yearly} in future charges",
+    "mostExpensiveActive": "Most expensive active subscriptions (monthly):",
+    "expensesByCategory": "Spending by category",
+    "noDataToShow": "No data to show",
+    "byBillingCycle": "By billing cycle",
+    "subscriptionCount": "{count} subscription",
+    "subscriptionCount_plural": "{count} subscriptions",
+    "monthlyExpenses": "Monthly spend (last 6 months)",
+    "monthlyExpensesHint": "Real data from history when payments exist; otherwise projection.",
+    "chartSpend": "Spend",
+    "subscriptionsLabel": "Subscriptions",
+    "perMonth": "/mo"
+  },
+  "search": {
+    "placeholder": "Search subscriptions…",
+    "ariaLabel": "Search subscriptions",
+    "recentSearches": "Recent searches",
+    "clear": "Clear search",
+    "categoryLabel": "Category"
   },
   "export": {
     "export": "Export",
+    "exporting": "Exporting…",
     "pdf": "PDF",
-    "csv": "CSV"
+    "csv": "CSV",
+    "subscriptions": "Subscriptions",
+    "paymentHistory": "Payment history"
   },
   "pagination": {
     "prev": "Previous",

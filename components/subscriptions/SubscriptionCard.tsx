@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { Subscription } from "@/types";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
@@ -13,7 +14,6 @@ import { cn } from "@/lib/utils";
 import {
   getAnnualEquivalent,
   getInstallmentProgress,
-  getSubscriptionCycleLabel,
   isInstallmentSubscription,
   isSubscriptionCompleted,
 } from "@/lib/subscriptions";
@@ -26,11 +26,22 @@ interface SubscriptionCardProps {
 
 export const SUBSCRIPTION_CARD_MIN_HEIGHT = 220;
 
+function getCycleLabelKey(subscription: Subscription): "cycleMonth" | "cycleQuarter" | "cycleYear" | "cycleInstallment" {
+  if (subscription.payment_type === "installment") return "cycleInstallment";
+  switch (subscription.billing_cycle) {
+    case "monthly": return "cycleMonth";
+    case "quarterly": return "cycleQuarter";
+    case "yearly": return "cycleYear";
+    default: return "cycleMonth";
+  }
+}
+
 export function SubscriptionCard({
   subscription,
   onEdit,
   onDelete,
 }: SubscriptionCardProps) {
+  const t = useTranslations("subscriptionForm");
   const [expanded, setExpanded] = useState(false);
   const formatCurrency = useFormatCurrency();
   const installment = getInstallmentProgress(subscription);
@@ -42,16 +53,16 @@ export function SubscriptionCard({
 
   const getStatusBadge = () => {
     if (isCompleted) {
-      return <Badge variant="success">Finalizado</Badge>;
+      return <Badge variant="success">{t("completed")}</Badge>;
     }
 
     switch (subscription.status) {
       case "active":
-        return <Badge variant="success">Activa</Badge>;
+        return <Badge variant="success">{t("active")}</Badge>;
       case "cancelled":
-        return <Badge variant="danger">Cancelada</Badge>;
+        return <Badge variant="danger">{t("cancelled")}</Badge>;
       case "paused":
-        return <Badge variant="warning">Pausada</Badge>;
+        return <Badge variant="warning">{t("paused")}</Badge>;
       default:
         return null;
     }
@@ -59,17 +70,17 @@ export function SubscriptionCard({
 
   const getPaymentUrgency = () => {
     if (isCompleted) {
-      return { color: "text-emerald-600 dark:text-emerald-400", text: "Sin cuotas pendientes" };
+      return { color: "text-emerald-600 dark:text-emerald-400", text: t("noInstallmentsLeft") };
     }
 
-    if (daysUntilPayment < 0) return { color: "text-red-600 dark:text-red-400", text: "Vencida" };
-    if (daysUntilPayment <= 3) return { color: "text-amber-600 dark:text-amber-400", text: "Próxima" };
-    if (daysUntilPayment <= 7) return { color: "text-amber-600/80 dark:text-amber-400/80", text: "Pronto" };
-    return { color: "text-muted-foreground", text: `${daysUntilPayment} días` };
+    if (daysUntilPayment < 0) return { color: "text-red-600 dark:text-red-400", text: t("overdue") };
+    if (daysUntilPayment <= 3) return { color: "text-amber-600 dark:text-amber-400", text: t("upcoming") };
+    if (daysUntilPayment <= 7) return { color: "text-amber-600/80 dark:text-amber-400/80", text: t("soon") };
+    return { color: "text-muted-foreground", text: `${daysUntilPayment} ${t("days")}` };
   };
 
   const urgency = getPaymentUrgency();
-  const cycleLabel = getSubscriptionCycleLabel(subscription);
+  const cycleLabel = t(getCycleLabelKey(subscription));
   const yearlySavingsIfCancelled = subscription.status === "active" ? getAnnualEquivalent(subscription) : null;
 
   return (
@@ -87,7 +98,7 @@ export function SubscriptionCard({
               {isInstallment && (
                 <Badge variant="info" className="gap-1 text-xs">
                   <CreditCard className="h-3 w-3" />
-                  Cuotas
+                  {t("installment")}
                 </Badge>
               )}
               {getStatusBadge()}
@@ -97,11 +108,11 @@ export function SubscriptionCard({
                 <p className="text-base font-semibold text-foreground sm:text-lg">
                   {formatCurrency(subscription.price)}
                   <span className="ml-1 text-sm font-normal text-muted-foreground">
-                    por cuota
+                    {t("perInstallment")}
                   </span>
                 </p>
                 <p className="truncate text-sm text-muted-foreground">
-                  Total: {formatCurrency(installment.totalAmount)} · {installment.paid} de {installment.count} pagadas
+                  {t("totalPaidOf", { total: formatCurrency(installment.totalAmount), paid: installment.paid, count: installment.count })}
                 </p>
               </div>
             ) : (
@@ -135,7 +146,7 @@ export function SubscriptionCard({
         <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted-foreground">
           <Calendar className="h-4 w-4 shrink-0" />
           <span>
-            {isInstallment ? "Próxima cuota" : "Próximo pago"}: {formatDate(subscription.next_payment_date)}
+            {isInstallment ? t("nextInstallment") : t("nextPayment")}: {formatDate(subscription.next_payment_date)}
           </span>
           <span className={cn("shrink-0", urgency.color)}>({urgency.text})</span>
           {isInstallment && (
@@ -148,12 +159,12 @@ export function SubscriptionCard({
               {expanded ? (
                 <>
                   <ChevronUp className="h-4 w-4" />
-                  Menos
+                  {t("showLess")}
                 </>
               ) : (
                 <>
                   <ChevronDown className="h-4 w-4" />
-                  Ver progreso
+                  {t("showProgress")}
                 </>
               )}
             </Button>
@@ -162,10 +173,10 @@ export function SubscriptionCard({
         {isInstallment && expanded && (
           <div className="space-y-2">
             <div className="flex items-center justify-between text-xs text-muted-foreground">
-              <span>Progreso del plan</span>
+              <span>{t("planProgress")}</span>
               {!installment.completed && (
                 <span className="font-medium text-foreground">
-                  Siguiente: cuota {installment.nextInstallment} de {installment.count}
+                  {t("nextInstallmentOf", { current: installment.nextInstallment, count: installment.count })}
                 </span>
               )}
             </div>
@@ -190,8 +201,8 @@ export function SubscriptionCard({
           {yearlySavingsIfCancelled != null && yearlySavingsIfCancelled > 0 && (
             <p className="text-sm text-muted-foreground">
               {isInstallment
-                ? `Saldo pendiente: ${formatCurrency(yearlySavingsIfCancelled)}`
-                : `Ahorro anual si cancelas: ${formatCurrency(yearlySavingsIfCancelled)}`}
+                ? t("balanceRemaining", { amount: formatCurrency(yearlySavingsIfCancelled) })
+                : t("yearlySavingsIfCancel", { amount: formatCurrency(yearlySavingsIfCancelled) })}
             </p>
           )}
         </div>
