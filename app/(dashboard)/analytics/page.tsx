@@ -64,7 +64,8 @@ function CustomTooltipBar({
   realLabel,
 }: {
   active?: boolean;
-  payload?: { payload: Record<string, unknown> }[];
+  // Use a broad type here to be compatible with Recharts' Payload type
+  payload?: any[]; // eslint-disable-line @typescript-eslint/no-explicit-any
   formatter: (v: number) => string;
   labelKey?: string;
   shownLabel: string;
@@ -484,9 +485,10 @@ export default function AnalyticsPage() {
                   width={90}
                 />
                 <Tooltip
-                  content={(props) => (
+                  content={({ active, payload }) => (
                     <CustomTooltipBar
-                      {...props}
+                      active={active}
+                      payload={payload as any} // compatible with our broad payload type
                       formatter={formatCurrency}
                       labelKey="month"
                       shownLabel={t("shown")}
