@@ -35,7 +35,7 @@ export function Landing() {
       />
 
       <header className="relative z-10 border-b border-border/60 bg-background/70 px-3 py-3 backdrop-blur-md sm:px-6 sm:py-4">
-        <div className="mx-auto flex max-w-5xl items-center justify-between gap-2 sm:gap-4">
+        <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-2 sm:flex-nowrap sm:gap-4">
           <div className="flex min-w-0 shrink items-center gap-2">
             <Image
               src="/icons/subghost-logo.svg"
