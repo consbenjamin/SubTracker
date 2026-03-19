@@ -43,6 +43,7 @@ export default function DashboardPage() {
   const { permission, requestPermission, checkUpcomingPayments } = useNotifications();
   const toast = useToast();
   const { monthlyBudget } = useSettings();
+  const isDev = process.env.NODE_ENV === "development";
 
   useEffect(() => {
     if (permission === "default") {
@@ -82,6 +83,47 @@ export default function DashboardPage() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleTestNotification = async () => {
+    if (!isDev) return;
+
+    const now = new Date();
+    const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(
+      now.getDate()
+    ).padStart(2, "0")}`;
+
+    const candidate = subscriptions.find(
+      (s) => s.status === "active" && (s.payment_type ?? "recurring") === "recurring"
+    );
+
+    if (!candidate) {
+      toast.error(t("testNotificationNoSubscriptions"));
+      return;
+    }
+
+    // Evitar dedupe para el test (solo para hoy).
+    const dedupeKey = `notified:${candidate.id}:${todayStr}:today`;
+    try {
+      localStorage.removeItem(dedupeKey);
+    } catch {
+      // ignore
+    }
+
+    const granted = permission === "granted" ? true : await requestPermission();
+    if (!granted) {
+      toast.error(t("testNotificationPermissionNeeded"));
+      return;
+    }
+
+    const fakeDue: Subscription = {
+      ...candidate,
+      next_payment_date: todayStr,
+      payment_type: candidate.payment_type ?? "recurring",
+    };
+
+    checkUpcomingPayments([fakeDue]);
+    toast.success(t("testNotificationSent"));
   };
 
   const handleCreate = async (data: any) => {
@@ -246,8 +288,13 @@ export default function DashboardPage() {
             {t("summary")}
           </p>
         </div>
-        <div className="w-full sm:w-auto">
+        <div className="w-full sm:w-auto flex flex-wrap items-center justify-end gap-2">
           <ExportDropdown subscriptions={subscriptions} />
+          {isDev && (
+            <Button type="button" variant="secondary" size="sm" onClick={handleTestNotification}>
+              {t("testNotification")}
+            </Button>
+          )}
         </div>
       </header>
 

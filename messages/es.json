@@ -115,7 +115,11 @@
     "deleteSubscription": "Eliminar suscripción",
     "deleteConfirm": "¿Estás seguro de que quieres eliminar esta suscripción? Esta acción no se puede deshacer.",
     "editSubscription": "Editar suscripción",
-    "newSubscription": "Nueva suscripción"
+    "newSubscription": "Nueva suscripción",
+    "testNotification": "Probar notificación",
+    "testNotificationNoSubscriptions": "No hay suscripciones activas para probar.",
+    "testNotificationPermissionNeeded": "Necesitás aceptar permisos para notificaciones.",
+    "testNotificationSent": "Notificación de prueba enviada."
   },
   "subscriptions": {
     "title": "Suscripciones",

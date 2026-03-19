@@ -2,15 +2,21 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Subscription } from "@/types";
-import { differenceInDays } from "date-fns";
+import { differenceInCalendarDays, parseISO, startOfDay } from "date-fns";
 
 export function useNotifications() {
   const [permission, setPermission] = useState<NotificationPermission>("default");
   const [isSupported, setIsSupported] = useState(false);
   const pendingSubscriptionsRef = useRef<Subscription[] | null>(null);
 
+  const logDebug = (...args: unknown[]) => {
+    if (process.env.NODE_ENV !== "development") return;
+    console.debug("[notifications]", ...args);
+  };
+
   useEffect(() => {
-    setIsSupported("Notification" in window && "serviceWorker" in navigator);
+    // Para notificaciones del navegador (Notification API) no hace falta Service Worker.
+    setIsSupported("Notification" in window);
     if ("Notification" in window) {
       setPermission(Notification.permission);
     }
@@ -31,22 +37,36 @@ export function useNotifications() {
   };
 
   const checkUpcomingPayments = (subscriptions: Subscription[]) => {
+    if (!isSupported) {
+      logDebug("Not supported in this browser");
+      return;
+    }
+
+    const today = startOfDay(new Date());
     const upcoming = subscriptions.filter((sub) => {
       if (sub.status !== "active") return false;
-      if (sub.payment_type !== "recurring") return false;
-      const days = differenceInDays(new Date(sub.next_payment_date), new Date());
+      const paymentType = sub.payment_type ?? "recurring";
+      if (paymentType !== "recurring") return false;
+
+      // `next_payment_date` viene como YYYY-MM-DD (DATE), parseamos en local para evitar desfasajes TZ.
+      const dueDate = startOfDay(parseISO(sub.next_payment_date));
+      const days = differenceInCalendarDays(dueDate, today);
       return days === 0 || days === 1;
     });
+
+    logDebug("Permission:", permission, "| candidates:", upcoming.length);
 
     // Si todavía no tenemos permisos, guardamos para disparar cuando el usuario acepte.
     if (upcoming.length > 0 && permission !== "granted") {
       pendingSubscriptionsRef.current = subscriptions;
+      logDebug("Pending notifications stored; permission is not granted");
       return;
     }
 
     if (upcoming.length > 0 && permission === "granted") {
       upcoming.forEach((sub) => {
-        const days = differenceInDays(new Date(sub.next_payment_date), new Date());
+        const dueDateParsed = startOfDay(parseISO(sub.next_payment_date));
+        const days = differenceInCalendarDays(dueDateParsed, today);
         const eventType = days === 1 ? "tomorrow" : "today";
         const dueDate = sub.next_payment_date;
         const dedupeKey = `notified:${sub.id}:${dueDate}:${eventType}`;
@@ -54,7 +74,10 @@ export function useNotifications() {
         try {
           if (typeof window !== "undefined") {
             const already = localStorage.getItem(dedupeKey);
-            if (already) return;
+            if (already) {
+              logDebug("Skipped by dedupe:", dedupeKey);
+              return;
+            }
             localStorage.setItem(dedupeKey, "1");
           }
         } catch {
@@ -72,6 +95,7 @@ export function useNotifications() {
           icon: "/icons/subghost-logo.svg",
           tag: dedupeKey,
         });
+        logDebug("Notification shown:", { subId: sub.id, dueDate, eventType });
 
         notification.onclick = () => {
           const url = `/subscriptions/${sub.id}?confirmDue=true&due=${encodeURIComponent(dueDate)}`;
