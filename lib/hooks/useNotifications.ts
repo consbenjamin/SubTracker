@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Subscription } from "@/types";
-import { differenceInCalendarDays, parseISO, startOfDay } from "date-fns";
+import { differenceInCalendarDays, differenceInDays, parseISO, startOfDay } from "date-fns";
 
 export function useNotifications() {
   const [permission, setPermission] = useState<NotificationPermission>("default");
