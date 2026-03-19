@@ -115,11 +115,7 @@
     "deleteSubscription": "Delete subscription",
     "deleteConfirm": "Are you sure you want to delete this subscription? This action cannot be undone.",
     "editSubscription": "Edit subscription",
-    "newSubscription": "New subscription",
-    "testNotification": "Test notification",
-    "testNotificationNoSubscriptions": "No active subscriptions available to test.",
-    "testNotificationPermissionNeeded": "You need to accept notification permissions.",
-    "testNotificationSent": "Test notification sent."
+    "newSubscription": "New subscription"
   },
   "subscriptions": {
     "title": "Subscriptions",
