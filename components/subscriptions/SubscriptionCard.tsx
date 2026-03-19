@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { Subscription } from "@/types";
 import { Card } from "@/components/ui/Card";
@@ -41,6 +42,7 @@ export function SubscriptionCard({
   onEdit,
   onDelete,
 }: SubscriptionCardProps) {
+  const router = useRouter();
   const t = useTranslations("subscriptionForm");
   const [expanded, setExpanded] = useState(false);
   const formatCurrency = useFormatCurrency();
@@ -149,6 +151,23 @@ export function SubscriptionCard({
             {isInstallment ? t("nextInstallment") : t("nextPayment")}: {formatDate(subscription.next_payment_date)}
           </span>
           <span className={cn("shrink-0", urgency.color)}>({urgency.text})</span>
+          {!isInstallment && subscription.status === "active" && daysUntilPayment < 0 && (
+            <Button
+              type="button"
+              variant="primary"
+              size="sm"
+              className="whitespace-nowrap"
+              onClick={() => {
+                router.push(
+                  `/subscriptions/${subscription.id}?confirmDue=true&due=${encodeURIComponent(
+                    subscription.next_payment_date
+                  )}`
+                );
+              }}
+            >
+              {t("confirmPaymentCta")}
+            </Button>
+          )}
           {isInstallment && (
             <Button
               variant="ghost"

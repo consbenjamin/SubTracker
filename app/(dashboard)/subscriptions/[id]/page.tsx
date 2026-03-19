@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter, useParams } from "next/navigation";
+import { useRouter, useParams, useSearchParams } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { Subscription, PaymentHistory } from "@/types";
 import { SubscriptionForm } from "@/components/subscriptions/SubscriptionForm";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
@@ -22,6 +23,8 @@ import { cn } from "@/lib/utils";
 export default function EditSubscriptionPage() {
   const router = useRouter();
   const params = useParams();
+  const searchParams = useSearchParams();
+  const t = useTranslations("subscriptionForm");
   const formatCurrency = useFormatCurrency();
   const [subscription, setSubscription] = useState<Subscription | null>(null);
   const [payments, setPayments] = useState<PaymentHistory[]>([]);
@@ -32,6 +35,8 @@ export default function EditSubscriptionPage() {
     () => new Date().toISOString().slice(0, 10)
   );
   const [paymentSubmitting, setPaymentSubmitting] = useState(false);
+  const [confirmDueOpen, setConfirmDueOpen] = useState(false);
+  const [confirmDueDate, setConfirmDueDate] = useState<string | null>(null);
 
   useEffect(() => {
     if (params.id) {
@@ -39,6 +44,21 @@ export default function EditSubscriptionPage() {
       fetchPayments();
     }
   }, [params.id]);
+
+  useEffect(() => {
+    // Deep-link UX for notifications: /subscriptions/[id]?confirmDue=true&due=YYYY-MM-DD
+    if (!subscription) return;
+    const shouldConfirm = searchParams.get("confirmDue") === "true";
+    const dueDate = searchParams.get("due");
+    if (!shouldConfirm || !dueDate) return;
+    if (subscription.payment_type !== "recurring") return;
+
+    setConfirmDueDate(dueDate);
+    setConfirmDueOpen(true);
+
+    // Remove query params to avoid re-opening the modal on re-render/back navigation.
+    router.replace(`/subscriptions/${params.id}`);
+  }, [subscription, searchParams, params.id, router]);
 
   const fetchSubscription = async () => {
     try {
@@ -122,6 +142,36 @@ export default function EditSubscriptionPage() {
         fetchSubscription();
         fetchPayments();
       }
+    } finally {
+      setPaymentSubmitting(false);
+    }
+  };
+
+  const handleConfirmDue = async (paid: boolean) => {
+    if (!subscription) return;
+    if (!paid) {
+      setConfirmDueOpen(false);
+      return;
+    }
+
+    const due = confirmDueDate ?? subscription.next_payment_date;
+    setPaymentSubmitting(true);
+    try {
+      const response = await fetch(`/api/subscriptions/${params.id}/payments`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ amount: subscription.price, payment_date: due }),
+      });
+
+      if (!response.ok) {
+        // If the request fails, keep the modal open so the user can retry.
+        return;
+      }
+
+      setConfirmDueOpen(false);
+      // Recargar para que `next_payment_date` actualice el estado visual.
+      fetchSubscription();
+      fetchPayments();
     } finally {
       setPaymentSubmitting(false);
     }
@@ -418,6 +468,41 @@ export default function EditSubscriptionPage() {
             </Button>
           </div>
         </form>
+      </Modal>
+
+      <Modal
+        isOpen={confirmDueOpen}
+        onClose={() => setConfirmDueOpen(false)}
+        title={t("confirmPaymentTitle")}
+        size="sm"
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-muted-foreground">
+            {t("confirmPaymentBody", {
+              due: formatDate(confirmDueDate ?? subscription.next_payment_date),
+            })}
+          </p>
+          <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => handleConfirmDue(false)}
+              className="w-full sm:w-auto"
+              disabled={paymentSubmitting}
+            >
+              {t("confirmPaymentNo")}
+            </Button>
+            <Button
+              type="button"
+              variant="primary"
+              onClick={() => handleConfirmDue(true)}
+              className="w-full sm:w-auto"
+              disabled={paymentSubmitting}
+            >
+              {paymentSubmitting ? t("saving") : t("confirmPaymentYes")}
+            </Button>
+          </div>
+        </div>
       </Modal>
     </div>
   );

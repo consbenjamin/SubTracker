@@ -19,6 +19,20 @@ function addOneMonth(dateStr: string): string {
   return `${yy}-${mm}-${dd}`;
 }
 
+function addBillingCycle(
+  dateStr: string,
+  billingCycle: "monthly" | "quarterly" | "yearly"
+): string {
+  const [y, m, d] = dateStr.split("-").map(Number);
+  const date = new Date(y, m - 1, d);
+  const monthsToAdd = billingCycle === "monthly" ? 1 : billingCycle === "quarterly" ? 3 : 12;
+  const next = addMonths(date, monthsToAdd);
+  const yy = next.getFullYear();
+  const mm = String(next.getMonth() + 1).padStart(2, "0");
+  const dd = String(next.getDate()).padStart(2, "0");
+  return `${yy}-${mm}-${dd}`;
+}
+
 export async function GET(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
@@ -89,7 +103,9 @@ export async function POST(
 
   const sub = await supabase
     .from("subscriptions")
-    .select("id, payment_type, installment_count, installments_paid, next_payment_date")
+    .select(
+      "id, payment_type, billing_cycle, installment_count, installments_paid, next_payment_date"
+    )
     .eq("id", id)
     .eq("user_id", user.id)
     .single();
@@ -114,18 +130,32 @@ export async function POST(
     );
   }
 
-  const { data, error } = await supabase
-    .from("payment_history")
-    .insert({
-      subscription_id: id,
-      amount: parsed.data.amount,
-      payment_date: parsed.data.payment_date,
-    })
-    .select()
-    .single();
+  const paidDate = parsed.data.payment_date;
 
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  // Idempotencia: si ya existe un pago para ese día, no insertamos duplicado.
+  const existing = await supabase
+    .from("payment_history")
+    .select("id, subscription_id, amount, payment_date, created_at")
+    .eq("subscription_id", id)
+    .eq("payment_date", paidDate)
+    .maybeSingle();
+
+  let data = existing.data;
+  if (!data) {
+    const inserted = await supabase
+      .from("payment_history")
+      .insert({
+        subscription_id: id,
+        amount: parsed.data.amount,
+        payment_date: paidDate,
+      })
+      .select()
+      .single();
+
+    if (inserted.error) {
+      return NextResponse.json({ error: inserted.error.message }, { status: 500 });
+    }
+    data = inserted.data;
   }
 
   if (
@@ -146,6 +176,21 @@ export async function POST(
             ? addOneMonth(sub.data.next_payment_date)
             : parsed.data.payment_date,
       })
+      .eq("id", id)
+      .eq("user_id", user.id);
+  }
+
+  // Para recurrentes (o legacy null): solo avanzamos si el pago corresponde al vencimiento actual.
+  const paymentType = sub.data.payment_type ?? "recurring";
+  if (paymentType === "recurring" && sub.data.next_payment_date === paidDate) {
+    const nextDue = addBillingCycle(
+      sub.data.next_payment_date,
+      sub.data.billing_cycle ?? "monthly"
+    );
+
+    await supabase
+      .from("subscriptions")
+      .update({ next_payment_date: nextDue })
       .eq("id", id)
       .eq("user_id", user.id);
   }
