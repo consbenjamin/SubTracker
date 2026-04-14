@@ -70,12 +70,29 @@ export const subscriptionUpdateBodySchema = withInstallmentValidation(z.object({
 }));
 
 /** Schema para registro de pago (amount puede venir como string en JSON) */
-export const paymentBodySchema = z.object({
-  amount: z.coerce.number().min(0).max(999999.99),
-  payment_date: z
-    .string()
-    .regex(/^\d{4}-\d{2}-\d{2}$/, "Formato fecha: YYYY-MM-DD"),
-});
+export const paymentBodySchema = z
+  .object({
+    amount: z.coerce.number().min(0).max(999999.99),
+    payment_date: z
+      .string()
+      .regex(/^\d{4}-\d{2}-\d{2}$/, "Formato fecha: YYYY-MM-DD"),
+    /** Si es true (solo recurrentes), la API usa la fecha de vencimiento del servidor y valida contra expected_due. */
+    confirm_due: z.boolean().optional(),
+    /** Vencimiento que el usuario vio al abrir el modal; debe coincidir con next_payment_date en servidor (anti doble envío). */
+    expected_due: z
+      .string()
+      .regex(/^\d{4}-\d{2}-\d{2}$/, "Formato fecha: YYYY-MM-DD")
+      .optional(),
+  })
+  .superRefine((data, ctx) => {
+    if (data.confirm_due && !data.expected_due) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["expected_due"],
+        message: "Indicá el vencimiento que estás confirmando",
+      });
+    }
+  });
 
 /** Schema para login/registro con email y contraseña */
 export const emailAuthSchema = z.object({

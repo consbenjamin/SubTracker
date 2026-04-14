@@ -33,6 +33,12 @@ function addBillingCycle(
   return `${yy}-${mm}-${dd}`;
 }
 
+/** DATE de Postgres / Supabase puede llegar como ISO con hora; las comparaciones y split("-") deben usar YYYY-MM-DD. */
+function toDateOnlyString(value: unknown): string {
+  if (value == null) return "";
+  return String(value).slice(0, 10);
+}
+
 export async function GET(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
@@ -72,7 +78,9 @@ export async function GET(
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  return NextResponse.json(data);
+  return NextResponse.json(data, {
+    headers: { "Cache-Control": "no-store, must-revalidate" },
+  });
 }
 
 export async function POST(
@@ -104,7 +112,7 @@ export async function POST(
   const sub = await supabase
     .from("subscriptions")
     .select(
-      "id, payment_type, billing_cycle, installment_count, installments_paid, next_payment_date"
+      "id, price, payment_type, billing_cycle, installment_count, installments_paid, next_payment_date"
     )
     .eq("id", id)
     .eq("user_id", user.id)
@@ -130,23 +138,56 @@ export async function POST(
     );
   }
 
-  const paidDate = parsed.data.payment_date;
+  const paymentType = sub.data.payment_type ?? "recurring";
+  const nextDueNormalized = toDateOnlyString(sub.data.next_payment_date);
+
+  let paidDate = parsed.data.payment_date;
+  let insertAmount = parsed.data.amount;
+
+  if (parsed.data.confirm_due && paymentType === "recurring") {
+    const expected = parsed.data.expected_due
+      ? toDateOnlyString(parsed.data.expected_due)
+      : "";
+    if (!expected) {
+      return NextResponse.json(
+        { error: "Falta expected_due para confirmar el vencimiento" },
+        { status: 400 }
+      );
+    }
+    if (expected !== nextDueNormalized) {
+      return NextResponse.json(
+        {
+          error:
+            "Ese vencimiento ya no es el actual. Recargá la página y volvé a intentar.",
+        },
+        { status: 409 }
+      );
+    }
+    paidDate = nextDueNormalized;
+    if (!paidDate) {
+      return NextResponse.json(
+        { error: "La suscripción no tiene próxima fecha de cobro" },
+        { status: 400 }
+      );
+    }
+    insertAmount = Number(sub.data.price);
+  }
 
   // Idempotencia: si ya existe un pago para ese día, no insertamos duplicado.
-  const existing = await supabase
+  const { data: existingRows } = await supabase
     .from("payment_history")
     .select("id, subscription_id, amount, payment_date, created_at")
     .eq("subscription_id", id)
     .eq("payment_date", paidDate)
-    .maybeSingle();
+    .limit(1);
 
-  let data = existing.data;
+  let data = existingRows?.[0];
   if (!data) {
     const inserted = await supabase
       .from("payment_history")
       .insert({
         subscription_id: id,
-        amount: parsed.data.amount,
+        amount: insertAmount,
         payment_date: paidDate,
       })
       .select()
@@ -173,18 +214,17 @@ export async function POST(
         installments_paid: nextPaid,
         next_payment_date:
           nextPaid < sub.data.installment_count
-            ? addOneMonth(sub.data.next_payment_date)
-            : parsed.data.payment_date,
+            ? addOneMonth(nextDueNormalized || paidDate)
+            : paidDate,
       })
       .eq("id", id)
       .eq("user_id", user.id);
   }
 
   // Para recurrentes (o legacy null): solo avanzamos si el pago corresponde al vencimiento actual.
-  const paymentType = sub.data.payment_type ?? "recurring";
-  if (paymentType === "recurring" && sub.data.next_payment_date === paidDate) {
+  if (paymentType === "recurring" && nextDueNormalized === paidDate) {
     const nextDue = addBillingCycle(
-      sub.data.next_payment_date,
+      nextDueNormalized,
       sub.data.billing_cycle ?? "monthly"
     );
 
@@ -195,5 +235,7 @@ export async function POST(
       .eq("user_id", user.id);
   }
 
-  return NextResponse.json(data);
+  return NextResponse.json(data, {
+    headers: { "Cache-Control": "no-store, must-revalidate" },
+  });
 }

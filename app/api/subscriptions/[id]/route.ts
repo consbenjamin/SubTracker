@@ -80,7 +80,9 @@ export async function GET(
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  return NextResponse.json(data);
+  return NextResponse.json(data, {
+    headers: { "Cache-Control": "no-store, must-revalidate" },
+  });
 }
 
 export async function PUT(
@@ -142,14 +144,14 @@ export async function PUT(
       const paymentDate = dueDate ?? new Date().toISOString().slice(0, 10);
 
       // Idempotencia: evitar duplicados (mismo subscription_id + payment_date)
-      const existing = await supabase
+      const { data: existingRows } = await supabase
         .from("payment_history")
         .select("id")
         .eq("subscription_id", id)
         .eq("payment_date", paymentDate)
-        .maybeSingle();
+        .limit(1);
 
-      if (!existing.data) {
+      if (!existingRows?.length) {
         await supabase.from("payment_history").insert({
           subscription_id: id,
           amount: current.price,

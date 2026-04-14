@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter, useParams, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { Subscription, PaymentHistory } from "@/types";
@@ -19,6 +19,7 @@ import {
 } from "@/lib/subscriptions";
 import { addMonths } from "date-fns";
 import { cn } from "@/lib/utils";
+import { useToast } from "@/lib/contexts/ToastContext";
 
 export default function EditSubscriptionPage() {
   const router = useRouter();
@@ -26,6 +27,12 @@ export default function EditSubscriptionPage() {
   const searchParams = useSearchParams();
   const t = useTranslations("subscriptionForm");
   const formatCurrency = useFormatCurrency();
+  const toast = useToast();
+  const subId =
+    typeof params.id === "string" ? params.id : params.id?.[0] ?? "";
+  /** Evita reabrir el modal cuando la URL aún tiene ?confirmDue y se refresca la suscripción. */
+  const confirmDueDismissedRef = useRef(false);
+  const lastSubIdRef = useRef<string>("");
   const [subscription, setSubscription] = useState<Subscription | null>(null);
   const [payments, setPayments] = useState<PaymentHistory[]>([]);
   const [loading, setLoading] = useState(true);
@@ -39,30 +46,43 @@ export default function EditSubscriptionPage() {
   const [confirmDueDate, setConfirmDueDate] = useState<string | null>(null);
 
   useEffect(() => {
-    if (params.id) {
-      fetchSubscription();
-      fetchPayments();
+    if (searchParams.get("confirmDue") === "true") {
+      confirmDueDismissedRef.current = false;
     }
-  }, [params.id]);
+  }, [searchParams]);
+
+  useEffect(() => {
+    if (!subId) return;
+    if (lastSubIdRef.current !== subId) {
+      lastSubIdRef.current = subId;
+      confirmDueDismissedRef.current = false;
+    }
+    fetchSubscription();
+    fetchPayments();
+  }, [subId]);
 
   useEffect(() => {
     // Deep-link UX for notifications: /subscriptions/[id]?confirmDue=true&due=YYYY-MM-DD
-    if (!subscription) return;
+    if (!subscription || !subId) return;
+    if (confirmDueDismissedRef.current) return;
     const shouldConfirm = searchParams.get("confirmDue") === "true";
     const dueDate = searchParams.get("due");
     if (!shouldConfirm || !dueDate) return;
-    if (subscription.payment_type !== "recurring") return;
+    if ((subscription.payment_type ?? "recurring") !== "recurring") return;
 
-    setConfirmDueDate(dueDate);
+    setConfirmDueDate(dueDate.slice(0, 10));
     setConfirmDueOpen(true);
 
-    // Remove query params to avoid re-opening the modal on re-render/back navigation.
-    router.replace(`/subscriptions/${params.id}`);
-  }, [subscription, searchParams, params.id, router]);
+    // Quitar query para que un refetch de la suscripción no vuelva a abrir el modal.
+    router.replace(`/subscriptions/${subId}`);
+  }, [subscription, searchParams, subId, router]);
 
   const fetchSubscription = async () => {
+    if (!subId) return;
     try {
-      const response = await fetch(`/api/subscriptions/${params.id}`);
+      const response = await fetch(`/api/subscriptions/${subId}`, {
+        cache: "no-store",
+      });
       if (response.ok) {
         const data = await response.json();
         setSubscription(data);
@@ -75,8 +95,11 @@ export default function EditSubscriptionPage() {
   };
 
   const fetchPayments = async () => {
+    if (!subId) return;
     try {
-      const response = await fetch(`/api/subscriptions/${params.id}/payments`);
+      const response = await fetch(`/api/subscriptions/${subId}/payments`, {
+        cache: "no-store",
+      });
       if (response.ok) {
         const data = await response.json();
         setPayments(data);
@@ -87,7 +110,7 @@ export default function EditSubscriptionPage() {
   };
 
   const handleSubmit = async (data: any) => {
-    const response = await fetch(`/api/subscriptions/${params.id}`, {
+    const response = await fetch(`/api/subscriptions/${subId}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
@@ -102,7 +125,7 @@ export default function EditSubscriptionPage() {
     data: any,
     recordPayment: boolean
   ) => {
-    const response = await fetch(`/api/subscriptions/${params.id}`, {
+    const response = await fetch(`/api/subscriptions/${subId}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ ...data, record_payment: recordPayment }),
@@ -130,7 +153,7 @@ export default function EditSubscriptionPage() {
     setPaymentSubmitting(true);
     try {
       const response = await fetch(
-        `/api/subscriptions/${params.id}/payments`,
+        `/api/subscriptions/${subId}/payments`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -147,31 +170,55 @@ export default function EditSubscriptionPage() {
     }
   };
 
+  const dismissConfirmDuePrompt = () => {
+    confirmDueDismissedRef.current = true;
+    setConfirmDueOpen(false);
+    if (subId) {
+      router.replace(`/subscriptions/${subId}`);
+    }
+  };
+
   const handleConfirmDue = async (paid: boolean) => {
-    if (!subscription) return;
+    if (!subscription || !subId) return;
     if (!paid) {
-      setConfirmDueOpen(false);
+      dismissConfirmDuePrompt();
       return;
     }
 
-    const due = confirmDueDate ?? subscription.next_payment_date;
+    const due = (confirmDueDate ?? subscription.next_payment_date)
+      .toString()
+      .slice(0, 10);
     setPaymentSubmitting(true);
     try {
-      const response = await fetch(`/api/subscriptions/${params.id}/payments`, {
+      const response = await fetch(`/api/subscriptions/${subId}/payments`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ amount: subscription.price, payment_date: due }),
+        body: JSON.stringify({
+          amount: subscription.price,
+          payment_date: due,
+          confirm_due: true,
+          expected_due: due,
+        }),
       });
 
       if (!response.ok) {
-        // If the request fails, keep the modal open so the user can retry.
+        try {
+          const err = await response.json();
+          toast.error(
+            typeof err.error === "string"
+              ? err.error
+              : "No se pudo registrar el pago. Probá de nuevo."
+          );
+        } catch {
+          toast.error("No se pudo registrar el pago. Probá de nuevo.");
+        }
         return;
       }
 
+      confirmDueDismissedRef.current = true;
       setConfirmDueOpen(false);
-      // Recargar para que `next_payment_date` actualice el estado visual.
-      fetchSubscription();
-      fetchPayments();
+      router.replace(`/subscriptions/${subId}`);
+      await Promise.all([fetchSubscription(), fetchPayments()]);
     } finally {
       setPaymentSubmitting(false);
     }
@@ -472,7 +519,7 @@ export default function EditSubscriptionPage() {
 
       <Modal
         isOpen={confirmDueOpen}
-        onClose={() => setConfirmDueOpen(false)}
+        onClose={dismissConfirmDuePrompt}
         title={t("confirmPaymentTitle")}
         size="sm"
       >
