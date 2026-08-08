@@ -1,9 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Subscription, PaymentHistory } from "@/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
+import { LoadingState } from "@/components/ui/Loading";
+import { lastMonths, monthKey, parseDateOnly } from "@/lib/date";
 import { useFormatCurrency } from "@/lib/hooks/useFormatCurrency";
 import {
   BarChart,
@@ -25,6 +27,9 @@ import {
   getMonthlyEquivalent,
   isSubscriptionActiveForCalculations,
 } from "@/lib/subscriptions";
+
+const MONTHS_IN_TREND = 6;
+const TREND_WINDOW_MONTHS = 12;
 
 const CHART_COLORS = [
   "var(--chart-1)",
@@ -97,113 +102,74 @@ export default function AnalyticsPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    Promise.all([fetchSubscriptions(), fetchPayments()]).finally(() =>
-      setLoading(false)
-    );
+    const load = async <T,>(url: string, apply: (data: T) => void) => {
+      try {
+        const res = await fetch(url);
+        if (res.ok) apply((await res.json()) as T);
+      } catch (error) {
+        console.error(`Error fetching ${url}:`, error);
+      }
+    };
+
+    Promise.all([
+      load("/api/subscriptions", setSubscriptions),
+      load("/api/payments", setPayments),
+    ]).finally(() => setLoading(false));
   }, []);
 
-  const fetchSubscriptions = async () => {
-    try {
-      const response = await fetch("/api/subscriptions");
-      if (response.ok) {
-        const data = await response.json();
-        setSubscriptions(data);
-      }
-    } catch (error) {
-      console.error("Error fetching subscriptions:", error);
-    }
-  };
+  const activeSubscriptions = useMemo(
+    () => subscriptions.filter(isSubscriptionActiveForCalculations),
+    [subscriptions]
+  );
 
-  const fetchPayments = async () => {
-    try {
-      const response = await fetch("/api/payments");
-      if (response.ok) {
-        const data = await response.json();
-        setPayments(data);
-      }
-    } catch (error) {
-      console.error("Error fetching payments:", error);
-    }
-  };
-
-  const activeSubscriptions = subscriptions.filter(isSubscriptionActiveForCalculations);
-
+  const totalMonthly = activeSubscriptions.reduce((sum, s) => sum + getMonthlyEquivalent(s), 0);
+  const totalYearly = activeSubscriptions.reduce((sum, s) => sum + getAnnualEquivalent(s), 0);
   const totalRealAllTime = payments.reduce((sum, p) => sum + p.amount, 0);
+
   const now = new Date();
-  const last12MonthsStart = new Date(now.getFullYear(), now.getMonth() - 11, 1);
-  const paymentsLast12Months = payments.filter(
-    (p) => new Date(p.payment_date) >= last12MonthsStart
-  );
-  const totalRealLast12Months = paymentsLast12Months.reduce(
-    (sum, p) => sum + p.amount,
-    0
-  );
+  const windowStart = new Date(now.getFullYear(), now.getMonth() - (TREND_WINDOW_MONTHS - 1), 1);
+  const paymentsInWindow = payments.filter((p) => parseDateOnly(p.payment_date) >= windowStart);
+  const totalRealInWindow = paymentsInWindow.reduce((sum, p) => sum + p.amount, 0);
+  const avgRealMonthly = paymentsInWindow.length > 0 ? totalRealInWindow / TREND_WINDOW_MONTHS : 0;
 
-  const categoryData = activeSubscriptions.reduce((acc, sub) => {
-    const monthlyPrice = getMonthlyEquivalent(sub);
-    const cat = sub.category ?? tCommon("uncategorized");
-    if (acc[cat]) acc[cat] += monthlyPrice;
-    else acc[cat] = monthlyPrice;
-    return acc;
-  }, {} as Record<string, number>);
+  const categoryChartData = useMemo(() => {
+    const byCategory = new Map<string, number>();
+    for (const sub of activeSubscriptions) {
+      const cat = sub.category || tCommon("uncategorized");
+      byCategory.set(cat, (byCategory.get(cat) ?? 0) + getMonthlyEquivalent(sub));
+    }
+    return [...byCategory].map(([name, value]) => ({
+      name: name.charAt(0).toUpperCase() + name.slice(1),
+      value: Number(value.toFixed(2)),
+    }));
+  }, [activeSubscriptions, tCommon]);
 
-  const categoryChartData = Object.entries(categoryData).map(([name, value]) => ({
-    name: name.charAt(0).toUpperCase() + name.slice(1),
-    value: Number(value.toFixed(2)),
-  }));
+  const billingCycleChartData = useMemo(() => {
+    const byCycle = new Map<string, number>();
+    for (const sub of activeSubscriptions) {
+      const key = getBillingCycleLabel(sub.billing_cycle, sub.payment_type, sub.installment_count);
+      byCycle.set(key, (byCycle.get(key) ?? 0) + 1);
+    }
+    return [...byCycle].map(([name, value]) => ({ name, value }));
+  }, [activeSubscriptions]);
 
-  const monthlyExpensesReal: Record<string, number> = {};
-  for (let i = 5; i >= 0; i--) {
-    const date = new Date();
-    date.setMonth(date.getMonth() - i);
-    const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
-    monthlyExpensesReal[monthKey] = 0;
-  }
-  payments.forEach((p) => {
-    const d = new Date(p.payment_date);
-    const monthKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
-    if (monthKey in monthlyExpensesReal) monthlyExpensesReal[monthKey] += p.amount;
-  });
+  /** Gasto real por mes; los meses sin pagos registrados muestran la proyección actual. */
+  const monthlyExpenses = useMemo(() => {
+    const realByMonth = new Map<string, number>();
+    for (const p of payments) {
+      const key = monthKey(p.payment_date);
+      realByMonth.set(key, (realByMonth.get(key) ?? 0) + p.amount);
+    }
 
-  const monthlyExpenses = Array.from({ length: 6 }, (_, i) => {
-    const date = new Date();
-    date.setMonth(date.getMonth() - (5 - i));
-    const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
-    const realGasto = monthlyExpensesReal[monthKey] ?? 0;
-    const proyeccion = activeSubscriptions.reduce((sum, sub) => sum + getMonthlyEquivalent(sub), 0);
-    return {
-      month: date.toLocaleDateString("es-ES", { month: "short", year: "numeric" }),
-      gasto: Number((realGasto > 0 ? realGasto : proyeccion).toFixed(2)),
-      real: Number(realGasto.toFixed(2)),
-      proyeccion: Number(proyeccion.toFixed(2)),
-    };
-  });
-
-  const billingCycleData = activeSubscriptions.reduce((acc, sub) => {
-    const key = getBillingCycleLabel(sub.billing_cycle, sub.payment_type, sub.installment_count);
-    acc[key] = (acc[key] || 0) + 1;
-    return acc;
-  }, {} as Record<string, number>);
-
-  const billingCycleChartData = Object.entries(billingCycleData).map(([name, value]) => ({
-    name,
-    value,
-  }));
-
-  const totalMonthly = activeSubscriptions.reduce((sum, sub) => sum + getMonthlyEquivalent(sub), 0);
-
-  const totalYearly = activeSubscriptions.reduce(
-    (sum, sub) => sum + getAnnualEquivalent(sub),
-    0
-  );
-  const avgRealMonthly =
-    paymentsLast12Months.length > 0 ? totalRealLast12Months / 12 : 0;
-
-  const chartGridStyle = {
-    stroke: "var(--chart-grid)",
-    strokeDasharray: "4 4",
-    strokeWidth: 1,
-  };
+    return lastMonths(MONTHS_IN_TREND).map((date) => {
+      const real = realByMonth.get(monthKey(date)) ?? 0;
+      return {
+        month: date.toLocaleDateString("es-ES", { month: "short", year: "numeric" }),
+        gasto: Number((real > 0 ? real : totalMonthly).toFixed(2)),
+        real: Number(real.toFixed(2)),
+      };
+    });
+  }, [payments, totalMonthly]);
 
   const axisStyle = {
     stroke: "var(--muted-foreground)",
@@ -211,14 +177,7 @@ export default function AnalyticsPage() {
     fontFamily: "inherit",
   };
 
-  if (loading) {
-    return (
-      <div className="flex min-h-[40vh] flex-col items-center justify-center gap-4">
-        <div className="h-8 w-8 animate-spin rounded-full border-2 border-muted-foreground border-t-transparent" />
-        <p className="text-sm text-muted-foreground">{t("loading")}</p>
-      </div>
-    );
-  }
+  if (loading) return <LoadingState message={t("loading")} />;
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
@@ -253,11 +212,14 @@ export default function AnalyticsPage() {
             {t("realSpendLast12Months")}
           </p>
           <p className="mt-1.5 text-lg font-semibold tracking-tight text-foreground sm:text-xl">
-            {formatCurrency(totalRealLast12Months)}
+            {formatCurrency(totalRealInWindow)}
           </p>
-          {paymentsLast12Months.length > 0 && (
+          {paymentsInWindow.length > 0 && (
             <p className="mt-0.5 text-xs text-muted-foreground">
-              {t("perMonthPayments", { amount: formatCurrency(avgRealMonthly), count: paymentsLast12Months.length })}
+              {t("perMonthPayments", {
+                amount: formatCurrency(avgRealMonthly),
+                count: paymentsInWindow.length,
+              })}
             </p>
           )}
         </Card>

@@ -1,239 +1,122 @@
-import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
 import {
   isValidSubscriptionId,
   subscriptionUpdateBodySchema,
 } from "@/lib/validations/schemas";
-import { isRateLimitedRequest } from "@/lib/rate-limit";
-import { getClientIp, unauthorizedResponse } from "@/lib/api-auth";
+import { normalizeSubscriptionPayload } from "@/lib/subscriptions";
+import { addBillingCycle, toDateOnly, todayDateOnly } from "@/lib/date";
+import { authenticate, dbError, parseBody, NO_STORE } from "@/lib/api/route";
 
-import { addMonths } from "date-fns";
+type Params = { params: Promise<{ id: string }> };
 
-function normalizeSubscriptionPayload(payload: ReturnType<typeof subscriptionUpdateBodySchema.parse>) {
-  const { record_payment, ...rest } = payload;
+const invalidId = () => NextResponse.json({ error: "ID inválido" }, { status: 400 });
 
-  if (rest.payment_type === "installment") {
-    return {
-      record_payment,
-      formData: {
-        ...rest,
-        billing_cycle: "monthly" as const,
-        installment_count: rest.installment_count ?? null,
-        installments_paid: rest.installments_paid ?? 0,
-        total_amount: rest.total_amount ?? null,
-      },
-    };
-  }
-
-  return {
-    record_payment,
-    formData: {
-      ...rest,
-      payment_type: "recurring" as const,
-      installment_count: null,
-      installments_paid: 0,
-      total_amount: null,
-    },
-  };
-}
-
-function addBillingCycle(
-  dateStr: string,
-  billingCycle: "monthly" | "quarterly" | "yearly"
-): string {
-  const [y, m, d] = dateStr.split("-").map(Number);
-  const date = new Date(y, m - 1, d);
-  const monthsToAdd = billingCycle === "monthly" ? 1 : billingCycle === "quarterly" ? 3 : 12;
-  const next = addMonths(date, monthsToAdd);
-  const yy = next.getFullYear();
-  const mm = String(next.getMonth() + 1).padStart(2, "0");
-  const dd = String(next.getDate()).padStart(2, "0");
-  return `${yy}-${mm}-${dd}`;
-}
-
-export async function GET(
-  request: Request,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function GET(request: Request, { params }: Params) {
   const { id } = await params;
-  if (!isValidSubscriptionId(id)) {
-    return NextResponse.json({ error: "ID inválido" }, { status: 400 });
-  }
+  if (!isValidSubscriptionId(id)) return invalidId();
 
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const auth = await authenticate(request, `/api/subscriptions/${id}`);
+  if (auth instanceof NextResponse) return auth;
 
-  if (!user) {
-    return unauthorizedResponse(request, `/api/subscriptions/${id}`);
-  }
-
-  const { data, error } = await supabase
+  const { data, error } = await auth.supabase
     .from("subscriptions")
     .select("*")
     .eq("id", id)
-    .eq("user_id", user.id)
+    .eq("user_id", auth.userId)
     .single();
 
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
-  }
-
-  return NextResponse.json(data, {
-    headers: { "Cache-Control": "no-store, must-revalidate" },
-  });
+  if (error) return dbError(error);
+  return NextResponse.json(data, NO_STORE);
 }
 
-export async function PUT(
-  request: Request,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function PUT(request: Request, { params }: Params) {
   const { id } = await params;
-  if (!isValidSubscriptionId(id)) {
-    return NextResponse.json({ error: "ID inválido" }, { status: 400 });
-  }
+  if (!isValidSubscriptionId(id)) return invalidId();
 
-  const ip = getClientIp(request);
-  if (isRateLimitedRequest(ip, "api")) {
-    return NextResponse.json(
-      { error: "Demasiadas peticiones. Intenta más tarde." },
-      { status: 429 }
-    );
-  }
+  const auth = await authenticate(request, `/api/subscriptions/${id}`, {
+    rateLimit: true,
+  });
+  if (auth instanceof NextResponse) return auth;
 
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const body = await parseBody(request, subscriptionUpdateBodySchema);
+  if (body instanceof NextResponse) return body;
 
-  if (!user) {
-    return unauthorizedResponse(request, `/api/subscriptions/${id}`);
-  }
-
-  let body: unknown;
-  try {
-    body = await request.json();
-  } catch {
-    return NextResponse.json({ error: "Body JSON inválido" }, { status: 400 });
-  }
-
-  const parsed = subscriptionUpdateBodySchema.safeParse(body);
-  if (!parsed.success) {
-    const msg = parsed.error.flatten().fieldErrors;
-    return NextResponse.json(
-      { error: "Datos inválidos", details: msg },
-      { status: 400 }
-    );
-  }
-
-  const { record_payment, formData } = normalizeSubscriptionPayload(parsed.data);
+  const { record_payment, ...rest } = body.data;
+  const formData = normalizeSubscriptionPayload(rest);
 
   if (record_payment) {
-    const { data: current } = await supabase
+    const { data: current } = await auth.supabase
       .from("subscriptions")
-      .select(
-        "price, next_payment_date, billing_cycle, payment_type, installment_count, installments_paid"
-      )
+      .select("price, next_payment_date, billing_cycle, payment_type, installment_count, installments_paid")
       .eq("id", id)
-      .eq("user_id", user.id)
+      .eq("user_id", auth.userId)
       .single();
 
     if (current) {
-      const dueDate = current.next_payment_date?.toString().slice(0, 10);
-      const paymentDate = dueDate ?? new Date().toISOString().slice(0, 10);
+      const currentDue = toDateOnly(current.next_payment_date);
+      const paymentDate = currentDue || todayDateOnly();
 
-      // Idempotencia: evitar duplicados (mismo subscription_id + payment_date)
-      const { data: existingRows } = await supabase
+      // Idempotencia: evitar duplicados (mismo subscription_id + payment_date).
+      const { data: existing } = await auth.supabase
         .from("payment_history")
         .select("id")
         .eq("subscription_id", id)
         .eq("payment_date", paymentDate)
         .limit(1);
 
-      if (!existingRows?.length) {
-        await supabase.from("payment_history").insert({
+      if (!existing?.length) {
+        await auth.supabase.from("payment_history").insert({
           subscription_id: id,
           amount: current.price,
           payment_date: paymentDate,
         });
       }
 
-      if (
-        current.payment_type === "installment" &&
-        current.installment_count != null
-      ) {
+      if (current.payment_type === "installment" && current.installment_count != null) {
         formData.installments_paid = Math.min(
           (current.installments_paid ?? 0) + 1,
           current.installment_count
         );
       }
 
-      // Para recurrentes: avanzar automáticamente a la próxima fecha
-      // solo si el usuario no reprogramó manualmente el `next_payment_date`.
-      const paymentType = (current.payment_type ?? "recurring") as "recurring" | "installment";
-      if (paymentType === "recurring") {
-        const currentDue = current.next_payment_date?.toString().slice(0, 10);
-        const requestedDue = formData.next_payment_date?.toString().slice(0, 10);
-
-        if (currentDue && requestedDue === currentDue) {
-          formData.next_payment_date = addBillingCycle(
-            currentDue,
-            (current.billing_cycle ?? "monthly") as "monthly" | "quarterly" | "yearly"
-          );
-        }
+      // Recurrentes: avanzar a la próxima fecha solo si el usuario no la reprogramó a mano.
+      const isRecurring = (current.payment_type ?? "recurring") === "recurring";
+      if (isRecurring && currentDue && toDateOnly(formData.next_payment_date) === currentDue) {
+        formData.next_payment_date = addBillingCycle(
+          currentDue,
+          current.billing_cycle ?? "monthly"
+        );
       }
     }
   }
 
-  const { data, error } = await supabase
+  const { data, error } = await auth.supabase
     .from("subscriptions")
     .update(formData)
     .eq("id", id)
-    .eq("user_id", user.id)
+    .eq("user_id", auth.userId)
     .select()
     .single();
 
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
-  }
-
+  if (error) return dbError(error);
   return NextResponse.json(data);
 }
 
-export async function DELETE(
-  request: Request,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function DELETE(request: Request, { params }: Params) {
   const { id } = await params;
-  if (!isValidSubscriptionId(id)) {
-    return NextResponse.json({ error: "ID inválido" }, { status: 400 });
-  }
-  const ip = getClientIp(request);
-  if (isRateLimitedRequest(ip, "api")) {
-    return NextResponse.json(
-      { error: "Demasiadas peticiones. Intenta más tarde." },
-      { status: 429 }
-    );
-  }
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  if (!isValidSubscriptionId(id)) return invalidId();
 
-  if (!user) {
-    return unauthorizedResponse(request, `/api/subscriptions/${id}`);
-  }
+  const auth = await authenticate(request, `/api/subscriptions/${id}`, {
+    rateLimit: true,
+  });
+  if (auth instanceof NextResponse) return auth;
 
-  const { error } = await supabase
+  const { error } = await auth.supabase
     .from("subscriptions")
     .delete()
     .eq("id", id)
-    .eq("user_id", user.id);
+    .eq("user_id", auth.userId);
 
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
-  }
-
+  if (error) return dbError(error);
   return NextResponse.json({ success: true });
 }

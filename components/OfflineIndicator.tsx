@@ -1,26 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useTranslations } from "next-intl";
 import { WifiOff } from "lucide-react";
 import { Badge } from "@/components/ui/Badge";
+import { useOfflineStorage } from "@/lib/hooks/useOfflineStorage";
 
 export function OfflineIndicator() {
-  const [isOnline, setIsOnline] = useState(true);
-
-  useEffect(() => {
-    setIsOnline(navigator.onLine);
-
-    const handleOnline = () => setIsOnline(true);
-    const handleOffline = () => setIsOnline(false);
-
-    window.addEventListener("online", handleOnline);
-    window.addEventListener("offline", handleOffline);
-
-    return () => {
-      window.removeEventListener("online", handleOnline);
-      window.removeEventListener("offline", handleOffline);
-    };
-  }, []);
+  const t = useTranslations("common");
+  const { isOnline } = useOfflineStorage();
 
   if (isOnline) return null;
 
@@ -28,7 +15,7 @@ export function OfflineIndicator() {
     <div className="fixed bottom-4 right-4 z-50">
       <Badge variant="warning" className="flex items-center gap-2">
         <WifiOff className="h-4 w-4" />
-        Modo offline
+        {t("offline")}
       </Badge>
     </div>
   );

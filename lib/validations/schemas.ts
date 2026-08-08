@@ -2,12 +2,23 @@ import { z } from "zod";
 
 /** UUID v4 básico para validar IDs en rutas */
 const uuidSchema = z.string().uuid("ID inválido");
-const installmentCountSchema = z.union([
+
+/** Solo se admiten planes de 3, 6, 9 o 12 cuotas (igual que el CHECK en la base). */
+export const installmentCountSchema = z.union([
   z.literal(3),
   z.literal(6),
   z.literal(9),
   z.literal(12),
 ]);
+
+/** El count llega como string desde los `<select>`; "" y null significan "sin cuotas". */
+const optionalInstallmentCount = z.preprocess(
+  (val) => (val === "" || val == null ? null : Number(val)),
+  installmentCountSchema.nullable().optional()
+);
+
+const dateOnly = (message = "Formato fecha: YYYY-MM-DD") =>
+  z.string().regex(/^\d{4}-\d{2}-\d{2}$/, message);
 
 const subscriptionFields = {
   name: z
@@ -17,16 +28,10 @@ const subscriptionFields = {
   price: z.coerce.number().min(0, "El precio debe ser >= 0").max(999999.99),
   billing_cycle: z.enum(["monthly", "yearly", "quarterly"]),
   payment_type: z.enum(["recurring", "installment"]).default("recurring"),
-  installment_count: z.preprocess(
-    (val) => (val === "" || val == null ? null : Number(val)),
-    installmentCountSchema.nullable().optional()
-  ),
+  installment_count: optionalInstallmentCount,
   installments_paid: z.coerce.number().int().min(0).max(999).optional(),
   total_amount: z.coerce.number().min(0).max(999999.99).nullable().optional(),
-  next_payment_date: z
-    .string()
-    .min(1, "La fecha es requerida")
-    .regex(/^\d{4}-\d{2}-\d{2}$/, "Formato fecha: YYYY-MM-DD"),
+  next_payment_date: dateOnly().min(1, "La fecha es requerida"),
   category: z
     .string()
     .trim()
@@ -73,16 +78,11 @@ export const subscriptionUpdateBodySchema = withInstallmentValidation(z.object({
 export const paymentBodySchema = z
   .object({
     amount: z.coerce.number().min(0).max(999999.99),
-    payment_date: z
-      .string()
-      .regex(/^\d{4}-\d{2}-\d{2}$/, "Formato fecha: YYYY-MM-DD"),
+    payment_date: dateOnly(),
     /** Si es true (solo recurrentes), la API usa la fecha de vencimiento del servidor y valida contra expected_due. */
     confirm_due: z.boolean().optional(),
     /** Vencimiento que el usuario vio al abrir el modal; debe coincidir con next_payment_date en servidor (anti doble envío). */
-    expected_due: z
-      .string()
-      .regex(/^\d{4}-\d{2}-\d{2}$/, "Formato fecha: YYYY-MM-DD")
-      .optional(),
+    expected_due: dateOnly().optional(),
   })
   .superRefine((data, ctx) => {
     if (data.confirm_due && !data.expected_due) {
@@ -117,13 +117,6 @@ const optionalUrl = z
   .optional()
   .refine((s) => s === undefined || z.string().url().safeParse(s).success, "URL inválida");
 
-const plannedPurchaseInstallmentCount = z.union([
-  z.literal(3),
-  z.literal(6),
-  z.literal(9),
-  z.literal(12),
-]);
-
 export const plannedPurchaseBodySchema = z
   .object({
     name: z.string().min(1, "El nombre es requerido").max(200, "Nombre demasiado largo"),
@@ -131,18 +124,11 @@ export const plannedPurchaseBodySchema = z
     planned_month: z.coerce.number().int().min(1).max(12),
     planned_year: z.coerce.number().int().min(2000).max(2100),
     bought: z.boolean().default(false),
-    bought_date: z
-      .string()
-      .regex(/^\d{4}-\d{2}-\d{2}$/, "Formato fecha: YYYY-MM-DD")
-      .nullable()
-      .optional(),
+    bought_date: dateOnly().nullable().optional(),
     payment_method: plannedPurchasePaymentMethod.nullable().optional(),
     card_name: z.string().max(100).nullable().optional(),
     bought_with_installments: z.boolean().optional().default(false),
-    installment_count: z.preprocess(
-      (val) => (val === "" || val == null ? null : Number(val)),
-      plannedPurchaseInstallmentCount.nullable().optional()
-    ),
+    installment_count: optionalInstallmentCount,
     installments_paid: z.coerce.number().int().min(0).max(12).optional(),
     installments_start_next_month: z.boolean().optional(),
     notes: z.string().max(1000).nullable().optional(),

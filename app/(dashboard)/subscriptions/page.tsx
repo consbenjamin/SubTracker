@@ -9,10 +9,12 @@ import { SubscriptionFilters } from "@/components/subscriptions/SubscriptionFilt
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { Modal } from "@/components/ui/Modal";
 import { Pagination } from "@/components/ui/Pagination";
+import { LoadingState } from "@/components/ui/Loading";
 import { SubscriptionForm } from "@/components/subscriptions/SubscriptionForm";
 import { Button } from "@/components/ui/Button";
 import { ExportDropdown } from "@/components/ui/ExportDropdown";
 import { useToast } from "@/lib/contexts/ToastContext";
+import { useSubscriptions } from "@/lib/hooks/useSubscriptions";
 import { isSubscriptionCompleted } from "@/lib/subscriptions";
 
 const PAGE_SIZE = 12;
@@ -23,8 +25,7 @@ function SubscriptionsContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const toast = useToast();
-  const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { subscriptions, loading, create, update, remove } = useSubscriptions();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingSubscription, setEditingSubscription] = useState<Subscription | null>(null);
   const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
@@ -34,30 +35,14 @@ function SubscriptionsContent() {
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [page, setPage] = useState(1);
 
-  const fetchSubscriptions = useCallback(async () => {
-    try {
-      const res = await fetch("/api/subscriptions");
-      if (res.ok) setSubscriptions(await res.json());
-    } catch (err) {
-      console.error("Error fetching subscriptions:", err);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
   useEffect(() => {
-    const q = searchParams.get("q") ?? "";
-    setSearchQuery(q);
+    setSearchQuery(searchParams.get("q") ?? "");
     setPage(1);
   }, [searchParams]);
 
   useEffect(() => {
     setPage(1);
   }, [statusFilter, categoryFilter]);
-
-  useEffect(() => {
-    fetchSubscriptions();
-  }, [fetchSubscriptions]);
 
   const closeModal = useCallback(() => {
     setIsModalOpen(false);
@@ -66,20 +51,11 @@ function SubscriptionsContent() {
 
   const handleCreate = useCallback(
     async (data: SubscriptionFormData) => {
-      const res = await fetch("/api/subscriptions", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-      });
-      if (res.ok) {
-        await fetchSubscriptions();
-        closeModal();
-        toast.success(t("subscriptionCreated"));
-      } else {
-        toast.error(t("errorCreate"));
-      }
+      if (!(await create(data))) return toast.error(t("errorCreate"));
+      closeModal();
+      toast.success(t("subscriptionCreated"));
     },
-    [fetchSubscriptions, closeModal, toast]
+    [create, closeModal, toast, t]
   );
 
   const handleEdit = useCallback((subscription: Subscription) => {
@@ -90,45 +66,28 @@ function SubscriptionsContent() {
   const handleUpdate = useCallback(
     async (data: SubscriptionFormData) => {
       if (!editingSubscription) return;
-      const res = await fetch(`/api/subscriptions/${editingSubscription.id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-      });
-      if (res.ok) {
-        await fetchSubscriptions();
-        closeModal();
-        toast.success(t("subscriptionUpdated"));
-      } else {
-        toast.error(t("errorUpdate"));
-      }
+      if (!(await update(editingSubscription.id, data))) return toast.error(t("errorUpdate"));
+      closeModal();
+      toast.success(t("subscriptionUpdated"));
     },
-    [editingSubscription, fetchSubscriptions, closeModal, toast]
+    [editingSubscription, update, closeModal, toast, t]
   );
 
   const handleDeleteClick = useCallback((id: string) => {
     setDeleteTargetId(id);
   }, []);
 
-  const handleDeleteConfirm = useCallback(
-    async () => {
-      if (!deleteTargetId) return;
-      setDeleting(true);
-      try {
-        const res = await fetch(`/api/subscriptions/${deleteTargetId}`, { method: "DELETE" });
-        if (res.ok) {
-          await fetchSubscriptions();
-          toast.success(t("subscriptionDeleted"));
-        } else {
-          toast.error(t("errorDelete"));
-        }
-      } finally {
-        setDeleting(false);
-        setDeleteTargetId(null);
-      }
-    },
-    [deleteTargetId, fetchSubscriptions, toast]
-  );
+  const handleDeleteConfirm = useCallback(async () => {
+    if (!deleteTargetId) return;
+    setDeleting(true);
+    try {
+      const ok = await remove(deleteTargetId);
+      toast[ok ? "success" : "error"](t(ok ? "subscriptionDeleted" : "errorDelete"));
+    } finally {
+      setDeleting(false);
+      setDeleteTargetId(null);
+    }
+  }, [deleteTargetId, remove, toast, t]);
 
   const categories = useMemo(
     () =>
@@ -177,14 +136,7 @@ function SubscriptionsContent() {
     };
   }, [filteredSubscriptions, page]);
 
-  if (loading) {
-    return (
-      <div className="flex min-h-[40vh] flex-col items-center justify-center gap-4">
-        <div className="h-8 w-8 animate-spin rounded-full border-2 border-muted-foreground border-t-transparent" />
-        <p className="text-sm text-muted-foreground">{t("loading")}</p>
-      </div>
-    );
-  }
+  if (loading) return <LoadingState message={t("loading")} />;
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
@@ -277,14 +229,7 @@ function SubscriptionsContent() {
 
 export default function SubscriptionsPage() {
   return (
-    <Suspense
-      fallback={
-        <div className="flex min-h-[40vh] flex-col items-center justify-center gap-4">
-          <div className="h-8 w-8 animate-spin rounded-full border-2 border-muted-foreground border-t-transparent" />
-          <p className="text-sm text-muted-foreground">...</p>
-        </div>
-      }
-    >
+    <Suspense fallback={<LoadingState />}>
       <SubscriptionsContent />
     </Suspense>
   );

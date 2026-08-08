@@ -45,17 +45,6 @@ export function logUnauthorized(path: string, ip?: string): void {
   });
 }
 
-export function logForbidden(path: string, ip?: string, userId?: string): void {
-  logSecurityEvent({
-    event: "forbidden",
-    level: "warn",
-    path,
-    status: 403,
-    ip,
-    userId,
-  });
-}
-
 export function logAuthFailure(path: string, ip?: string, message?: string): void {
   logSecurityEvent({
     event: "auth_failure",

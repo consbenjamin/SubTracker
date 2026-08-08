@@ -1,43 +1,79 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
-import { Subscription } from "@/types";
+import { Subscription, SubscriptionFormData } from "@/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import { LazySubscriptionCard } from "@/components/subscriptions/LazySubscriptionCard";
 import { Pagination } from "@/components/ui/Pagination";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { Modal } from "@/components/ui/Modal";
+import { LoadingState } from "@/components/ui/Loading";
 import { SubscriptionForm } from "@/components/subscriptions/SubscriptionForm";
 import { Button } from "@/components/ui/Button";
 import { ExportDropdown } from "@/components/ui/ExportDropdown";
 import { useFormatCurrency } from "@/lib/hooks/useFormatCurrency";
-import { differenceInDays } from "date-fns";
-import { TrendingUp, Calendar, DollarSign, Bell, Loader2 } from "lucide-react";
+import { TrendingUp, Calendar, DollarSign, Bell } from "lucide-react";
 import { useOfflineStorage } from "@/lib/hooks/useOfflineStorage";
+import { useSubscriptions } from "@/lib/hooks/useSubscriptions";
 import { useNotifications } from "@/lib/hooks/useNotifications";
 import { useToast } from "@/lib/contexts/ToastContext";
 import { useSettings } from "@/lib/contexts/SettingsContext";
 import { UpcomingCalendar } from "@/components/dashboard/UpcomingCalendar";
+import { parseDateOnly } from "@/lib/date";
 import {
+  daysUntilPayment,
   getAnnualEquivalent,
   getMonthlyEquivalent,
   isSubscriptionActiveForCalculations,
+  isUpcoming,
 } from "@/lib/subscriptions";
+
+const PAGE_SIZE = 9;
+const UPCOMING_PREVIEW = 5;
+
+type Filter = "all" | "active" | "upcoming";
+
+function StatCard({
+  label,
+  value,
+  icon: Icon,
+}: {
+  label: string;
+  value: string | number;
+  icon: typeof DollarSign;
+}) {
+  return (
+    <Card variant="outline" className="h-full">
+      <div className="flex h-full min-h-[88px] items-start justify-between gap-4">
+        <div className="min-w-0">
+          <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+            {label}
+          </p>
+          <p className="mt-1.5 text-lg font-semibold tracking-tight text-foreground sm:text-xl">
+            {value}
+          </p>
+        </div>
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-muted/60 text-muted-foreground">
+          <Icon className="h-5 w-5" />
+        </div>
+      </div>
+    </Card>
+  );
+}
 
 export default function DashboardPage() {
   const t = useTranslations("dashboard");
   const tCommon = useTranslations("common");
-  const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { subscriptions, setSubscriptions, loading, create, update, remove } =
+    useSubscriptions();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingSubscription, setEditingSubscription] = useState<Subscription | null>(null);
   const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
-  const [filter, setFilter] = useState<"all" | "active" | "upcoming">("all");
+  const [filter, setFilter] = useState<Filter>("all");
   const [page, setPage] = useState(1);
 
-  const PAGE_SIZE = 9;
   const formatCurrency = useFormatCurrency();
   const { isOnline, saveSubscriptions, getSubscriptions } = useOfflineStorage();
   const { permission, requestPermission, checkUpcomingPayments } = useNotifications();
@@ -45,74 +81,43 @@ export default function DashboardPage() {
   const { monthlyBudget } = useSettings();
 
   useEffect(() => {
-    if (permission === "default") {
-      requestPermission();
-    }
+    if (permission === "default") requestPermission();
   }, [permission, requestPermission]);
 
+  // Con red: refrescamos la caché offline con lo último del servidor.
   useEffect(() => {
-    fetchSubscriptions();
-  }, []);
+    if (!loading && isOnline && subscriptions.length) saveSubscriptions(subscriptions);
+  }, [loading, isOnline, subscriptions, saveSubscriptions]);
+
+  // Sin red y sin datos: mostramos la última copia local.
+  useEffect(() => {
+    if (loading || isOnline || subscriptions.length) return;
+    getSubscriptions().then((cached) => {
+      if (cached.length) setSubscriptions(cached);
+    });
+  }, [loading, isOnline, subscriptions.length, getSubscriptions, setSubscriptions]);
 
   useEffect(() => {
-    if (subscriptions.length > 0) {
-      checkUpcomingPayments(subscriptions);
-    }
+    if (subscriptions.length > 0) checkUpcomingPayments(subscriptions);
   }, [subscriptions, checkUpcomingPayments]);
 
-  const fetchSubscriptions = async () => {
-    try {
-      if (isOnline) {
-        const response = await fetch("/api/subscriptions");
-        if (response.ok) {
-          const data = await response.json();
-          setSubscriptions(data);
-          await saveSubscriptions(data);
-        }
-      } else {
-        const cached = await getSubscriptions();
-        setSubscriptions(cached);
-      }
-    } catch (error) {
-      console.error("Error fetching subscriptions:", error);
-      if (!isOnline) {
-        const cached = await getSubscriptions();
-        setSubscriptions(cached);
-      }
-    } finally {
-      setLoading(false);
-    }
+  /** Las escrituras necesitan servidor: sin red avisamos en vez de guardar algo que se perdería. */
+  const guardOnline = () => {
+    if (isOnline) return true;
+    toast.error(t("offlineWriteBlocked"));
+    return false;
   };
 
-  const handleCreate = async (data: any) => {
-    if (isOnline) {
-      const response = await fetch("/api/subscriptions", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-      });
+  const closeModal = () => {
+    setIsModalOpen(false);
+    setEditingSubscription(null);
+  };
 
-      if (response.ok) {
-        const newSub = await response.json();
-        await fetchSubscriptions();
-        setIsModalOpen(false);
-        toast.success(t("subscriptionCreated"));
-      } else {
-        toast.error(t("errorCreate"));
-      }
-    } else {
-      const newSub: Subscription = {
-        ...data,
-        id: crypto.randomUUID(),
-        user_id: "offline",
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      };
-      await saveSubscriptions([...subscriptions, newSub]);
-      setSubscriptions([...subscriptions, newSub]);
-      setIsModalOpen(false);
-      toast.success(t("subscriptionCreatedOffline"));
-    }
+  const handleCreate = async (data: SubscriptionFormData) => {
+    if (!guardOnline()) return;
+    if (!(await create(data))) return toast.error(t("errorCreate"));
+    closeModal();
+    toast.success(t("subscriptionCreated"));
   };
 
   const handleEdit = (subscription: Subscription) => {
@@ -120,98 +125,48 @@ export default function DashboardPage() {
     setIsModalOpen(true);
   };
 
-  const handleUpdate = async (data: any) => {
-    if (!editingSubscription) return;
-
-    if (isOnline) {
-      const response = await fetch(`/api/subscriptions/${editingSubscription.id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-      });
-
-      if (response.ok) {
-        await fetchSubscriptions();
-        setIsModalOpen(false);
-        setEditingSubscription(null);
-        toast.success(t("subscriptionUpdated"));
-      } else {
-        toast.error(t("errorUpdate"));
-      }
-    } else {
-      const updated = { ...editingSubscription, ...data, updated_at: new Date().toISOString() };
-      const updatedList = subscriptions.map((s) =>
-        s.id === editingSubscription.id ? updated : s
-      );
-      await saveSubscriptions(updatedList);
-      setSubscriptions(updatedList);
-      setIsModalOpen(false);
-      setEditingSubscription(null);
-      toast.success(t("subscriptionUpdatedOffline"));
-    }
-  };
-
-  const handleDeleteClick = (id: string) => {
-    setDeleteTargetId(id);
+  const handleUpdate = async (data: SubscriptionFormData) => {
+    if (!editingSubscription || !guardOnline()) return;
+    if (!(await update(editingSubscription.id, data))) return toast.error(t("errorUpdate"));
+    closeModal();
+    toast.success(t("subscriptionUpdated"));
   };
 
   const handleDeleteConfirm = async () => {
     if (!deleteTargetId) return;
+    if (!guardOnline()) return setDeleteTargetId(null);
     setDeleting(true);
     try {
-      if (isOnline) {
-        const response = await fetch(`/api/subscriptions/${deleteTargetId}`, {
-          method: "DELETE",
-        });
-
-        if (response.ok) {
-          await fetchSubscriptions();
-          toast.success(t("subscriptionDeleted"));
-        } else {
-          toast.error(t("errorDelete"));
-        }
-      } else {
-        const updatedList = subscriptions.filter((s) => s.id !== deleteTargetId);
-        await saveSubscriptions(updatedList);
-        setSubscriptions(updatedList);
-        toast.success(t("subscriptionDeleted"));
-      }
+      const ok = await remove(deleteTargetId);
+      toast[ok ? "success" : "error"](t(ok ? "subscriptionDeleted" : "errorDelete"));
     } finally {
       setDeleting(false);
       setDeleteTargetId(null);
     }
   };
 
-  const activeSubscriptions = subscriptions.filter(isSubscriptionActiveForCalculations);
-  const monthlyTotal = activeSubscriptions.reduce(
-    (sum, sub) => sum + getMonthlyEquivalent(sub),
-    0
+  const activeSubscriptions = useMemo(
+    () => subscriptions.filter(isSubscriptionActiveForCalculations),
+    [subscriptions]
   );
 
-  const yearlyTotal = activeSubscriptions.reduce(
-    (sum, sub) => sum + getAnnualEquivalent(sub),
-    0
+  const monthlyTotal = activeSubscriptions.reduce((sum, s) => sum + getMonthlyEquivalent(s), 0);
+  const yearlyTotal = activeSubscriptions.reduce((sum, s) => sum + getAnnualEquivalent(s), 0);
+
+  const upcomingPayments = useMemo(
+    () =>
+      subscriptions
+        .filter((s) => isUpcoming(s))
+        .sort((a, b) => daysUntilPayment(a) - daysUntilPayment(b))
+        .slice(0, UPCOMING_PREVIEW),
+    [subscriptions]
   );
 
-  const upcomingPayments = subscriptions
-    .filter((s) => {
-      const days = differenceInDays(new Date(s.next_payment_date), new Date());
-      return isSubscriptionActiveForCalculations(s) && days >= 0 && days <= 7;
-    })
-    .sort((a, b) =>
-      differenceInDays(new Date(a.next_payment_date), new Date(b.next_payment_date))
-    )
-    .slice(0, 5);
-
-  const filteredSubscriptions =
-    filter === "all"
-      ? subscriptions
-      : filter === "active"
-      ? subscriptions.filter(isSubscriptionActiveForCalculations)
-      : subscriptions.filter((s) => {
-          const days = differenceInDays(new Date(s.next_payment_date), new Date());
-          return isSubscriptionActiveForCalculations(s) && days >= 0 && days <= 7;
-        });
+  const filteredSubscriptions = useMemo(() => {
+    if (filter === "active") return activeSubscriptions;
+    if (filter === "upcoming") return subscriptions.filter((s) => isUpcoming(s));
+    return subscriptions;
+  }, [filter, subscriptions, activeSubscriptions]);
 
   const totalPages = Math.max(1, Math.ceil(filteredSubscriptions.length / PAGE_SIZE));
   const paginatedSubscriptions = filteredSubscriptions.slice(
@@ -219,50 +174,42 @@ export default function DashboardPage() {
     page * PAGE_SIZE
   );
 
-  const filterTabs: { key: "all" | "active" | "upcoming"; label: string }[] = [
+  const filterTabs: { key: Filter; label: string }[] = [
     { key: "all", label: t("filterAll") },
     { key: "active", label: t("filterActive") },
     { key: "upcoming", label: t("filterUpcoming") },
   ];
 
-  if (loading) {
-    return (
-      <div className="flex min-h-[60vh] flex-col items-center justify-center gap-4">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-        <p className="text-sm text-muted-foreground">{t("loadingSubscriptions")}</p>
-      </div>
-    );
-  }
+  const budgetRatio = monthlyBudget ? monthlyTotal / monthlyBudget : 0;
+  const budgetColor =
+    budgetRatio > 1 ? "var(--chart-6)" : budgetRatio > 0.8 ? "var(--chart-5)" : "var(--chart-4)";
+
+  if (loading) return <LoadingState message={t("loadingSubscriptions")} className="min-h-[60vh]" />;
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
-      {/* Header */}
       <header className="mb-6 flex flex-col gap-4 sm:mb-10 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
         <div className="min-w-0">
           <h1 className="text-xl font-semibold tracking-tight text-foreground sm:text-2xl lg:text-3xl">
             {t("title")}
           </h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            {t("summary")}
-          </p>
+          <p className="mt-1 text-sm text-muted-foreground">{t("summary")}</p>
         </div>
         <div className="w-full sm:w-auto">
           <ExportDropdown subscriptions={subscriptions} />
         </div>
       </header>
 
-      {/* Presupuesto mensual (si está definido) */}
       {monthlyBudget != null && monthlyBudget > 0 && (
         <section className="mb-8">
           <Card variant="outline">
             <CardContent className="pt-6">
               <div className="flex flex-wrap items-center justify-between gap-4">
                 <div>
-                  <p className="text-sm font-medium text-foreground">
-                    {t("monthlyBudget")}
-                  </p>
+                  <p className="text-sm font-medium text-foreground">{t("monthlyBudget")}</p>
                   <p className="mt-0.5 text-sm text-muted-foreground">
-                    {formatCurrency(monthlyTotal)} {t("usedOf")} {formatCurrency(monthlyBudget)} {t("used")}
+                    {formatCurrency(monthlyTotal)} {t("usedOf")}{" "}
+                    {formatCurrency(monthlyBudget)} {t("used")}
                   </p>
                 </div>
                 <div className="min-w-[160px] flex-1 max-w-xs">
@@ -270,20 +217,15 @@ export default function DashboardPage() {
                     <div
                       className="h-full rounded-full transition-all duration-500"
                       style={{
-                        width: `${Math.min(100, (monthlyTotal / monthlyBudget) * 100)}%`,
-                        backgroundColor:
-                          monthlyTotal > monthlyBudget
-                            ? "var(--chart-6)"
-                            : monthlyTotal / monthlyBudget > 0.8
-                            ? "var(--chart-5)"
-                            : "var(--chart-4)",
+                        width: `${Math.min(100, budgetRatio * 100)}%`,
+                        backgroundColor: budgetColor,
                       }}
                     />
                   </div>
                   <p className="mt-1.5 text-xs font-medium text-muted-foreground">
-                    {monthlyTotal > monthlyBudget
+                    {budgetRatio > 1
                       ? `${formatCurrency(monthlyTotal - monthlyBudget)} ${t("overBudget")}`
-                      : `${((monthlyTotal / monthlyBudget) * 100).toFixed(0)}% ${t("usedPercent")}`}
+                      : `${(budgetRatio * 100).toFixed(0)}% ${t("usedPercent")}`}
                   </p>
                 </div>
               </div>
@@ -292,74 +234,17 @@ export default function DashboardPage() {
         </section>
       )}
 
-      {/* Stats */}
       <section className="mb-10 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Card variant="outline" className="h-full">
-          <div className="flex h-full min-h-[88px] items-start justify-between gap-4">
-            <div className="min-w-0">
-              <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                {t("monthlyTotal")}
-              </p>
-              <p className="mt-1.5 text-lg font-semibold tracking-tight text-foreground sm:text-xl">
-                {formatCurrency(monthlyTotal)}
-              </p>
-            </div>
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-muted/60 text-muted-foreground">
-              <DollarSign className="h-5 w-5" />
-            </div>
-          </div>
-        </Card>
-
-        <Card variant="outline" className="h-full">
-          <div className="flex h-full min-h-[88px] items-start justify-between gap-4">
-            <div className="min-w-0">
-              <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                {t("futureCommitment")}
-              </p>
-              <p className="mt-1.5 text-lg font-semibold tracking-tight text-foreground sm:text-xl">
-                {formatCurrency(yearlyTotal)}
-              </p>
-            </div>
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-muted/60 text-muted-foreground">
-              <TrendingUp className="h-5 w-5" />
-            </div>
-          </div>
-        </Card>
-
-        <Card variant="outline" className="h-full">
-          <div className="flex h-full min-h-[88px] items-start justify-between gap-4">
-            <div className="min-w-0">
-              <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                {t("active")}
-              </p>
-              <p className="mt-1.5 text-lg font-semibold tracking-tight text-foreground sm:text-xl">
-                {activeSubscriptions.length}
-              </p>
-            </div>
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-muted/60 text-muted-foreground">
-              <Calendar className="h-5 w-5" />
-            </div>
-          </div>
-        </Card>
-
-        <Card variant="outline" className="h-full">
-          <div className="flex h-full min-h-[88px] items-start justify-between gap-4">
-            <div className="min-w-0">
-              <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                {t("upcomingPayments")}
-              </p>
-              <p className="mt-1.5 text-lg font-semibold tracking-tight text-foreground sm:text-xl">
-                {upcomingPayments.length}
-              </p>
-            </div>
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-muted/60 text-muted-foreground">
-              <Bell className="h-5 w-5" />
-            </div>
-          </div>
-        </Card>
+        <StatCard label={t("monthlyTotal")} value={formatCurrency(monthlyTotal)} icon={DollarSign} />
+        <StatCard
+          label={t("futureCommitment")}
+          value={formatCurrency(yearlyTotal)}
+          icon={TrendingUp}
+        />
+        <StatCard label={t("active")} value={activeSubscriptions.length} icon={Calendar} />
+        <StatCard label={t("upcomingPayments")} value={upcomingPayments.length} icon={Bell} />
       </section>
 
-      {/* Upcoming payments */}
       {upcomingPayments.length > 0 && (
         <section className="mb-10">
           <Card variant="outline">
@@ -377,7 +262,7 @@ export default function DashboardPage() {
                       <p className="font-medium text-foreground">{sub.name}</p>
                       <p className="text-sm text-muted-foreground">
                         {formatCurrency(sub.price)} ·{" "}
-                        {new Date(sub.next_payment_date).toLocaleDateString("es-ES", {
+                        {parseDateOnly(sub.next_payment_date).toLocaleDateString("es-ES", {
                           day: "numeric",
                           month: "short",
                           year: "numeric",
@@ -392,15 +277,10 @@ export default function DashboardPage() {
         </section>
       )}
 
-      {/* Calendario de vencimientos */}
       <section className="mb-10">
-        <UpcomingCalendar
-          subscriptions={subscriptions}
-          onSubscriptionClick={handleEdit}
-        />
+        <UpcomingCalendar subscriptions={subscriptions} onSubscriptionClick={handleEdit} />
       </section>
 
-      {/* Filters + list */}
       <section className="min-w-0">
         <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
           <div className="flex w-full overflow-x-auto rounded-lg border border-border p-1 sm:w-auto">
@@ -437,18 +317,14 @@ export default function DashboardPage() {
                 key={subscription.id}
                 subscription={subscription}
                 onEdit={handleEdit}
-                onDelete={handleDeleteClick}
+                onDelete={setDeleteTargetId}
               />
             ))
           )}
         </div>
 
-        {filteredSubscriptions.length > 0 && totalPages > 1 && (
-          <Pagination
-            page={page}
-            totalPages={totalPages}
-            onPageChange={setPage}
-          />
+        {totalPages > 1 && (
+          <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
         )}
       </section>
 
@@ -466,19 +342,13 @@ export default function DashboardPage() {
 
       <Modal
         isOpen={isModalOpen}
-        onClose={() => {
-          setIsModalOpen(false);
-          setEditingSubscription(null);
-        }}
+        onClose={closeModal}
         title={editingSubscription ? t("editSubscription") : t("newSubscription")}
       >
         <SubscriptionForm
           subscription={editingSubscription || undefined}
           onSubmit={editingSubscription ? handleUpdate : handleCreate}
-          onCancel={() => {
-            setIsModalOpen(false);
-            setEditingSubscription(null);
-          }}
+          onCancel={closeModal}
         />
       </Modal>
     </div>

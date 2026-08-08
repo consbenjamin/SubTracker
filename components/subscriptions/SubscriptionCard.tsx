@@ -10,9 +10,9 @@ import { Button } from "@/components/ui/Button";
 import { formatDate } from "@/lib/utils";
 import { useFormatCurrency } from "@/lib/hooks/useFormatCurrency";
 import { Edit, Trash2, Calendar, CreditCard, ChevronDown, ChevronUp } from "lucide-react";
-import { differenceInDays } from "date-fns";
 import { cn } from "@/lib/utils";
 import {
+  daysUntilPayment,
   getAnnualEquivalent,
   getInstallmentProgress,
   isInstallmentSubscription,
@@ -49,9 +49,9 @@ export function SubscriptionCard({
   const installment = getInstallmentProgress(subscription);
   const isInstallment = isInstallmentSubscription(subscription);
   const isCompleted = isSubscriptionCompleted(subscription);
-  const daysUntilPayment = isCompleted
+  const remainingDays = isCompleted
     ? Number.POSITIVE_INFINITY
-    : differenceInDays(new Date(subscription.next_payment_date), new Date());
+    : daysUntilPayment(subscription);
 
   const getStatusBadge = () => {
     if (isCompleted) {
@@ -75,10 +75,10 @@ export function SubscriptionCard({
       return { color: "text-emerald-600 dark:text-emerald-400", text: t("noInstallmentsLeft") };
     }
 
-    if (daysUntilPayment < 0) return { color: "text-red-600 dark:text-red-400", text: t("overdue") };
-    if (daysUntilPayment <= 3) return { color: "text-amber-600 dark:text-amber-400", text: t("upcoming") };
-    if (daysUntilPayment <= 7) return { color: "text-amber-600/80 dark:text-amber-400/80", text: t("soon") };
-    return { color: "text-muted-foreground", text: `${daysUntilPayment} ${t("days")}` };
+    if (remainingDays < 0) return { color: "text-red-600 dark:text-red-400", text: t("overdue") };
+    if (remainingDays <= 3) return { color: "text-amber-600 dark:text-amber-400", text: t("upcoming") };
+    if (remainingDays <= 7) return { color: "text-amber-600/80 dark:text-amber-400/80", text: t("soon") };
+    return { color: "text-muted-foreground", text: `${remainingDays} ${t("days")}` };
   };
 
   const urgency = getPaymentUrgency();
@@ -151,7 +151,7 @@ export function SubscriptionCard({
             {isInstallment ? t("nextInstallment") : t("nextPayment")}: {formatDate(subscription.next_payment_date)}
           </span>
           <span className={cn("shrink-0", urgency.color)}>({urgency.text})</span>
-          {!isInstallment && subscription.status === "active" && daysUntilPayment < 0 && (
+          {!isInstallment && subscription.status === "active" && remainingDays < 0 && (
             <Button
               type="button"
               variant="primary"

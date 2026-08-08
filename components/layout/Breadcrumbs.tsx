@@ -4,8 +4,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { ChevronRight } from "lucide-react";
-import { cn } from "@/lib/utils";
 
+/** Segmento de la URL → clave del namespace `nav`. */
 const NAV_SEGMENT_KEYS: Record<string, string> = {
   dashboard: "dashboard",
   purchases: "purchases",
@@ -15,42 +15,32 @@ const NAV_SEGMENT_KEYS: Record<string, string> = {
   settings: "settings",
 };
 
-function getBreadcrumbs(
-  pathname: string,
-  getLabel: (seg: string) => string
-): { href: string; label: string }[] {
-  if (pathname === "/dashboard") {
-    return [{ href: "/dashboard", label: getLabel("dashboard") }];
-  }
-
-  const segments = pathname.split("/").filter(Boolean);
-  const crumbs: { href: string; label: string }[] = [
-    { href: "/dashboard", label: getLabel("dashboard") },
-  ];
-
-  let href = "";
-  for (let i = 0; i < segments.length; i++) {
-    const seg = segments[i];
-    href += `/${seg}`;
-    const label =
-      NAV_SEGMENT_KEYS[seg] !== undefined
-        ? getLabel(NAV_SEGMENT_KEYS[seg])
-        : seg.length === 36
-          ? getLabel("detail")
-          : seg.charAt(0).toUpperCase() + seg.slice(1);
-    crumbs.push({ href, label });
-  }
-
-  return crumbs;
-}
+const UUID_LENGTH = 36;
 
 export function Breadcrumbs() {
   const pathname = usePathname();
   const tNav = useTranslations("nav");
   const tCommon = useTranslations("common");
-  const getLabel = (seg: string) =>
-    seg === "detail" ? tCommon("detail") : tNav(NAV_SEGMENT_KEYS[seg] ?? seg);
-  const crumbs = getBreadcrumbs(pathname, getLabel);
+
+  const segmentLabel = (segment: string) => {
+    const navKey = NAV_SEGMENT_KEYS[segment];
+    if (navKey) return tNav(navKey);
+    if (segment.length === UUID_LENGTH) return tCommon("detail");
+    return segment.charAt(0).toUpperCase() + segment.slice(1);
+  };
+
+  const crumbs = [
+    { href: "/dashboard", label: tNav("dashboard") },
+    ...(pathname === "/dashboard"
+      ? []
+      : pathname
+          .split("/")
+          .filter(Boolean)
+          .map((segment, i, all) => ({
+            href: `/${all.slice(0, i + 1).join("/")}`,
+            label: segmentLabel(segment),
+          }))),
+  ];
 
   if (crumbs.length <= 1) return null;
 

@@ -21,6 +21,7 @@ import { es, enUS } from "date-fns/locale";
 import { Subscription } from "@/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
+import { toDateOnly } from "@/lib/date";
 import { useFormatCurrency } from "@/lib/hooks/useFormatCurrency";
 import { ChevronLeft, ChevronRight, CalendarDays } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -52,17 +53,14 @@ export function UpcomingCalendar({
     [subscriptions]
   );
 
+  // Clave YYYY-MM-DD tomada tal cual del DATE: sin convertir a Date no hay desfase de zona.
   const paymentsByDate = useMemo(() => {
-    const map = new Map<string, { count: number; subs: Subscription[] }>();
+    const map = new Map<string, Subscription[]>();
     for (const sub of activeWithDueDate) {
-      const key = format(new Date(sub.next_payment_date), "yyyy-MM-dd");
+      const key = toDateOnly(sub.next_payment_date);
       const existing = map.get(key);
-      if (existing) {
-        existing.count += 1;
-        existing.subs.push(sub);
-      } else {
-        map.set(key, { count: 1, subs: [sub] });
-      }
+      if (existing) existing.push(sub);
+      else map.set(key, [sub]);
     }
     return map;
   }, [activeWithDueDate]);
@@ -73,24 +71,14 @@ export function UpcomingCalendar({
     return eachDayOfInterval({ start, end });
   }, [viewDate]);
 
-  const selectedPayments = useMemo(() => {
-    if (!selectedDate) return [];
-    const key = format(selectedDate, "yyyy-MM-dd");
-    return paymentsByDate.get(key)?.subs ?? [];
-  }, [selectedDate, paymentsByDate]);
+  const selectedPayments = useMemo(
+    () => (selectedDate ? paymentsByDate.get(toDateOnly(selectedDate)) ?? [] : []),
+    [selectedDate, paymentsByDate]
+  );
 
-  const hasPayment = (date: Date) => {
-    const key = format(date, "yyyy-MM-dd");
-    return paymentsByDate.has(key);
-  };
+  const getPaymentCount = (date: Date) => paymentsByDate.get(toDateOnly(date))?.length ?? 0;
 
-  const getPaymentCount = (date: Date) => {
-    const key = format(date, "yyyy-MM-dd");
-    return paymentsByDate.get(key)?.count ?? 0;
-  };
-
-  const isPast = (date: Date) =>
-    isBefore(startOfDay(date), startOfDay(new Date()));
+  const isPast = (date: Date) => isBefore(startOfDay(date), startOfDay(new Date()));
 
   return (
     <Card variant="outline" className="overflow-hidden">

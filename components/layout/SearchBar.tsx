@@ -196,6 +196,7 @@ export function SearchBar({ className, onNavigate, variant = "default" }: Search
           onKeyDown={handleKeyDown}
           placeholder={t("placeholder")}
           autoComplete="off"
+          role="combobox"
           aria-label={t("ariaLabel")}
           aria-expanded={showDropdown}
           aria-autocomplete="list"

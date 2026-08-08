@@ -7,7 +7,7 @@
     "dev:turbo": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint",
+    "lint": "eslint .",
     "audit": "npm audit"
   },
   "dependencies": {
@@ -15,9 +15,7 @@
     "@supabase/ssr": "^0.5.0",
     "@supabase/supabase-js": "^2.39.0",
     "@vercel/analytics": "^1.6.1",
-    "clean-webpack-plugin": "^4.0.0",
     "clsx": "^2.1.1",
-    "common-tags": "^1.8.2",
     "date-fns": "^3.0.0",
     "jspdf": "^4.0.0",
     "jspdf-autotable": "^5.0.7",
@@ -30,8 +28,7 @@
     "react-hook-form": "^7.49.0",
     "recharts": "^2.10.0",
     "tailwind-merge": "^3.4.0",
-    "zod": "^3.22.0",
-    "zustand": "^4.4.7"
+    "zod": "^3.22.0"
   },
   "devDependencies": {
     "@babel/core": "^7.29.0",
@@ -43,8 +40,8 @@
     "@types/react": "^18.2.0",
     "@types/react-dom": "^18.2.0",
     "autoprefixer": "^10.4.17",
-    "eslint": "^10.0.1",
-    "eslint-config-next": "^0.2.4",
+    "eslint": "^9.0.0",
+    "eslint-config-next": "^16.1.6",
     "postcss": "^8.4.33",
     "sharp": "^0.33.5",
     "tailwindcss": "^3.4.1",

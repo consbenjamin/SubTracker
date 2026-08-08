@@ -1,31 +1,24 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Subscription } from "@/types";
-import { differenceInCalendarDays, differenceInDays, parseISO, startOfDay } from "date-fns";
+import { daysUntilPayment } from "@/lib/subscriptions";
 
+/** Notificaciones del navegador para vencimientos de hoy y de mañana. */
 export function useNotifications() {
   const [permission, setPermission] = useState<NotificationPermission>("default");
   const [isSupported, setIsSupported] = useState(false);
-  const pendingSubscriptionsRef = useRef<Subscription[] | null>(null);
-
-  const logDebug = (...args: unknown[]) => {
-    if (process.env.NODE_ENV !== "development") return;
-    console.debug("[notifications]", ...args);
-  };
+  const pendingRef = useRef<Subscription[] | null>(null);
 
   useEffect(() => {
-    // Para notificaciones del navegador (Notification API) no hace falta Service Worker.
-    setIsSupported("Notification" in window);
-    if ("Notification" in window) {
-      setPermission(Notification.permission);
-    }
+    // La Notification API no necesita Service Worker.
+    const supported = "Notification" in window;
+    setIsSupported(supported);
+    if (supported) setPermission(Notification.permission);
   }, []);
 
-  const requestPermission = async () => {
-    if (!("Notification" in window)) {
-      return false;
-    }
+  const requestPermission = useCallback(async () => {
+    if (!("Notification" in window)) return false;
 
     if (Notification.permission === "default") {
       const result = await Notification.requestPermission();
@@ -34,116 +27,62 @@ export function useNotifications() {
     }
 
     return Notification.permission === "granted";
-  };
+  }, []);
 
-  const checkUpcomingPayments = (subscriptions: Subscription[]) => {
-    if (!isSupported) {
-      logDebug("Not supported in this browser");
-      return;
-    }
+  const checkUpcomingPayments = useCallback(
+    (subscriptions: Subscription[]) => {
+      if (!isSupported) return;
 
-    const today = startOfDay(new Date());
-    const upcoming = subscriptions.filter((sub) => {
-      if (sub.status !== "active") return false;
-      const paymentType = sub.payment_type ?? "recurring";
-      if (paymentType !== "recurring") return false;
+      const dueSoon = subscriptions.filter((sub) => {
+        if (sub.status !== "active") return false;
+        if ((sub.payment_type ?? "recurring") !== "recurring") return false;
+        const days = daysUntilPayment(sub);
+        return days === 0 || days === 1;
+      });
 
-      // `next_payment_date` viene como YYYY-MM-DD (DATE), parseamos en local para evitar desfasajes TZ.
-      const dueDate = startOfDay(parseISO(sub.next_payment_date));
-      const days = differenceInCalendarDays(dueDate, today);
-      return days === 0 || days === 1;
-    });
+      if (dueSoon.length === 0) return;
 
-    logDebug("Permission:", permission, "| candidates:", upcoming.length);
+      // Todavía sin permiso: guardamos para disparar en cuanto el usuario acepte.
+      if (permission !== "granted") {
+        pendingRef.current = subscriptions;
+        return;
+      }
 
-    // Si todavía no tenemos permisos, guardamos para disparar cuando el usuario acepte.
-    if (upcoming.length > 0 && permission !== "granted") {
-      pendingSubscriptionsRef.current = subscriptions;
-      logDebug("Pending notifications stored; permission is not granted");
-      return;
-    }
-
-    if (upcoming.length > 0 && permission === "granted") {
-      upcoming.forEach((sub) => {
-        const dueDateParsed = startOfDay(parseISO(sub.next_payment_date));
-        const days = differenceInCalendarDays(dueDateParsed, today);
-        const eventType = days === 1 ? "tomorrow" : "today";
+      for (const sub of dueSoon) {
+        const isTomorrow = daysUntilPayment(sub) === 1;
         const dueDate = sub.next_payment_date;
-        const dedupeKey = `notified:${sub.id}:${dueDate}:${eventType}`;
+        const dedupeKey = `notified:${sub.id}:${dueDate}:${isTomorrow ? "tomorrow" : "today"}`;
 
         try {
-          if (typeof window !== "undefined") {
-            const already = localStorage.getItem(dedupeKey);
-            if (already) {
-              logDebug("Skipped by dedupe:", dedupeKey);
-              return;
-            }
-            localStorage.setItem(dedupeKey, "1");
-          }
+          if (localStorage.getItem(dedupeKey)) continue;
+          localStorage.setItem(dedupeKey, "1");
         } catch {
-          // Si localStorage falla (modo incógnito, etc.), igual intentamos notificar una vez.
+          // localStorage puede fallar (incógnito); igual notificamos una vez.
         }
 
-        const title = days === 1 ? `Pago próximo: ${sub.name}` : `Vence hoy: ${sub.name}`;
-        const body =
-          days === 1
-            ? `El pago de ${sub.name} vence mañana. Marcá si ya lo hiciste.`
-            : `El pago de ${sub.name} vence hoy. Marcá si ya lo hiciste.`;
-
-        const notification = new Notification(title, {
-          body,
-          icon: "/icons/subghost-logo.svg",
-          tag: dedupeKey,
-        });
-        logDebug("Notification shown:", { subId: sub.id, dueDate, eventType });
+        const notification = new Notification(
+          isTomorrow ? `Pago próximo: ${sub.name}` : `Vence hoy: ${sub.name}`,
+          {
+            body: `El pago de ${sub.name} vence ${isTomorrow ? "mañana" : "hoy"}. Marcá si ya lo hiciste.`,
+            icon: "/icons/subghost-logo.svg",
+            tag: dedupeKey,
+          }
+        );
 
         notification.onclick = () => {
-          const url = `/subscriptions/${sub.id}?confirmDue=true&due=${encodeURIComponent(dueDate)}`;
-          window.location.href = url;
+          window.location.href = `/subscriptions/${sub.id}?confirmDue=true&due=${encodeURIComponent(dueDate)}`;
         };
-      });
-    }
-  };
+      }
+    },
+    [isSupported, permission]
+  );
 
   useEffect(() => {
-    if (permission !== "granted") return;
-    if (!pendingSubscriptionsRef.current) return;
-
-    const pending = pendingSubscriptionsRef.current;
-    pendingSubscriptionsRef.current = null;
-
+    if (permission !== "granted" || !pendingRef.current) return;
+    const pending = pendingRef.current;
+    pendingRef.current = null;
     checkUpcomingPayments(pending);
-  }, [permission]);
+  }, [permission, checkUpcomingPayments]);
 
-  const scheduleNotifications = (subscriptions: Subscription[]) => {
-    if (permission !== "granted") return;
-
-    subscriptions.forEach((sub) => {
-      if (sub.status !== "active") return;
-
-      const paymentDate = new Date(sub.next_payment_date);
-      const now = new Date();
-      const daysUntil = differenceInDays(paymentDate, now);
-
-      if (daysUntil >= 0 && daysUntil <= 3) {
-        setTimeout(() => {
-          if (permission === "granted") {
-            new Notification(`Recordatorio: ${sub.name}`, {
-              body: `El pago de ${sub.name} vence pronto`,
-              icon: "/icons/subghost-logo.svg",
-              tag: `reminder-${sub.id}`,
-            });
-          }
-        }, Math.max(0, daysUntil * 24 * 60 * 60 * 1000));
-      }
-    });
-  };
-
-  return {
-    isSupported,
-    permission,
-    requestPermission,
-    checkUpcomingPayments,
-    scheduleNotifications,
-  };
+  return { isSupported, permission, requestPermission, checkUpcomingPayments };
 }

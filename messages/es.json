@@ -24,7 +24,8 @@
     "english": "English",
     "themeLight": "Usar tema claro",
     "themeDark": "Usar tema oscuro",
-    "changeTheme": "Cambiar tema"
+    "changeTheme": "Cambiar tema",
+    "offline": "Modo offline"
   },
   "nav": {
     "main": "Principal",
@@ -105,9 +106,7 @@
     "noSubscriptionsFilter": "que coincidan con el filtro.",
     "addFirst": "Añade tu primera suscripción.",
     "subscriptionCreated": "Suscripción creada",
-    "subscriptionCreatedOffline": "Suscripción creada (guardada localmente)",
     "subscriptionUpdated": "Suscripción actualizada",
-    "subscriptionUpdatedOffline": "Suscripción actualizada (guardada localmente)",
     "subscriptionDeleted": "Suscripción eliminada",
     "errorCreate": "Error al crear la suscripción",
     "errorUpdate": "Error al actualizar",
@@ -115,7 +114,8 @@
     "deleteSubscription": "Eliminar suscripción",
     "deleteConfirm": "¿Estás seguro de que quieres eliminar esta suscripción? Esta acción no se puede deshacer.",
     "editSubscription": "Editar suscripción",
-    "newSubscription": "Nueva suscripción"
+    "newSubscription": "Nueva suscripción",
+    "offlineWriteBlocked": "Sin conexión: no se puede guardar. Volvé a intentar cuando tengas internet."
   },
   "subscriptions": {
     "title": "Suscripciones",
@@ -240,7 +240,8 @@
     "templateGym": "Gimnasio",
     "templateNewspaper": "Periódico / Revista",
     "templateCourse": "Curso online",
-    "shortcuts": "Atajos"
+    "shortcuts": "Atajos",
+    "errorUpdate": "No se pudo actualizar el gasto"
   },
   "calendar": {
     "upcomingDue": "Próximos vencimientos",
@@ -282,12 +283,32 @@
     "noPurchasesHint": "Agregá lo que tengas planeado comprar y marcalo cuando lo compres",
     "deletePurchaseConfirm": "¿Eliminamos esta compra de la lista? No se puede deshacer.",
     "months": {
-      "1": "Enero", "2": "Febrero", "3": "Marzo", "4": "Abril", "5": "Mayo", "6": "Junio",
-      "7": "Julio", "8": "Agosto", "9": "Septiembre", "10": "Octubre", "11": "Noviembre", "12": "Diciembre"
+      "1": "Enero",
+      "2": "Febrero",
+      "3": "Marzo",
+      "4": "Abril",
+      "5": "Mayo",
+      "6": "Junio",
+      "7": "Julio",
+      "8": "Agosto",
+      "9": "Septiembre",
+      "10": "Octubre",
+      "11": "Noviembre",
+      "12": "Diciembre"
     },
     "monthsShort": {
-      "1": "Ene", "2": "Feb", "3": "Mar", "4": "Abr", "5": "May", "6": "Jun",
-      "7": "Jul", "8": "Ago", "9": "Sep", "10": "Oct", "11": "Nov", "12": "Dic"
+      "1": "Ene",
+      "2": "Feb",
+      "3": "Mar",
+      "4": "Abr",
+      "5": "May",
+      "6": "Jun",
+      "7": "Jul",
+      "8": "Ago",
+      "9": "Sep",
+      "10": "Oct",
+      "11": "Nov",
+      "12": "Dic"
     },
     "statusBought": "Comprado",
     "statusPending": "Pendiente",
@@ -364,6 +385,8 @@
   },
   "pagination": {
     "prev": "Anterior",
-    "next": "Siguiente"
+    "next": "Siguiente",
+    "label": "Paginación",
+    "pageOf": "Página {page} de {totalPages}"
   }
 }

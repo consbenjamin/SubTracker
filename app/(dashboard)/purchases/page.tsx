@@ -9,6 +9,7 @@ import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
 import { Select } from "@/components/ui/Select";
+import { LoadingState } from "@/components/ui/Loading";
 import { useToast } from "@/lib/contexts/ToastContext";
 import type { PlannedPurchaseBody } from "@/lib/validations/schemas";
 import { ShoppingBag, Plus, Calendar } from "lucide-react";
@@ -55,7 +56,7 @@ function PurchasesContent() {
     } finally {
       setLoading(false);
     }
-  }, [month, year, toast]);
+  }, [month, year, toast, t]);
 
   useEffect(() => {
     setLoading(true);
@@ -67,23 +68,32 @@ function PurchasesContent() {
     setEditingPurchase(null);
   }, []);
 
-  const handleCreate = useCallback(
+  /** Alta y edición comparten todo salvo la URL, el verbo y el mensaje de éxito. */
+  const savePurchase = useCallback(
     async (data: PlannedPurchaseBody) => {
-      const res = await fetch("/api/planned-purchases", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-      });
-      if (res.ok) {
-        await fetchPurchases();
-        closeModal();
-        toast.success(t("purchaseAdded"));
-      } else {
-        const err = await res.json();
-        toast.error(err.details ? t("checkData") : err.error || t("errorSave"));
+      const editing = editingPurchase;
+      const res = await fetch(
+        editing ? `/api/planned-purchases/${editing.id}` : "/api/planned-purchases",
+        {
+          method: editing ? "PUT" : "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(data),
+        }
+      );
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        toast.error(
+          err.details ? t("checkData") : err.error || t(editing ? "errorUpdate" : "errorSave")
+        );
+        return;
       }
+
+      await fetchPurchases();
+      closeModal();
+      toast.success(t(editing ? "purchaseUpdated" : "purchaseAdded"));
     },
-    [fetchPurchases, closeModal, toast]
+    [editingPurchase, fetchPurchases, closeModal, toast, t]
   );
 
   const handleEdit = useCallback((purchase: PlannedPurchase) => {
@@ -91,63 +101,25 @@ function PurchasesContent() {
     setIsModalOpen(true);
   }, []);
 
-  const handleUpdate = useCallback(
-    async (data: PlannedPurchaseBody) => {
-      if (!editingPurchase) return;
-      const res = await fetch(`/api/planned-purchases/${editingPurchase.id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
+  const handleDeleteConfirm = useCallback(async () => {
+    if (!deleteTargetId) return;
+    setDeleting(true);
+    try {
+      const res = await fetch(`/api/planned-purchases/${deleteTargetId}`, {
+        method: "DELETE",
       });
-      if (res.ok) {
-        await fetchPurchases();
-        closeModal();
-        toast.success(t("purchaseUpdated"));
-      } else {
-        const err = await res.json();
-        toast.error(err.details ? t("checkData") : err.error || t("errorUpdate"));
-      }
-    },
-    [editingPurchase, fetchPurchases, closeModal, toast]
-  );
-
-  const handleDeleteClick = useCallback((id: string) => {
-    setDeleteTargetId(id);
-  }, []);
-
-  const handleDeleteConfirm = useCallback(
-    async () => {
-      if (!deleteTargetId) return;
-      setDeleting(true);
-      try {
-        const res = await fetch(`/api/planned-purchases/${deleteTargetId}`, {
-          method: "DELETE",
-        });
-        if (res.ok) {
-          await fetchPurchases();
-          toast.success(t("purchaseDeleted"));
-        } else {
-          toast.error(t("errorDelete"));
-        }
-      } finally {
-        setDeleting(false);
-        setDeleteTargetId(null);
-      }
-    },
-    [deleteTargetId, fetchPurchases, toast]
-  );
+      toast[res.ok ? "success" : "error"](t(res.ok ? "purchaseDeleted" : "errorDelete"));
+      if (res.ok) await fetchPurchases();
+    } finally {
+      setDeleting(false);
+      setDeleteTargetId(null);
+    }
+  }, [deleteTargetId, fetchPurchases, toast, t]);
 
   const years = Array.from({ length: 5 }, (_, i) => now.getFullYear() + i);
   const yearOptions = years.map((y) => ({ value: String(y), label: String(y) }));
 
-  if (loading) {
-    return (
-      <div className="flex min-h-[40vh] flex-col items-center justify-center gap-4">
-        <div className="h-8 w-8 animate-spin rounded-full border-2 border-muted-foreground border-t-transparent" />
-        <p className="text-sm text-muted-foreground">{t("loading")}</p>
-      </div>
-    );
-  }
+  if (loading) return <LoadingState message={t("loading")} />;
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
@@ -229,7 +201,7 @@ function PurchasesContent() {
               key={purchase.id}
               purchase={purchase}
               onEdit={handleEdit}
-              onDelete={handleDeleteClick}
+              onDelete={setDeleteTargetId}
             />
           ))
         )}
@@ -257,7 +229,7 @@ function PurchasesContent() {
           purchase={editingPurchase ?? undefined}
           defaultMonth={month}
           defaultYear={year}
-          onSubmit={editingPurchase ? handleUpdate : handleCreate}
+          onSubmit={savePurchase}
           onCancel={closeModal}
         />
       </Modal>
@@ -267,14 +239,7 @@ function PurchasesContent() {
 
 export default function PurchasesPage() {
   return (
-    <Suspense
-      fallback={
-        <div className="flex min-h-[40vh] flex-col items-center justify-center gap-4">
-          <div className="h-8 w-8 animate-spin rounded-full border-2 border-muted-foreground border-t-transparent" />
-          <p className="text-sm text-muted-foreground">...</p>
-        </div>
-      }
-    >
+    <Suspense fallback={<LoadingState />}>
       <PurchasesContent />
     </Suspense>
   );

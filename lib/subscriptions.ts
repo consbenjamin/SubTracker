@@ -1,15 +1,62 @@
+import { differenceInCalendarDays, startOfDay } from "date-fns";
 import type { BillingCycle, PaymentType, Subscription } from "@/types";
+import { parseDateOnly } from "@/lib/date";
 
 export const INSTALLMENT_OPTIONS = [3, 6, 9, 12] as const;
 
-export function getPaymentType(subscription: Pick<Subscription, "payment_type">): PaymentType {
-  return subscription.payment_type ?? "recurring";
+/** Días de calendario hasta el próximo cobro (negativo = vencido). */
+export function daysUntilPayment(
+  subscription: Pick<Subscription, "next_payment_date">
+): number {
+  return differenceInCalendarDays(
+    parseDateOnly(subscription.next_payment_date),
+    startOfDay(new Date())
+  );
+}
+
+/** Activa y con vencimiento dentro de los próximos `days` días. */
+export function isUpcoming(subscription: Subscription, days = 7): boolean {
+  if (!isSubscriptionActiveForCalculations(subscription)) return false;
+  const remaining = daysUntilPayment(subscription);
+  return remaining >= 0 && remaining <= days;
 }
 
 export function isInstallmentSubscription(
   subscription: Pick<Subscription, "payment_type">
 ): boolean {
-  return getPaymentType(subscription) === "installment";
+  return (subscription.payment_type ?? "recurring") === "installment";
+}
+
+interface SubscriptionPayload {
+  payment_type: PaymentType;
+  billing_cycle: BillingCycle;
+  installment_count?: 3 | 6 | 9 | 12 | null;
+  installments_paid?: number;
+  total_amount?: number | null;
+}
+
+/**
+ * Coherencia entre los dos tipos de gasto antes de escribir en la base:
+ * las cuotas siempre son mensuales, y los recurrentes no llevan datos de cuotas.
+ */
+export function normalizeSubscriptionPayload<T extends SubscriptionPayload>(payload: T) {
+  if (payload.payment_type === "installment") {
+    return {
+      ...payload,
+      billing_cycle: "monthly" as const,
+      installment_count: payload.installment_count ?? null,
+      installments_paid: payload.installments_paid ?? 0,
+      total_amount: payload.total_amount ?? null,
+    };
+  }
+
+  return {
+    ...payload,
+    payment_type: "recurring" as const,
+    installment_count: null,
+    installments_paid: 0,
+    total_amount: null,
+  };
 }
 
 export function getInstallmentProgress(
@@ -35,23 +82,6 @@ export function getInstallmentProgress(
     totalAmount,
     completed: count > 0 && paid >= count,
   };
-}
-
-export function getSubscriptionCycleLabel(subscription: Pick<Subscription, "billing_cycle" | "payment_type" | "installment_count">): string {
-  if (isInstallmentSubscription(subscription)) {
-    return "cuota";
-  }
-
-  switch (subscription.billing_cycle) {
-    case "monthly":
-      return "mes";
-    case "quarterly":
-      return "trimestre";
-    case "yearly":
-      return "año";
-    default:
-      return subscription.billing_cycle;
-  }
 }
 
 export function getBillingCycleLabel(

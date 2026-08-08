@@ -1,14 +1,19 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Subscription } from "@/types";
 
 const DB_NAME = "subghost-db";
 const DB_VERSION = 1;
 const STORE_NAME = "subscriptions";
 
+/**
+ * Caché de solo lectura para modo offline: guarda la última respuesta del servidor
+ * en IndexedDB y la devuelve cuando no hay conexión. No es un almacén de escritura;
+ * crear o editar sin red requiere servidor.
+ */
 export function useOfflineStorage() {
-  const [db, setDb] = useState<IDBDatabase | null>(null);
+  const dbRef = useRef<IDBDatabase | null>(null);
   const [isOnline, setIsOnline] = useState(true);
 
   useEffect(() => {
@@ -16,11 +21,20 @@ export function useOfflineStorage() {
 
     const handleOnline = () => setIsOnline(true);
     const handleOffline = () => setIsOnline(false);
-
     window.addEventListener("online", handleOnline);
     window.addEventListener("offline", handleOffline);
 
-    initDB();
+    const request = indexedDB.open(DB_NAME, DB_VERSION);
+    request.onerror = () => console.error("Error opening IndexedDB");
+    request.onsuccess = () => {
+      dbRef.current = request.result;
+    };
+    request.onupgradeneeded = (event) => {
+      const db = (event.target as IDBOpenDBRequest).result;
+      if (!db.objectStoreNames.contains(STORE_NAME)) {
+        db.createObjectStore(STORE_NAME, { keyPath: "id" });
+      }
+    };
 
     return () => {
       window.removeEventListener("online", handleOnline);
@@ -28,103 +42,35 @@ export function useOfflineStorage() {
     };
   }, []);
 
-  const initDB = () => {
-    const request = indexedDB.open(DB_NAME, DB_VERSION);
-
-    request.onerror = () => {
-      console.error("Error opening IndexedDB");
-    };
-
-    request.onsuccess = () => {
-      setDb(request.result);
-    };
-
-    request.onupgradeneeded = (event) => {
-      const db = (event.target as IDBOpenDBRequest).result;
-      if (!db.objectStoreNames.contains(STORE_NAME)) {
-        const objectStore = db.createObjectStore(STORE_NAME, { keyPath: "id" });
-        objectStore.createIndex("user_id", "user_id", { unique: false });
-        objectStore.createIndex("status", "status", { unique: false });
-      }
-    };
-  };
-
-  const saveSubscriptions = async (subscriptions: Subscription[]) => {
+  const saveSubscriptions = useCallback(async (subscriptions: Subscription[]) => {
+    const db = dbRef.current;
     if (!db) return;
 
     return new Promise<void>((resolve, reject) => {
       const transaction = db.transaction([STORE_NAME], "readwrite");
       const store = transaction.objectStore(STORE_NAME);
       store.clear();
-
-      subscriptions.forEach((sub) => {
-        store.add(sub);
-      });
+      subscriptions.forEach((sub) => store.put(sub));
 
       transaction.oncomplete = () => resolve();
       transaction.onerror = () => reject(transaction.error);
     });
-  };
+  }, []);
 
-  const getSubscriptions = async (): Promise<Subscription[]> => {
+  const getSubscriptions = useCallback(async (): Promise<Subscription[]> => {
+    const db = dbRef.current;
     if (!db) return [];
 
-    return new Promise((resolve, reject) => {
-      const transaction = db.transaction([STORE_NAME], "readonly");
-      const store = transaction.objectStore(STORE_NAME);
-      const request = store.getAll();
+    return new Promise((resolve) => {
+      const request = db
+        .transaction([STORE_NAME], "readonly")
+        .objectStore(STORE_NAME)
+        .getAll();
 
       request.onsuccess = () => resolve(request.result);
-      request.onerror = () => reject(request.error);
+      request.onerror = () => resolve([]);
     });
-  };
+  }, []);
 
-  const addSubscription = async (subscription: Subscription) => {
-    if (!db) return;
-
-    return new Promise<void>((resolve, reject) => {
-      const transaction = db.transaction([STORE_NAME], "readwrite");
-      const store = transaction.objectStore(STORE_NAME);
-      const request = store.add(subscription);
-
-      request.onsuccess = () => resolve();
-      request.onerror = () => reject(request.error);
-    });
-  };
-
-  const updateSubscription = async (subscription: Subscription) => {
-    if (!db) return;
-
-    return new Promise<void>((resolve, reject) => {
-      const transaction = db.transaction([STORE_NAME], "readwrite");
-      const store = transaction.objectStore(STORE_NAME);
-      const request = store.put(subscription);
-
-      request.onsuccess = () => resolve();
-      request.onerror = () => reject(request.error);
-    });
-  };
-
-  const deleteSubscription = async (id: string) => {
-    if (!db) return;
-
-    return new Promise<void>((resolve, reject) => {
-      const transaction = db.transaction([STORE_NAME], "readwrite");
-      const store = transaction.objectStore(STORE_NAME);
-      const request = store.delete(id);
-
-      request.onsuccess = () => resolve();
-      request.onerror = () => reject(request.error);
-    });
-  };
-
-  return {
-    isOnline,
-    db,
-    saveSubscriptions,
-    getSubscriptions,
-    addSubscription,
-    updateSubscription,
-    deleteSubscription,
-  };
+  return { isOnline, saveSubscriptions, getSubscriptions };
 }
