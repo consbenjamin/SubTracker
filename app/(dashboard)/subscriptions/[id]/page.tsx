@@ -1,23 +1,20 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter, useParams, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { Subscription, PaymentHistory } from "@/types";
+import { Subscription, PaymentHistory, SubscriptionFormData } from "@/types";
 import { SubscriptionForm } from "@/components/subscriptions/SubscriptionForm";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Modal } from "@/components/ui/Modal";
+import { LoadingState } from "@/components/ui/Loading";
 import { useFormatCurrency } from "@/lib/hooks/useFormatCurrency";
 import { formatDate } from "@/lib/utils";
 import { Calendar, Plus, Check, Circle } from "lucide-react";
-import {
-  getInstallmentProgress,
-  isInstallmentSubscription,
-  isSubscriptionCompleted,
-} from "@/lib/subscriptions";
-import { addMonths } from "date-fns";
+import { getInstallmentProgress, isInstallmentSubscription } from "@/lib/subscriptions";
+import { addMonthsDateOnly, toDateOnly, todayDateOnly } from "@/lib/date";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/lib/contexts/ToastContext";
 
@@ -26,6 +23,7 @@ export default function EditSubscriptionPage() {
   const params = useParams();
   const searchParams = useSearchParams();
   const t = useTranslations("subscriptionForm");
+  const tCommon = useTranslations("common");
   const formatCurrency = useFormatCurrency();
   const toast = useToast();
   const subId =
@@ -38,9 +36,7 @@ export default function EditSubscriptionPage() {
   const [loading, setLoading] = useState(true);
   const [paymentModalOpen, setPaymentModalOpen] = useState(false);
   const [paymentAmount, setPaymentAmount] = useState("");
-  const [paymentDate, setPaymentDate] = useState(
-    () => new Date().toISOString().slice(0, 10)
-  );
+  const [paymentDate, setPaymentDate] = useState(todayDateOnly);
   const [paymentSubmitting, setPaymentSubmitting] = useState(false);
   const [confirmDueOpen, setConfirmDueOpen] = useState(false);
   const [confirmDueDate, setConfirmDueDate] = useState<string | null>(null);
@@ -50,16 +46,6 @@ export default function EditSubscriptionPage() {
       confirmDueDismissedRef.current = false;
     }
   }, [searchParams]);
-
-  useEffect(() => {
-    if (!subId) return;
-    if (lastSubIdRef.current !== subId) {
-      lastSubIdRef.current = subId;
-      confirmDueDismissedRef.current = false;
-    }
-    fetchSubscription();
-    fetchPayments();
-  }, [subId]);
 
   useEffect(() => {
     // Deep-link UX for notifications: /subscriptions/[id]?confirmDue=true&due=YYYY-MM-DD
@@ -77,63 +63,52 @@ export default function EditSubscriptionPage() {
     router.replace(`/subscriptions/${subId}`);
   }, [subscription, searchParams, subId, router]);
 
-  const fetchSubscription = async () => {
+  const fetchSubscription = useCallback(async () => {
     if (!subId) return;
     try {
-      const response = await fetch(`/api/subscriptions/${subId}`, {
-        cache: "no-store",
-      });
-      if (response.ok) {
-        const data = await response.json();
-        setSubscription(data);
-      }
+      const res = await fetch(`/api/subscriptions/${subId}`, { cache: "no-store" });
+      if (res.ok) setSubscription(await res.json());
     } catch (error) {
       console.error("Error fetching subscription:", error);
     } finally {
       setLoading(false);
     }
-  };
+  }, [subId]);
 
-  const fetchPayments = async () => {
+  const fetchPayments = useCallback(async () => {
     if (!subId) return;
     try {
-      const response = await fetch(`/api/subscriptions/${subId}/payments`, {
-        cache: "no-store",
-      });
-      if (response.ok) {
-        const data = await response.json();
-        setPayments(data);
-      }
+      const res = await fetch(`/api/subscriptions/${subId}/payments`, { cache: "no-store" });
+      if (res.ok) setPayments(await res.json());
     } catch (error) {
       console.error("Error fetching payments:", error);
     }
-  };
+  }, [subId]);
 
-  const handleSubmit = async (data: any) => {
-    const response = await fetch(`/api/subscriptions/${subId}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(data),
-    });
-
-    if (response.ok) {
-      router.push("/subscriptions");
+  useEffect(() => {
+    if (!subId) return;
+    if (lastSubIdRef.current !== subId) {
+      lastSubIdRef.current = subId;
+      confirmDueDismissedRef.current = false;
     }
-  };
+    fetchSubscription();
+    fetchPayments();
+  }, [subId, fetchSubscription, fetchPayments]);
 
-  const handleSubmitWithRecordPayment = async (
-    data: any,
-    recordPayment: boolean
+  const saveSubscription = async (
+    data: SubscriptionFormData,
+    recordPayment?: boolean
   ) => {
     const response = await fetch(`/api/subscriptions/${subId}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...data, record_payment: recordPayment }),
+      body: JSON.stringify(
+        recordPayment === undefined ? data : { ...data, record_payment: recordPayment }
+      ),
     });
 
-    if (response.ok) {
-      router.push("/subscriptions");
-    }
+    if (response.ok) router.push("/subscriptions");
+    else toast.error(t("errorUpdate"));
   };
 
   const handleCancel = () => {
@@ -142,7 +117,7 @@ export default function EditSubscriptionPage() {
 
   const openPaymentModal = () => {
     setPaymentAmount(subscription?.price?.toString() ?? "");
-    setPaymentDate(new Date().toISOString().slice(0, 10));
+    setPaymentDate(todayDateOnly());
     setPaymentModalOpen(true);
   };
 
@@ -224,17 +199,7 @@ export default function EditSubscriptionPage() {
     }
   };
 
-  if (loading) {
-    return (
-      <div
-        className="flex min-h-[40vh] flex-col items-center justify-center gap-4"
-        style={{ backgroundColor: "var(--background)" }}
-      >
-        <div className="h-8 w-8 animate-spin rounded-full border-2 border-muted-foreground border-t-transparent" />
-        <p className="text-sm text-muted-foreground">Cargando...</p>
-      </div>
-    );
-  }
+  if (loading) return <LoadingState message={tCommon("loading")} />;
 
   if (!subscription) {
     return (
@@ -249,34 +214,31 @@ export default function EditSubscriptionPage() {
 
   const installment = getInstallmentProgress(subscription);
   const isInstallment = isInstallmentSubscription(subscription);
-  const isCompleted = isSubscriptionCompleted(subscription);
 
-  const paymentsByOrder = isInstallment
-    ? [...payments].sort(
-        (a, b) => new Date(a.payment_date).getTime() - new Date(b.payment_date).getTime()
-      )
-    : [];
-
+  /** Cuotas pagadas → fecha real del pago; el resto → un mes por cuota desde el próximo vencimiento. */
   const installmentRows = isInstallment
-    ? Array.from({ length: installment.count }, (_, i) => {
-        const num = i + 1;
-        const isPaid = num <= installment.paid;
-        const isNext = num === installment.nextInstallment;
-        const payment = isPaid && paymentsByOrder[num - 1] ? paymentsByOrder[num - 1] : null;
-        const dueDate = isPaid && payment
-          ? payment.payment_date
-          : isNext
-          ? subscription.next_payment_date
-          : addMonths(new Date(subscription.next_payment_date), num - installment.nextInstallment)
-              .toISOString()
-              .slice(0, 10);
-        return {
-          num,
-          status: isPaid ? ("paid" as const) : isNext ? ("due" as const) : ("upcoming" as const),
-          date: dueDate,
-          amount: subscription.price,
-        };
-      })
+    ? (() => {
+        const paidInOrder = [...payments].sort((a, b) =>
+          a.payment_date.localeCompare(b.payment_date)
+        );
+        const nextDue = toDateOnly(subscription.next_payment_date);
+
+        return Array.from({ length: installment.count }, (_, i) => {
+          const num = i + 1;
+          const isPaid = num <= installment.paid;
+          const isNext = num === installment.nextInstallment;
+          const payment = isPaid ? paidInOrder[num - 1] : null;
+
+          return {
+            num,
+            status: isPaid ? ("paid" as const) : isNext ? ("due" as const) : ("upcoming" as const),
+            date: payment
+              ? toDateOnly(payment.payment_date)
+              : addMonthsDateOnly(nextDue, num - installment.nextInstallment),
+            amount: subscription.price,
+          };
+        });
+      })()
     : [];
 
   return (
@@ -301,8 +263,8 @@ export default function EditSubscriptionPage() {
             <CardContent className="pt-6">
               <SubscriptionForm
                 subscription={subscription}
-                onSubmit={handleSubmit}
-                onSubmitWithRecordPayment={handleSubmitWithRecordPayment}
+                onSubmit={(data) => saveSubscription(data)}
+                onSubmitWithRecordPayment={saveSubscription}
                 onCancel={handleCancel}
               />
             </CardContent>
@@ -439,7 +401,7 @@ export default function EditSubscriptionPage() {
                 </p>
               ) : (
                 <ul className="space-y-0">
-                  {payments.map((p, i) => (
+                  {payments.map((p) => (
                     <li
                       key={p.id}
                       className="flex items-center gap-3 py-3 border-b border-border last:border-0"

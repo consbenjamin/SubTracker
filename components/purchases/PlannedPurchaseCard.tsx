@@ -21,15 +21,16 @@ export function PlannedPurchaseCard({
   const tPurchases = useTranslations("purchases");
   const tForm = useTranslations("plannedPurchaseForm");
 
-  const paymentIcon =
+  const PaymentIcon =
     purchase.payment_method === "card"
       ? CreditCard
       : purchase.payment_method === "transfer"
         ? Banknote
         : Wallet;
-  const PaymentIcon = paymentIcon;
 
-  const monthLabel = tPurchases(`monthsShort.${purchase.planned_month}` as any);
+  const monthLabel = tPurchases(
+    `monthsShort.${purchase.planned_month}` as Parameters<typeof tPurchases>[0]
+  );
 
   const paymentMethodLabel =
     purchase.payment_method === "card"

@@ -24,7 +24,8 @@
     "english": "English",
     "themeLight": "Use light theme",
     "themeDark": "Use dark theme",
-    "changeTheme": "Change theme"
+    "changeTheme": "Change theme",
+    "offline": "Offline mode"
   },
   "nav": {
     "main": "Main",
@@ -105,9 +106,7 @@
     "noSubscriptionsFilter": "matching the filter.",
     "addFirst": "Add your first subscription.",
     "subscriptionCreated": "Subscription created",
-    "subscriptionCreatedOffline": "Subscription created (saved locally)",
     "subscriptionUpdated": "Subscription updated",
-    "subscriptionUpdatedOffline": "Subscription updated (saved locally)",
     "subscriptionDeleted": "Subscription deleted",
     "errorCreate": "Error creating subscription",
     "errorUpdate": "Error updating",
@@ -115,7 +114,8 @@
     "deleteSubscription": "Delete subscription",
     "deleteConfirm": "Are you sure you want to delete this subscription? This action cannot be undone.",
     "editSubscription": "Edit subscription",
-    "newSubscription": "New subscription"
+    "newSubscription": "New subscription",
+    "offlineWriteBlocked": "You're offline: changes can't be saved. Try again once you're back online."
   },
   "subscriptions": {
     "title": "Subscriptions",
@@ -240,7 +240,8 @@
     "templateGym": "Gym",
     "templateNewspaper": "Newspaper / Magazine",
     "templateCourse": "Online course",
-    "shortcuts": "Shortcuts"
+    "shortcuts": "Shortcuts",
+    "errorUpdate": "Could not update the expense"
   },
   "calendar": {
     "upcomingDue": "Upcoming due dates",
@@ -282,12 +283,32 @@
     "noPurchasesHint": "Add what you plan to buy and mark it when you've bought it",
     "deletePurchaseConfirm": "Remove this purchase from the list? This cannot be undone.",
     "months": {
-      "1": "January", "2": "February", "3": "March", "4": "April", "5": "May", "6": "June",
-      "7": "July", "8": "August", "9": "September", "10": "October", "11": "November", "12": "December"
+      "1": "January",
+      "2": "February",
+      "3": "March",
+      "4": "April",
+      "5": "May",
+      "6": "June",
+      "7": "July",
+      "8": "August",
+      "9": "September",
+      "10": "October",
+      "11": "November",
+      "12": "December"
     },
     "monthsShort": {
-      "1": "Jan", "2": "Feb", "3": "Mar", "4": "Apr", "5": "May", "6": "Jun",
-      "7": "Jul", "8": "Aug", "9": "Sep", "10": "Oct", "11": "Nov", "12": "Dec"
+      "1": "Jan",
+      "2": "Feb",
+      "3": "Mar",
+      "4": "Apr",
+      "5": "May",
+      "6": "Jun",
+      "7": "Jul",
+      "8": "Aug",
+      "9": "Sep",
+      "10": "Oct",
+      "11": "Nov",
+      "12": "Dec"
     },
     "statusBought": "Bought",
     "statusPending": "Pending",
@@ -364,6 +385,8 @@
   },
   "pagination": {
     "prev": "Previous",
-    "next": "Next"
+    "next": "Next",
+    "label": "Pagination",
+    "pageOf": "Page {page} of {totalPages}"
   }
 }

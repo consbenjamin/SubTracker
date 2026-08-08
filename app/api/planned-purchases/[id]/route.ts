@@ -1,172 +1,72 @@
-import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
 import {
   isValidPlannedPurchaseId,
   plannedPurchaseBodySchema,
 } from "@/lib/validations/schemas";
-import { isRateLimitedRequest } from "@/lib/rate-limit";
-import { getClientIp, unauthorizedResponse } from "@/lib/api-auth";
+import { normalizePlannedPurchase } from "@/lib/plannedPurchases";
+import { authenticate, dbError, parseBody } from "@/lib/api/route";
 
-function normalizePayload(
-  payload: ReturnType<typeof plannedPurchaseBodySchema.parse>
-) {
-  const isCard = payload.bought && payload.payment_method === "card";
-  const usesInstallments = isCard && (payload.bought_with_installments ?? false);
+type Params = { params: Promise<{ id: string }> };
 
-  return {
-    name: payload.name,
-    link: payload.link ?? null,
-    planned_month: payload.planned_month,
-    planned_year: payload.planned_year,
-    bought: payload.bought ?? false,
-    bought_date: payload.bought ? (payload.bought_date ?? null) : null,
-    payment_method: payload.bought ? payload.payment_method ?? null : null,
-    card_name:
-      payload.bought && payload.payment_method === "card"
-        ? (payload.card_name?.trim() || null)
-        : null,
-    bought_with_installments: payload.bought
-      ? usesInstallments
-      : false,
-    installment_count: usesInstallments
-      ? (payload.installment_count ?? null)
-      : null,
-    installments_paid: usesInstallments
-      ? (payload.installments_paid ?? 0)
-      : 0,
-    installments_start_next_month: usesInstallments
-      ? (payload.installments_start_next_month ?? false)
-      : false,
-    notes: payload.notes?.trim() || null,
-  };
-}
+const invalidId = () => NextResponse.json({ error: "ID inválido" }, { status: 400 });
 
-export async function GET(
-  request: Request,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function GET(request: Request, { params }: Params) {
   const { id } = await params;
-  if (!isValidPlannedPurchaseId(id)) {
-    return NextResponse.json({ error: "ID inválido" }, { status: 400 });
-  }
+  if (!isValidPlannedPurchaseId(id)) return invalidId();
 
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const auth = await authenticate(request, `/api/planned-purchases/${id}`);
+  if (auth instanceof NextResponse) return auth;
 
-  if (!user) {
-    return unauthorizedResponse(request, "/api/planned-purchases/" + id);
-  }
-
-  const { data, error } = await supabase
+  const { data, error } = await auth.supabase
     .from("planned_purchases")
     .select("*")
     .eq("id", id)
-    .eq("user_id", user.id)
+    .eq("user_id", auth.userId)
     .single();
 
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
-  }
-
+  if (error) return dbError(error);
   return NextResponse.json(data);
 }
 
-export async function PUT(
-  request: Request,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function PUT(request: Request, { params }: Params) {
   const { id } = await params;
-  if (!isValidPlannedPurchaseId(id)) {
-    return NextResponse.json({ error: "ID inválido" }, { status: 400 });
-  }
+  if (!isValidPlannedPurchaseId(id)) return invalidId();
 
-  const ip = getClientIp(request);
-  if (isRateLimitedRequest(ip, "api")) {
-    return NextResponse.json(
-      { error: "Demasiadas peticiones. Intenta más tarde." },
-      { status: 429 }
-    );
-  }
+  const auth = await authenticate(request, `/api/planned-purchases/${id}`, {
+    rateLimit: true,
+  });
+  if (auth instanceof NextResponse) return auth;
 
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const body = await parseBody(request, plannedPurchaseBodySchema);
+  if (body instanceof NextResponse) return body;
 
-  if (!user) {
-    return unauthorizedResponse(request, "/api/planned-purchases/" + id);
-  }
-
-  let body: unknown;
-  try {
-    body = await request.json();
-  } catch {
-    return NextResponse.json({ error: "Body JSON inválido" }, { status: 400 });
-  }
-
-  const parsed = plannedPurchaseBodySchema.safeParse(body);
-  if (!parsed.success) {
-    const msg = parsed.error.flatten().fieldErrors;
-    return NextResponse.json(
-      { error: "Datos inválidos", details: msg },
-      { status: 400 }
-    );
-  }
-
-  const payload = normalizePayload(parsed.data);
-
-  const { data, error } = await supabase
+  const { data, error } = await auth.supabase
     .from("planned_purchases")
-    .update(payload)
+    .update(normalizePlannedPurchase(body.data))
     .eq("id", id)
-    .eq("user_id", user.id)
+    .eq("user_id", auth.userId)
     .select()
     .single();
 
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
-  }
-
+  if (error) return dbError(error);
   return NextResponse.json(data);
 }
 
-export async function DELETE(
-  request: Request,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function DELETE(request: Request, { params }: Params) {
   const { id } = await params;
-  if (!isValidPlannedPurchaseId(id)) {
-    return NextResponse.json({ error: "ID inválido" }, { status: 400 });
-  }
+  if (!isValidPlannedPurchaseId(id)) return invalidId();
 
-  const ip = getClientIp(request);
-  if (isRateLimitedRequest(ip, "api")) {
-    return NextResponse.json(
-      { error: "Demasiadas peticiones. Intenta más tarde." },
-      { status: 429 }
-    );
-  }
+  const auth = await authenticate(request, `/api/planned-purchases/${id}`, {
+    rateLimit: true,
+  });
+  if (auth instanceof NextResponse) return auth;
 
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    return unauthorizedResponse(request, "/api/planned-purchases/" + id);
-  }
-
-  const { error } = await supabase
+  const { error } = await auth.supabase
     .from("planned_purchases")
     .delete()
     .eq("id", id)
-    .eq("user_id", user.id);
+    .eq("user_id", auth.userId);
 
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
-  }
-
+  if (error) return dbError(error);
   return NextResponse.json({ success: true });
 }

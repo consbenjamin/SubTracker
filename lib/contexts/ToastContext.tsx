@@ -4,6 +4,7 @@ import {
   createContext,
   useCallback,
   useContext,
+  useMemo,
   useRef,
   useState,
   type ReactNode,
@@ -19,8 +20,12 @@ export interface ToastItem {
   createdAt: number;
 }
 
+/**
+ * Solo acciones: la lista de toasts vive en el provider y se pasa por props a
+ * `ToastList`. Así el valor del contexto nunca cambia de identidad y las páginas
+ * pueden depender de `toast` en sus `useCallback`/`useEffect` sin refetch en bucle.
+ */
 interface ToastContextValue {
-  toasts: ToastItem[];
   toast: (message: string, type?: ToastType) => void;
   success: (message: string) => void;
   error: (message: string) => void;
@@ -58,7 +63,10 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   const success = useCallback((message: string) => add(message, "success"), [add]);
   const error = useCallback((message: string) => add(message, "error"), [add]);
 
-  const value: ToastContextValue = { toasts, toast, success, error, remove };
+  const value = useMemo<ToastContextValue>(
+    () => ({ toast, success, error, remove }),
+    [toast, success, error, remove]
+  );
 
   return (
     <ToastContext.Provider value={value}>

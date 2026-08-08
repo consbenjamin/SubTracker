@@ -1,36 +1,23 @@
-import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
-import { unauthorizedResponse } from "@/lib/api-auth";
+import { authenticate, dbError } from "@/lib/api/route";
 
 export async function GET(request: Request) {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const auth = await authenticate(request, "/api/payments");
+  if (auth instanceof NextResponse) return auth;
 
-  if (!user) {
-    return unauthorizedResponse(request, "/api/payments");
-  }
-
-  const { data: subs } = await supabase
+  const { data: subs } = await auth.supabase
     .from("subscriptions")
     .select("id")
-    .eq("user_id", user.id);
+    .eq("user_id", auth.userId);
 
-  if (!subs?.length) {
-    return NextResponse.json([]);
-  }
+  if (!subs?.length) return NextResponse.json([]);
 
-  const ids = subs.map((s) => s.id);
-  const { data, error } = await supabase
+  const { data, error } = await auth.supabase
     .from("payment_history")
     .select("*")
-    .in("subscription_id", ids)
+    .in("subscription_id", subs.map((s) => s.id))
     .order("payment_date", { ascending: false });
 
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
-  }
-
+  if (error) return dbError(error);
   return NextResponse.json(data ?? []);
 }

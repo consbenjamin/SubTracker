@@ -4,12 +4,13 @@ import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { SubscriptionForm } from "@/components/subscriptions/SubscriptionForm";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
+import type { SubscriptionFormData } from "@/types";
 
 export default function NewSubscriptionPage() {
   const t = useTranslations("subscriptions");
   const router = useRouter();
 
-  const handleSubmit = async (data: any) => {
+  const handleSubmit = async (data: SubscriptionFormData) => {
     const response = await fetch("/api/subscriptions", {
       method: "POST",
       headers: { "Content-Type": "application/json" },

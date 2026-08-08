@@ -13,20 +13,16 @@ import {
   PaymentType,
 } from "@/types";
 import { SUBSCRIPTION_TEMPLATES } from "@/lib/constants/subscriptionTemplates";
+import { installmentCountSchema } from "@/lib/validations/schemas";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { Button } from "@/components/ui/Button";
 import { INSTALLMENT_OPTIONS } from "@/lib/subscriptions";
+import { firstDayOfNextMonth } from "@/lib/date";
 import { useFormatCurrency } from "@/lib/hooks/useFormatCurrency";
 import { Repeat, CreditCard } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-const installmentCountSchema = z.union([
-  z.literal(3),
-  z.literal(6),
-  z.literal(9),
-  z.literal(12),
-]);
 const optionalNumber = z.preprocess(
   (value) => (typeof value === "number" && Number.isNaN(value) ? undefined : value),
   z.number().optional()
@@ -225,20 +221,14 @@ export function SubscriptionForm({
             notes: values.notes?.trim() || undefined,
           };
 
-    if (onSubmitWithRecordPayment && showRecordPayment && recordPayment) {
-      await onSubmitWithRecordPayment(data, true);
-    } else if (onSubmitWithRecordPayment && showRecordPayment) {
-      await onSubmitWithRecordPayment(data, false);
+    if (onSubmitWithRecordPayment && showRecordPayment) {
+      await onSubmitWithRecordPayment(data, recordPayment);
     } else {
       await onSubmit(data);
     }
   };
 
   const applyTemplate = (name: string, category: string, billing_cycle: BillingCycle) => {
-    const next = new Date();
-    next.setMonth(next.getMonth() + 1);
-    next.setDate(1);
-    const nextPaymentDate = next.toISOString().slice(0, 10);
     reset({
       name,
       price: 0,
@@ -246,7 +236,7 @@ export function SubscriptionForm({
       payment_type: "recurring",
       installment_count: undefined,
       total_amount: undefined,
-      next_payment_date: nextPaymentDate,
+      next_payment_date: firstDayOfNextMonth(),
       category,
       status: "active",
       notes: "",

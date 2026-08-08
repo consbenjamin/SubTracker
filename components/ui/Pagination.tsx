@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/Button";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -17,39 +18,36 @@ export function Pagination({
   onPageChange,
   className,
 }: PaginationProps) {
-  if (totalPages <= 1) return null;
+  const t = useTranslations("pagination");
 
-  const canPrev = page > 1;
-  const canNext = page < totalPages;
+  if (totalPages <= 1) return null;
 
   return (
     <nav
-      aria-label="Paginación"
+      aria-label={t("label")}
       className={cn("flex items-center justify-center gap-2 py-6", className)}
     >
       <Button
         variant="outline"
         size="sm"
         onClick={() => onPageChange(page - 1)}
-        disabled={!canPrev}
+        disabled={page <= 1}
         className="gap-1"
-        aria-label="Página anterior"
       >
         <ChevronLeft className="h-4 w-4" />
-        Anterior
+        {t("prev")}
       </Button>
       <span className="min-w-[8rem] text-center text-sm text-muted-foreground">
-        Página {page} de {totalPages}
+        {t("pageOf", { page, totalPages })}
       </span>
       <Button
         variant="outline"
         size="sm"
         onClick={() => onPageChange(page + 1)}
-        disabled={!canNext}
+        disabled={page >= totalPages}
         className="gap-1"
-        aria-label="Página siguiente"
       >
-        Siguiente
+        {t("next")}
         <ChevronRight className="h-4 w-4" />
       </Button>
     </nav>

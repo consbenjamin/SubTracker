@@ -1,142 +1,65 @@
 import type { Subscription, PaymentHistory } from "@/types";
-import { getBillingCycleLabel, getMonthlyEquivalent } from "@/lib/subscriptions";
+import {
+  PAYMENT_HEADERS,
+  SUBSCRIPTION_HEADERS,
+  exportFilename,
+  formatDateTime,
+  formatNumber,
+  paymentRow,
+  sortPayments,
+  sortSubscriptions,
+  subscriptionRow,
+  totalMonthly,
+  totalPaid,
+  triggerDownload,
+} from "@/lib/export/shared";
 
-const UTF8_BOM = "\uFEFF";
+const UTF8_BOM = "﻿";
 const SEP = ";";
 
 function escapeCell(value: string): string {
   const s = String(value);
-  if (s.includes(SEP) || s.includes('"') || s.includes("\n") || s.includes("\r")) {
-    return `"${s.replace(/"/g, '""')}"`;
-  }
-  return s;
-}
-
-function formatNumber(value: number): string {
-  return value.toFixed(2).replace(".", ",");
-}
-
-function formatDateCsv(dateStr: string): string {
-  const d = new Date(dateStr);
-  const day = String(d.getDate()).padStart(2, "0");
-  const month = String(d.getMonth() + 1).padStart(2, "0");
-  const year = d.getFullYear();
-  return `${day}/${month}/${year}`;
-}
-
-function formatDateTimeCsv(date: Date): string {
-  const day = String(date.getDate()).padStart(2, "0");
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const year = date.getFullYear();
-  const h = String(date.getHours()).padStart(2, "0");
-  const m = String(date.getMinutes()).padStart(2, "0");
-  return `${day}/${month}/${year} ${h}:${m}`;
+  return /[;"\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
 }
 
 function row(cells: string[]): string {
   return cells.map(escapeCell).join(SEP);
 }
 
-function triggerDownload(blob: Blob, filename: string) {
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = filename;
-  a.click();
-  URL.revokeObjectURL(url);
+function download(kind: string, title: string, count: string, lines: string[]): void {
+  const csv = [
+    row([`SubGhost — ${title}`]),
+    row([`Exportado: ${formatDateTime(new Date())}`]),
+    row([`Total: ${count}`]),
+    "",
+    ...lines,
+  ].join("\r\n");
+
+  const blob = new Blob([UTF8_BOM + csv], { type: "text/csv;charset=utf-8" });
+  triggerDownload(blob, exportFilename(kind, "csv"));
 }
 
-const STATUS_LABELS: Record<string, string> = {
-  active: "Activa",
-  cancelled: "Cancelada",
-  paused: "Pausada",
-};
-
 export function exportSubscriptionsCsv(subscriptions: Subscription[]): void {
-  const sorted = [...subscriptions].sort((a, b) => {
-    const cat = (a.category ?? "").localeCompare(b.category ?? "");
-    return cat !== 0 ? cat : a.name.localeCompare(b.name);
-  });
+  const sorted = sortSubscriptions(subscriptions);
 
-  const lines: string[] = [];
-  lines.push(row(["SubGhost — Exportación de suscripciones"]));
-  lines.push(row([`Exportado: ${formatDateTimeCsv(new Date())}`]));
-  lines.push(row([`Total: ${sorted.length} suscripción(es)`]));
-  lines.push("");
-
-  const headers = [
-    "Nombre",
-    "Precio",
-    "Tipo",
-    "Ciclo de facturación",
-    "Plan",
-    "Próxima fecha de pago",
-    "Categoría",
-    "Estado",
-    "Notas",
-  ];
-  lines.push(row(headers));
-
-  let totalMonthly = 0;
-  for (const s of sorted) {
-    totalMonthly += getMonthlyEquivalent(s);
-    lines.push(
-      row([
-        s.name,
-        formatNumber(s.price),
-        s.payment_type === "installment" ? "Cuotas" : "Recurrente",
-        getBillingCycleLabel(s.billing_cycle, s.payment_type, s.installment_count),
-        s.payment_type === "installment"
-          ? `${s.installments_paid}/${s.installment_count ?? 0} pagadas`
-          : "-",
-        formatDateCsv(s.next_payment_date),
-        s.category,
-        STATUS_LABELS[s.status] ?? s.status,
-        s.notes ?? "",
-      ])
-    );
-  }
-
-  lines.push("");
-  lines.push(row(["", "", "", "", "", "Total mensual (equivalente)", formatNumber(totalMonthly)]));
-
-  const csv = lines.join("\r\n");
-  const blob = new Blob([UTF8_BOM + csv], { type: "text/csv;charset=utf-8" });
-  const date = new Date().toISOString().slice(0, 10);
-  triggerDownload(blob, `subghost-suscripciones-${date}.csv`);
+  download("suscripciones", "Exportación de suscripciones", `${sorted.length} suscripción(es)`, [
+    row(SUBSCRIPTION_HEADERS),
+    ...sorted.map((s) => row(subscriptionRow(s))),
+    "",
+    row(["", "", "", "", "", "Total mensual (equivalente)", formatNumber(totalMonthly(sorted))]),
+  ]);
 }
 
 export function exportPaymentsCsv(
   payments: PaymentHistory[],
-  subscriptionsMap?: Map<string, string>
+  subscriptionNames?: Map<string, string>
 ): void {
-  const sorted = [...payments].sort(
-    (a, b) => new Date(b.payment_date).getTime() - new Date(a.payment_date).getTime()
-  );
+  const sorted = sortPayments(payments);
 
-  const lines: string[] = [];
-  lines.push(row(["SubGhost — Historial de pagos"]));
-  lines.push(row([`Exportado: ${formatDateTimeCsv(new Date())}`]));
-  lines.push(row([`Total: ${sorted.length} pago(s)`]));
-  lines.push("");
-
-  const headers = ["Fecha", "Suscripción", "Importe", "ID del pago"];
-  lines.push(row(headers));
-
-  let total = 0;
-  for (const p of sorted) {
-    total += p.amount;
-    const subName = subscriptionsMap?.get(p.subscription_id) ?? p.subscription_id;
-    lines.push(
-      row([formatDateCsv(p.payment_date), subName, formatNumber(p.amount), p.id])
-    );
-  }
-
-  lines.push("");
-  lines.push(row(["", "", "Total", formatNumber(total)]));
-
-  const csv = lines.join("\r\n");
-  const blob = new Blob([UTF8_BOM + csv], { type: "text/csv;charset=utf-8" });
-  const date = new Date().toISOString().slice(0, 10);
-  triggerDownload(blob, `subghost-pagos-${date}.csv`);
+  download("pagos", "Historial de pagos", `${sorted.length} pago(s)`, [
+    row([...PAYMENT_HEADERS, "ID del pago"]),
+    ...sorted.map((p) => row([...paymentRow(p, subscriptionNames), p.id])),
+    "",
+    row(["", "", "Total", formatNumber(totalPaid(sorted))]),
+  ]);
 }
