@@ -1,20 +1,9 @@
 const createNextIntlPlugin = require("next-intl/plugin");
 const withNextIntl = createNextIntlPlugin("./i18n/request.ts");
 
-const withPWA = require("next-pwa")({
-  dest: "public",
-  register: true,
-  skipWaiting: true,
-  disable: process.env.NODE_ENV === "development",
-  // Que el SW nunca cachee ni intercepte el callback de OAuth (evita ver "[]").
-  runtimeCaching: [
-    {
-      urlPattern: /^https?:\/\/[^/]*\/api\/auth\/.*/i,
-      handler: "NetworkOnly",
-      options: { cacheName: "auth-bypass" },
-    },
-  ],
-});
+// El service worker está escrito a mano en public/sw.js y se registra desde
+// components/ServiceWorkerRegistration.tsx. No se usa next-pwa: es un plugin de
+// webpack y este proyecto buildea con Turbopack, así que nunca se ejecutaba.
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
@@ -78,4 +67,4 @@ const nextConfig = {
   },
 };
 
-module.exports = withNextIntl(withPWA(nextConfig));
+module.exports = withNextIntl(nextConfig);

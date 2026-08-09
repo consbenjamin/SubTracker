@@ -3,10 +3,20 @@ import { NextResponse, type NextRequest } from "next/server";
 import { getUserSafe, isAuthCookie } from "@/lib/supabase/user";
 
 /** Rutas accesibles sin sesión. */
-const PUBLIC_PREFIXES = ["/login", "/api/auth", "/api/locale"];
+const PUBLIC_PREFIXES = ["/login"];
+
+/**
+ * Las rutas de API no se redirigen nunca: cada una valida por su cuenta y
+ * responde 401 en JSON (o, en el cron, con su propio bearer). Mandarlas a /login
+ * devolvía un 307 al HTML del login, con lo cual `fetch` seguía el redirect,
+ * `res.ok` daba true y el cliente creía que la llamada había funcionado.
+ */
+function isApi(pathname: string): boolean {
+  return pathname.startsWith("/api/");
+}
 
 function isPublic(pathname: string): boolean {
-  return pathname === "/" || PUBLIC_PREFIXES.some((p) => pathname.startsWith(p));
+  return pathname === "/" || isApi(pathname) || PUBLIC_PREFIXES.some((p) => pathname.startsWith(p));
 }
 
 export async function middleware(request: NextRequest) {

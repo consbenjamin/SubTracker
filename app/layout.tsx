@@ -14,6 +14,7 @@ const inter = Inter({
 import { SettingsProvider } from "@/lib/contexts/SettingsContext";
 import { ToastProvider } from "@/lib/contexts/ToastContext";
 import { OfflineIndicator } from "@/components/OfflineIndicator";
+import { ServiceWorkerRegistration } from "@/components/ServiceWorkerRegistration";
 
 export const viewport: Viewport = {
   width: "device-width",
@@ -30,12 +31,16 @@ export async function generateMetadata(): Promise<Metadata> {
     manifest: "/manifest.webmanifest",
     appleWebApp: {
       capable: true,
-      statusBarStyle: "default",
+      statusBarStyle: "black-translucent",
       title: "SubGhost",
     },
     icons: {
-      icon: "/icons/subghost-logo.svg",
-      apple: "/icons/subghost-logo.svg",
+      icon: [
+        { url: "/icons/favicon-32.png", sizes: "32x32", type: "image/png" },
+        { url: "/icons/icon-192.png", sizes: "192x192", type: "image/png" },
+      ],
+      // iOS ignora el manifest: el icono de la pantalla de inicio sale de acá.
+      apple: [{ url: "/icons/apple-touch-icon.png", sizes: "180x180", type: "image/png" }],
     },
   };
 }
@@ -57,6 +62,7 @@ export default async function RootLayout({
             <ToastProvider>
               {children}
               <OfflineIndicator />
+              <ServiceWorkerRegistration />
             </ToastProvider>
           </SettingsProvider>
         </NextIntlClientProvider>

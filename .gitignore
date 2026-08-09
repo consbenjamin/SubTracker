@@ -35,8 +35,8 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# PWA (generado por next-pwa)
-**/public/sw.js
+# PWA: public/sw.js ya NO se ignora, es código fuente (ver public/sw.js).
+# Solo se ignoran los restos que dejaba next-pwa.
 **/public/sw.js.map
 **/public/workbox-*.js
 **/public/workbox-*.js.map
