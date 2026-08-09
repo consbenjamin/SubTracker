@@ -83,16 +83,34 @@ export async function GET(request: Request) {
     else byUser.set(sub.user_id, [sub]);
   }
 
-  const { data: devices } = await supabase
+  const { data: devices, error: devicesError } = await supabase
     .from("push_subscriptions")
     .select("id, user_id, endpoint, p256dh, auth, last_notified_on")
     .in("user_id", [...byUser.keys()]);
+
+  // Sin esto, si falta la tabla o falla la consulta, el cron respondía
+  // "ok, 0 enviados" y no había forma de saber por qué no llegaba nada.
+  if (devicesError) {
+    return NextResponse.json(
+      { error: `No se pudieron leer los dispositivos: ${devicesError.message}` },
+      { status: 500 }
+    );
+  }
+
+  if (!devices?.length) {
+    return NextResponse.json({
+      ok: true,
+      today,
+      sent: 0,
+      reason: "no hay dispositivos suscritos a notificaciones",
+    });
+  }
 
   let sent = 0;
   const staleIds: string[] = [];
   const notifiedIds: string[] = [];
 
-  for (const device of devices ?? []) {
+  for (const device of devices) {
     // Ya se le avisó hoy a este dispositivo.
     if (device.last_notified_on === today) continue;
 
@@ -135,7 +153,7 @@ export async function GET(request: Request) {
     ok: true,
     today,
     usuariosConVencimientos: byUser.size,
-    dispositivos: devices?.length ?? 0,
+    dispositivos: devices.length,
     sent,
     limpiados: staleIds.length,
   });
