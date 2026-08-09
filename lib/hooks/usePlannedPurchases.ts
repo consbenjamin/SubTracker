@@ -10,19 +10,22 @@ export type SaveResult = { ok: true } | { ok: false; invalidData: boolean; messa
 const BASE_URL = "/api/planned-purchases";
 
 /**
- * Compras planeadas del mes seleccionado.
+ * Compras planeadas. Con `month`/`year` en null trae todas (el dashboard las
+ * necesita para ver cuotas abiertas de meses anteriores).
  *
  * Solo depende de `month` y `year`: nada de traducciones ni toasts en las
  * dependencias, para que la lista no se recargue por causas ajenas a los filtros.
  */
-export function usePlannedPurchases(month: number, year: number) {
+export function usePlannedPurchases(month: number | null, year: number | null) {
   const [purchases, setPurchases] = useState<PlannedPurchase[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadFailed, setLoadFailed] = useState(false);
 
   const refresh = useCallback(async () => {
     try {
-      const params = new URLSearchParams({ month: String(month), year: String(year) });
+      const params = new URLSearchParams();
+      if (month != null) params.set("month", String(month));
+      if (year != null) params.set("year", String(year));
       const res = await fetch(`${BASE_URL}?${params}`);
       if (res.ok) {
         setPurchases(await res.json());

@@ -115,7 +115,13 @@
     "deleteConfirm": "¿Estás seguro de que quieres eliminar esta suscripción? Esta acción no se puede deshacer.",
     "editSubscription": "Editar suscripción",
     "newSubscription": "Nueva suscripción",
-    "offlineWriteBlocked": "Sin conexión: no se puede guardar. Volvé a intentar cuando tengas internet."
+    "offlineWriteBlocked": "Sin conexión: no se puede guardar. Volvé a intentar cuando tengas internet.",
+    "purchasesThisMonth": "Compras de {month}",
+    "purchasesSeeAll": "Ver todas",
+    "purchasesPending": "{count, plural, =0 {Sin pendientes} one {# pendiente} other {# pendientes}}",
+    "purchasesBought": "{count, plural, =0 {Ninguna comprada} one {# comprada} other {# compradas}}",
+    "purchasesAndMore": "y {count} más",
+    "purchasesOpenInstallments": "{count, plural, one {# compra en cuotas} other {# compras en cuotas}}"
   },
   "subscriptions": {
     "title": "Suscripciones",
