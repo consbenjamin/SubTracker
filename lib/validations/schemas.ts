@@ -20,17 +20,27 @@ const optionalInstallmentCount = z.preprocess(
 const dateOnly = (message = "Formato fecha: YYYY-MM-DD") =>
   z.string().regex(/^\d{4}-\d{2}-\d{2}$/, message);
 
+/**
+ * Tope de los importes: igual al DECIMAL(10,2) de las columnas.
+ * No bajarlo: en monedas como ARS o COP un importe de siete cifras es normal
+ * (un celular en 12 cuotas supera el millón sin problema).
+ */
+const MAX_AMOUNT = 99999999.99;
+
+const amount = (message = "El importe debe ser >= 0") =>
+  z.coerce.number().min(0, message).max(MAX_AMOUNT, "Importe demasiado grande");
+
 const subscriptionFields = {
   name: z
     .string()
     .min(1, "El nombre es requerido")
     .max(200, "Nombre demasiado largo"),
-  price: z.coerce.number().min(0, "El precio debe ser >= 0").max(999999.99),
+  price: amount("El precio debe ser >= 0"),
   billing_cycle: z.enum(["monthly", "yearly", "quarterly"]),
   payment_type: z.enum(["recurring", "installment"]).default("recurring"),
   installment_count: optionalInstallmentCount,
   installments_paid: z.coerce.number().int().min(0).max(999).optional(),
-  total_amount: z.coerce.number().min(0).max(999999.99).nullable().optional(),
+  total_amount: amount().nullable().optional(),
   next_payment_date: dateOnly().min(1, "La fecha es requerida"),
   category: z
     .string()
@@ -77,7 +87,7 @@ export const subscriptionUpdateBodySchema = withInstallmentValidation(z.object({
 /** Schema para registro de pago (amount puede venir como string en JSON) */
 export const paymentBodySchema = z
   .object({
-    amount: z.coerce.number().min(0).max(999999.99),
+    amount: amount(),
     payment_date: dateOnly(),
     /** Si es true (solo recurrentes), la API usa la fecha de vencimiento del servidor y valida contra expected_due. */
     confirm_due: z.boolean().optional(),
@@ -120,6 +130,11 @@ const optionalUrl = z
 export const plannedPurchaseBodySchema = z
   .object({
     name: z.string().min(1, "El nombre es requerido").max(200, "Nombre demasiado largo"),
+    /** Opcional: al planear una compra no siempre se sabe el precio. */
+    price: z.preprocess(
+      (val) => (val === "" || val == null || Number.isNaN(val) ? null : val),
+      amount("El precio debe ser >= 0").nullable().optional()
+    ),
     link: optionalUrl,
     planned_month: z.coerce.number().int().min(1).max(12),
     planned_year: z.coerce.number().int().min(2000).max(2100),

@@ -49,6 +49,8 @@ export interface PlannedPurchase {
   id: string;
   user_id: string;
   name: string;
+  /** Precio estimado. null = todavía no se sabe. En cuotas es el total de la compra. */
+  price: number | null;
   link: string | null;
   planned_month: number;
   planned_year: number;
@@ -67,6 +69,7 @@ export interface PlannedPurchase {
 
 export interface PlannedPurchaseFormData {
   name: string;
+  price?: number | null;
   link?: string;
   planned_month: number;
   planned_year: number;

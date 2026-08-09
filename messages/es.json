@@ -121,7 +121,12 @@
     "purchasesPending": "{count, plural, =0 {Sin pendientes} one {# pendiente} other {# pendientes}}",
     "purchasesBought": "{count, plural, =0 {Ninguna comprada} one {# comprada} other {# compradas}}",
     "purchasesAndMore": "y {count} más",
-    "purchasesOpenInstallments": "{count, plural, one {# compra en cuotas} other {# compras en cuotas}}"
+    "purchasesOpenInstallments": "{count, plural, one {# compra en cuotas} other {# compras en cuotas}}",
+    "purchasesPendingLabel": "Pendiente de comprar",
+    "purchasesBoughtLabel": "Comprado este mes",
+    "purchasesNoPrice": "{count, plural, one {# sin precio} other {# sin precio}}",
+    "purchasesInstallmentsPerMonth": "{amount} por mes en cuotas",
+    "purchasesRemainingTotal": "resta {amount}"
   },
   "subscriptions": {
     "title": "Suscripciones",
@@ -320,7 +325,8 @@
     "statusPending": "Pendiente",
     "installmentsCompleted": "Completado ({count}/{count}) ✓",
     "installmentsPaid": "Pagadas {paid}/{count}",
-    "installmentsStartsNextMonth": "· arranca el mes que viene"
+    "installmentsStartsNextMonth": "· arranca el mes que viene",
+    "installmentsOf": "{count} cuotas de {amount}"
   },
   "plannedPurchaseForm": {
     "namePlaceholder": "Ej: remera negra, juego Steam, auriculares",

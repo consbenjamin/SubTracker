@@ -5,22 +5,23 @@ import { useMemo } from "react";
 import { useTranslations } from "next-intl";
 import { ShoppingBag, ExternalLink, Layers, ChevronRight } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
-import { Badge } from "@/components/ui/Badge";
+import { useFormatCurrency } from "@/lib/hooks/useFormatCurrency";
 import { usePlannedPurchases } from "@/lib/hooks/usePlannedPurchases";
-import type { PlannedPurchase } from "@/types";
+import {
+  countWithoutPrice,
+  installmentAmount,
+  remainingAmount,
+  remainingInstallments,
+  totalPrice,
+} from "@/lib/plannedPurchases";
 
 const PENDING_PREVIEW = 4;
-
-/** Cuotas todavía abiertas de una compra ya realizada. */
-function remainingInstallments(p: PlannedPurchase): number {
-  if (!p.bought || !p.bought_with_installments || p.installment_count == null) return 0;
-  return Math.max(p.installment_count - p.installments_paid, 0);
-}
 
 export function PurchasesSummary() {
   const t = useTranslations("dashboard");
   const tPurchases = useTranslations("purchases");
   const tForm = useTranslations("plannedPurchaseForm");
+  const formatCurrency = useFormatCurrency();
 
   const now = useMemo(() => new Date(), []);
   const month = now.getMonth() + 1;
@@ -29,14 +30,24 @@ export function PurchasesSummary() {
   // Sin filtro de mes: las cuotas abiertas suelen venir de compras de meses anteriores.
   const { purchases, loading } = usePlannedPurchases(null, null);
 
-  const { pending, boughtCount, openInstallments } = useMemo(() => {
+  const stats = useMemo(() => {
     const thisMonth = purchases.filter(
       (p) => p.planned_month === month && p.planned_year === year
     );
+    const pending = thisMonth.filter((p) => !p.bought);
+    const bought = thisMonth.filter((p) => p.bought);
+    const openInstallments = purchases.filter((p) => remainingInstallments(p) > 0);
+
     return {
-      pending: thisMonth.filter((p) => !p.bought),
-      boughtCount: thisMonth.filter((p) => p.bought).length,
-      openInstallments: purchases.filter((p) => remainingInstallments(p) > 0),
+      pending,
+      bought,
+      pendingTotal: totalPrice(pending),
+      pendingWithoutPrice: countWithoutPrice(pending),
+      boughtTotal: totalPrice(bought),
+      openInstallments,
+      // Lo que estas cuotas te comprometen cada mes y lo que resta en total.
+      monthlyInstallments: openInstallments.reduce((sum, p) => sum + installmentAmount(p), 0),
+      remainingInstallmentsTotal: openInstallments.reduce((sum, p) => sum + remainingAmount(p), 0),
     };
   }, [purchases, month, year]);
 
@@ -53,7 +64,7 @@ export function PurchasesSummary() {
   }
 
   const monthLabel = tPurchases(`months.${month}` as "months.1");
-  const isEmpty = pending.length === 0 && boughtCount === 0;
+  const isEmpty = stats.pending.length === 0 && stats.bought.length === 0;
 
   return (
     <Card variant="outline">
@@ -81,18 +92,40 @@ export function PurchasesSummary() {
           </p>
         ) : (
           <>
-            <div className="flex flex-wrap items-center gap-2">
-              <Badge variant={pending.length > 0 ? "warning" : "default"}>
-                {t("purchasesPending", { count: pending.length })}
-              </Badge>
-              <Badge variant="success">{t("purchasesBought", { count: boughtCount })}</Badge>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                  {t("purchasesPendingLabel")}
+                </p>
+                <p className="mt-1 text-lg font-semibold tracking-tight text-foreground">
+                  {formatCurrency(stats.pendingTotal)}
+                </p>
+                <p className="mt-0.5 text-xs text-muted-foreground">
+                  {t("purchasesPending", { count: stats.pending.length })}
+                  {stats.pendingWithoutPrice > 0 &&
+                    ` · ${t("purchasesNoPrice", { count: stats.pendingWithoutPrice })}`}
+                </p>
+              </div>
+              <div>
+                <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                  {t("purchasesBoughtLabel")}
+                </p>
+                <p className="mt-1 text-lg font-semibold tracking-tight text-foreground">
+                  {formatCurrency(stats.boughtTotal)}
+                </p>
+                <p className="mt-0.5 text-xs text-muted-foreground">
+                  {t("purchasesBought", { count: stats.bought.length })}
+                </p>
+              </div>
             </div>
 
-            {pending.length > 0 && (
-              <ul className="divide-y divide-border">
-                {pending.slice(0, PENDING_PREVIEW).map((p) => (
+            {stats.pending.length > 0 && (
+              <ul className="divide-y divide-border border-t border-border pt-1">
+                {stats.pending.slice(0, PENDING_PREVIEW).map((p) => (
                   <li key={p.id} className="flex items-center justify-between gap-3 py-2">
-                    <span className="min-w-0 truncate text-sm text-foreground">{p.name}</span>
+                    <span className="min-w-0 flex-1 truncate text-sm text-foreground">
+                      {p.name}
+                    </span>
                     {p.link && (
                       <a
                         href={p.link}
@@ -104,33 +137,39 @@ export function PurchasesSummary() {
                         {tForm("link")}
                       </a>
                     )}
+                    <span className="shrink-0 text-sm text-muted-foreground">
+                      {p.price != null ? formatCurrency(p.price) : "—"}
+                    </span>
                   </li>
                 ))}
               </ul>
             )}
 
-            {pending.length > PENDING_PREVIEW && (
+            {stats.pending.length > PENDING_PREVIEW && (
               <p className="text-xs text-muted-foreground">
-                {t("purchasesAndMore", { count: pending.length - PENDING_PREVIEW })}
+                {t("purchasesAndMore", { count: stats.pending.length - PENDING_PREVIEW })}
               </p>
             )}
           </>
         )}
 
-        {openInstallments.length > 0 && (
-          <div className="flex items-start gap-2 border-t border-border pt-3 text-sm text-muted-foreground">
-            <Layers className="mt-0.5 h-4 w-4 shrink-0" />
-            <span>
-              {t("purchasesOpenInstallments", { count: openInstallments.length })}
-              <span className="ml-1 text-xs">
-                (
-                {openInstallments
-                  .slice(0, 2)
-                  .map((p) => `${p.name} ${p.installments_paid}/${p.installment_count}`)
-                  .join(" · ")}
-                {openInstallments.length > 2 ? " …" : ""})
-              </span>
-            </span>
+        {stats.openInstallments.length > 0 && (
+          <div className="flex items-start gap-2 border-t border-border pt-3 text-sm">
+            <Layers className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
+            <div className="min-w-0">
+              <p className="text-foreground">
+                {t("purchasesInstallmentsPerMonth", {
+                  amount: formatCurrency(stats.monthlyInstallments),
+                })}
+              </p>
+              <p className="mt-0.5 text-xs text-muted-foreground">
+                {t("purchasesOpenInstallments", { count: stats.openInstallments.length })}
+                {stats.remainingInstallmentsTotal > 0 &&
+                  ` · ${t("purchasesRemainingTotal", {
+                    amount: formatCurrency(stats.remainingInstallmentsTotal),
+                  })}`}
+              </p>
+            </div>
           </div>
         )}
       </CardContent>
