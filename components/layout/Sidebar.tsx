@@ -62,6 +62,9 @@ export function Sidebar({ isOpen = true, onClose, isMobile = false }: SidebarPro
     onClose?.();
     await fetch("/api/auth/logout", { method: "POST" });
     await supabase.auth.signOut();
+    // Recarga dura a propósito: al cerrar sesión hay que descartar todo el
+    // estado en memoria (contextos, datos cacheados), cosa que router.push no hace.
+    // eslint-disable-next-line @next/next/no-location-assign-relative-destination
     window.location.href = "/login";
   };
 

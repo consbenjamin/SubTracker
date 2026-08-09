@@ -341,6 +341,9 @@ export function PlannedPurchaseForm({
                     name="installments_paid"
                     control={control}
                     render={({ field }) => {
+                      // react-hook-form no es compatible con el React Compiler:
+                      // este componente queda sin optimizar. Nada que corregir.
+                      // eslint-disable-next-line react-hooks/incompatible-library
                       const total = watch("installment_count") ?? 12;
                       const options = Array.from({ length: total + 1 }, (_, paid) => {
                         if (paid === 0) return { value: "0", label: t("nonePaid") };

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { useSettings } from "@/lib/contexts/SettingsContext";
 import type { Theme } from "@/lib/contexts/SettingsContext";
@@ -15,7 +15,10 @@ export default function SettingsPage() {
   const t = useTranslations("settings");
   const tCommon = useTranslations("common");
   const { theme, setTheme, currency, setCurrency, monthlyBudget, setMonthlyBudget } = useSettings();
-  const [budgetInput, setBudgetInput] = useState(monthlyBudget?.toString() ?? "");
+  // null = "no se está editando": se muestra el valor guardado. Así el input no
+  // necesita un efecto que lo sincronice cuando cambia el presupuesto.
+  const [draft, setDraft] = useState<string | null>(null);
+  const budgetInput = draft ?? monthlyBudget?.toString() ?? "";
 
   const THEMES: { value: Theme; label: string; icon: typeof Sun }[] = [
     { value: "light", label: t("light"), icon: Sun },
@@ -23,19 +26,16 @@ export default function SettingsPage() {
     { value: "system", label: t("system"), icon: Monitor },
   ];
 
-  useEffect(() => {
-    setBudgetInput(monthlyBudget?.toString() ?? "");
-  }, [monthlyBudget]);
-
   const handleBudgetSubmit = () => {
     const parsed = budgetInput.trim() ? parseFloat(budgetInput.replace(",", ".")) : null;
     if (parsed !== null && (isNaN(parsed) || parsed <= 0)) return;
-    setMonthlyBudget(parsed !== null && !isNaN(parsed) && parsed > 0 ? parsed : null);
+    setMonthlyBudget(parsed !== null && parsed > 0 ? parsed : null);
+    setDraft(null);
   };
 
   const clearBudget = () => {
-    setBudgetInput("");
     setMonthlyBudget(null);
+    setDraft(null);
   };
 
   return (
@@ -104,7 +104,7 @@ export default function SettingsPage() {
                   step={1}
                   placeholder={tCommon("noLimit")}
                   value={budgetInput}
-                  onChange={(e) => setBudgetInput(e.target.value)}
+                  onChange={(e) => setDraft(e.target.value)}
                   onBlur={handleBudgetSubmit}
                   onKeyDown={(e) => e.key === "Enter" && handleBudgetSubmit()}
                   label={tCommon("amount")}

@@ -16,33 +16,45 @@ const BASE_URL = "/api/planned-purchases";
  * Solo depende de `month` y `year`: nada de traducciones ni toasts en las
  * dependencias, para que la lista no se recargue por causas ajenas a los filtros.
  */
+const EMPTY: PlannedPurchase[] = [];
+
 export function usePlannedPurchases(month: number | null, year: number | null) {
-  const [purchases, setPurchases] = useState<PlannedPurchase[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [loadFailed, setLoadFailed] = useState(false);
+  /**
+   * El resultado se guarda junto al filtro que lo produjo. Así `loading` es
+   * derivado —no hay datos para el filtro actual— en vez de un flag que haya
+   * que encender desde el efecto, y nunca se muestran los datos del mes anterior.
+   */
+  const filterKey = `${month ?? "all"}-${year ?? "all"}`;
+  const [result, setResult] = useState<{
+    key: string;
+    purchases: PlannedPurchase[];
+    failed: boolean;
+  } | null>(null);
+
+  const isCurrent = result?.key === filterKey;
+  const purchases = isCurrent ? result.purchases : EMPTY;
+  const loading = !isCurrent;
+  const loadFailed = isCurrent && result.failed;
 
   const refresh = useCallback(async () => {
+    const key = `${month ?? "all"}-${year ?? "all"}`;
     try {
       const params = new URLSearchParams();
       if (month != null) params.set("month", String(month));
       if (year != null) params.set("year", String(year));
       const res = await fetch(`${BASE_URL}?${params}`);
-      if (res.ok) {
-        setPurchases(await res.json());
-        setLoadFailed(false);
-      } else {
-        setLoadFailed(true);
-      }
+      if (res.ok) setResult({ key, purchases: await res.json(), failed: false });
+      else setResult({ key, purchases: EMPTY, failed: true });
     } catch (err) {
       console.error("Error fetching planned purchases:", err);
-      setLoadFailed(true);
-    } finally {
-      setLoading(false);
+      setResult({ key, purchases: EMPTY, failed: true });
     }
   }, [month, year]);
 
   useEffect(() => {
-    setLoading(true);
+    // Cargar al montar y ante cada cambio de filtro. `refresh` solo escribe
+    // estado después del await; el compilador no puede verlo.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     refresh();
   }, [refresh]);
 

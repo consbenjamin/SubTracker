@@ -3,11 +3,13 @@
 import {
   createContext,
   useContext,
-  useState,
   useEffect,
   useCallback,
+  useMemo,
+  useSyncExternalStore,
   ReactNode,
 } from "react";
+import { useMediaQuery } from "@/lib/hooks/useMediaQuery";
 
 const STORAGE_KEY = "subghost-settings";
 
@@ -35,6 +37,8 @@ interface SettingsContextValue extends SettingsState {
   setCurrency: (currency: CurrencyCode) => void;
   setMonthlyBudget: (value: number | null) => void;
   resolvedTheme: "light" | "dark";
+  /** false hasta que hidrata; sirve para no pintar valores del servidor. */
+  mounted: boolean;
 }
 
 const defaultState: SettingsState = {
@@ -68,51 +72,73 @@ function saveSettings(state: SettingsState) {
 
 const SettingsContext = createContext<SettingsContextValue | null>(null);
 
+/**
+ * Los ajustes viven en localStorage, que es un store externo al render.
+ * Leerlos con `useSyncExternalStore` evita el efecto que sincronizaba estado
+ * después de montar y, de paso, mantiene en sincronía las pestañas abiertas.
+ */
+const settingsListeners = new Set<() => void>();
+let cachedRaw: string | null = null;
+let cachedSettings: SettingsState = defaultState;
+
+function subscribeToSettings(onChange: () => void) {
+  settingsListeners.add(onChange);
+  window.addEventListener("storage", onChange);
+  return () => {
+    settingsListeners.delete(onChange);
+    window.removeEventListener("storage", onChange);
+  };
+}
+
+/** Devuelve siempre la misma referencia mientras el contenido no cambie. */
+function getSettingsSnapshot(): SettingsState {
+  const raw = localStorage.getItem(STORAGE_KEY);
+  if (raw !== cachedRaw) {
+    cachedRaw = raw;
+    cachedSettings = loadSettings();
+  }
+  return cachedSettings;
+}
+
+function emitSettingsChanged() {
+  for (const listener of settingsListeners) listener();
+}
+
 export function SettingsProvider({ children }: { children: ReactNode }) {
-  const [state, setState] = useState<SettingsState>(defaultState);
-  const [resolvedTheme, setResolvedTheme] = useState<"light" | "dark">("light");
-  const [mounted, setMounted] = useState(false);
+  const state = useSyncExternalStore(
+    subscribeToSettings,
+    getSettingsSnapshot,
+    () => defaultState
+  );
 
-  useEffect(() => {
-    setState(loadSettings());
-    setMounted(true);
+  // En el servidor no hay localStorage: hasta hidratar se usan los valores por
+  // defecto, y esto marca cuándo ya se pueden aplicar los reales.
+  const mounted = useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false
+  );
+
+  const prefersDark = useMediaQuery("(prefers-color-scheme: dark)");
+  // Derivado, no estado: el tema resuelto es función del elegido y del sistema.
+  const resolvedTheme: "light" | "dark" =
+    state.theme === "system" ? (prefersDark ? "dark" : "light") : state.theme;
+
+  /** Guarda en localStorage y avisa: el store es la única fuente de verdad. */
+  const update = useCallback((patch: Partial<SettingsState>) => {
+    saveSettings({ ...getSettingsSnapshot(), ...patch });
+    emitSettingsChanged();
   }, []);
 
-  const setTheme = useCallback((theme: Theme) => {
-    setState((prev) => {
-      const next = { ...prev, theme };
-      saveSettings(next);
-      return next;
-    });
-  }, []);
-
-  const setCurrency = useCallback((currency: CurrencyCode) => {
-    setState((prev) => {
-      const next = { ...prev, currency };
-      saveSettings(next);
-      return next;
-    });
-  }, []);
-
-  const setMonthlyBudget = useCallback((monthlyBudget: number | null) => {
-    setState((prev) => {
-      const next = { ...prev, monthlyBudget };
-      saveSettings(next);
-      return next;
-    });
-  }, []);
-
-  useEffect(() => {
-    if (state.theme === "system") {
-      const mq = window.matchMedia("(prefers-color-scheme: dark)");
-      const update = () => setResolvedTheme(mq.matches ? "dark" : "light");
-      update();
-      mq.addEventListener("change", update);
-      return () => mq.removeEventListener("change", update);
-    } else {
-      setResolvedTheme(state.theme);
-    }
-  }, [state.theme]);
+  const setTheme = useCallback((theme: Theme) => update({ theme }), [update]);
+  const setCurrency = useCallback(
+    (currency: CurrencyCode) => update({ currency }),
+    [update]
+  );
+  const setMonthlyBudget = useCallback(
+    (monthlyBudget: number | null) => update({ monthlyBudget }),
+    [update]
+  );
 
   useEffect(() => {
     if (!mounted) return;
@@ -126,13 +152,10 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     }
   }, [resolvedTheme, mounted]);
 
-  const value: SettingsContextValue = {
-    ...state,
-    setTheme,
-    setCurrency,
-    setMonthlyBudget,
-    resolvedTheme,
-  };
+  const value = useMemo<SettingsContextValue>(
+    () => ({ ...state, setTheme, setCurrency, setMonthlyBudget, resolvedTheme, mounted }),
+    [state, setTheme, setCurrency, setMonthlyBudget, resolvedTheme, mounted]
+  );
 
   return (
     <SettingsContext.Provider value={value}>{children}</SettingsContext.Provider>

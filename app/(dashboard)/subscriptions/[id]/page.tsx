@@ -32,9 +32,10 @@ export default function EditSubscriptionPage() {
   /** Evita reabrir el modal cuando la URL aún tiene ?confirmDue y se refresca la suscripción. */
   const confirmDueDismissedRef = useRef(false);
   const lastSubIdRef = useRef<string>("");
-  const [subscription, setSubscription] = useState<Subscription | null>(null);
+  // undefined = todavía cargando · null = no existe. `loading` sale de acá.
+  const [subscription, setSubscription] = useState<Subscription | null | undefined>(undefined);
   const [payments, setPayments] = useState<PaymentHistory[]>([]);
-  const [loading, setLoading] = useState(true);
+  const loading = subscription === undefined;
   const [paymentModalOpen, setPaymentModalOpen] = useState(false);
   const [paymentAmount, setPaymentAmount] = useState("");
   const [paymentDate, setPaymentDate] = useState(todayDateOnly);
@@ -57,6 +58,9 @@ export default function EditSubscriptionPage() {
     if (!shouldConfirm || !dueDate) return;
     if ((subscription.payment_type ?? "recurring") !== "recurring") return;
 
+    // Reacción a una navegación, no estado derivable: el modal tiene que seguir
+    // abierto después de que el router.replace de abajo limpie la query.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setConfirmDueDate(dueDate.slice(0, 10));
     setConfirmDueOpen(true);
 
@@ -68,11 +72,10 @@ export default function EditSubscriptionPage() {
     if (!subId) return;
     try {
       const res = await fetch(`/api/subscriptions/${subId}`, { cache: "no-store" });
-      if (res.ok) setSubscription(await res.json());
+      setSubscription(res.ok ? await res.json() : null);
     } catch (error) {
       console.error("Error fetching subscription:", error);
-    } finally {
-      setLoading(false);
+      setSubscription(null);
     }
   }, [subId]);
 
@@ -92,6 +95,8 @@ export default function EditSubscriptionPage() {
       lastSubIdRef.current = subId;
       confirmDueDismissedRef.current = false;
     }
+    // Las dos escriben estado recién después del await; el compilador no lo ve.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchSubscription();
     fetchPayments();
   }, [subId, fetchSubscription, fetchPayments]);

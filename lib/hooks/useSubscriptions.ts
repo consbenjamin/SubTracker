@@ -3,28 +3,38 @@
 import { useCallback, useEffect, useState } from "react";
 import type { Subscription, SubscriptionFormData } from "@/types";
 
+const EMPTY: Subscription[] = [];
+
 /**
  * Carga y CRUD de suscripciones contra `/api/subscriptions`.
  * Devuelve `true` si la operación funcionó, para que cada página decida el mensaje.
  */
 export function useSubscriptions() {
-  const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
-  const [loading, setLoading] = useState(true);
+  // null = todavía no llegó la primera respuesta. `loading` sale de ahí, en vez
+  // de ser un flag aparte que haya que apagar desde el efecto.
+  const [data, setData] = useState<Subscription[] | null>(null);
+  const subscriptions = data ?? EMPTY;
+  const loading = data === null;
 
   const refresh = useCallback(async () => {
     try {
       const res = await fetch("/api/subscriptions");
-      if (res.ok) setSubscriptions(await res.json());
+      setData(res.ok ? await res.json() : EMPTY);
     } catch (err) {
       console.error("Error fetching subscriptions:", err);
-    } finally {
-      setLoading(false);
+      setData(EMPTY);
     }
   }, []);
 
   useEffect(() => {
+    // Cargar al montar. `refresh` solo escribe estado después del await, pero
+    // el compilador no puede verlo y lo trata como escritura síncrona.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     refresh();
   }, [refresh]);
+
+  /** El dashboard la usa para volcar la caché offline. */
+  const setSubscriptions = useCallback((next: Subscription[]) => setData(next), []);
 
   const send = useCallback(
     async (url: string, method: string, body?: SubscriptionFormData) => {

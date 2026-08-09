@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback, useId } from "react";
+import { useState, useEffect, useRef, useCallback, useId, useSyncExternalStore } from "react";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { Search, Clock, Tag, X } from "lucide-react";
@@ -14,21 +14,53 @@ interface Suggestion {
 const RECENT_KEY = "subghost-recent-searches";
 const MAX_RECENT = 5;
 
+/**
+ * Las búsquedas recientes viven en localStorage, que es un store externo:
+ * se leen con `useSyncExternalStore` en vez de copiarlas a estado tras montar.
+ */
+const recentListeners = new Set<() => void>();
+const EMPTY: string[] = [];
+let cachedRaw: string | null = null;
+let cachedRecent: string[] = EMPTY;
+
+function subscribeToRecent(onChange: () => void) {
+  recentListeners.add(onChange);
+  window.addEventListener("storage", onChange);
+  return () => {
+    recentListeners.delete(onChange);
+    window.removeEventListener("storage", onChange);
+  };
+}
+
+/** Misma referencia mientras el contenido no cambie (lo exige el store). */
 function getRecentSearches(): string[] {
-  if (typeof window === "undefined") return [];
+  let raw: string | null = null;
   try {
-    const raw = localStorage.getItem(RECENT_KEY);
-    return raw ? JSON.parse(raw) : [];
+    raw = localStorage.getItem(RECENT_KEY);
   } catch {
-    return [];
+    return EMPTY;
   }
+  if (raw !== cachedRaw) {
+    cachedRaw = raw;
+    try {
+      cachedRecent = raw ? JSON.parse(raw) : EMPTY;
+    } catch {
+      cachedRecent = EMPTY;
+    }
+  }
+  return cachedRecent;
 }
 
 function addRecentSearch(query: string) {
   if (!query.trim()) return;
   const recent = getRecentSearches().filter((s) => s !== query);
   recent.unshift(query);
-  localStorage.setItem(RECENT_KEY, JSON.stringify(recent.slice(0, MAX_RECENT)));
+  try {
+    localStorage.setItem(RECENT_KEY, JSON.stringify(recent.slice(0, MAX_RECENT)));
+  } catch {
+    return;
+  }
+  for (const listener of recentListeners) listener();
 }
 
 interface SearchBarProps {
@@ -45,18 +77,28 @@ export function SearchBar({ className, onNavigate, variant = "default" }: Search
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const [query, setQuery] = useState("");
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
-  const [recentSearches, setRecentSearches] = useState<string[]>([]);
   const [isOpen, setIsOpen] = useState(false);
   const [highlightedIndex, setHighlightedIndex] = useState(-1);
   const [loading, setLoading] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => {
-    setQuery(searchParams.get("q") ?? "");
-  }, [searchParams, pathname]);
+  const recentSearches = useSyncExternalStore(subscribeToRecent, getRecentSearches, () => EMPTY);
+
+  /**
+   * Lo tipeado es un borrador sobre lo que dice la URL. Se guarda junto a la
+   * ubicación en la que se escribió, así al navegar el borrador queda obsoleto
+   * y el input vuelve solo al valor de la URL, sin efecto que lo sincronice.
+   */
+  const urlQuery = searchParams.get("q") ?? "";
+  const location = `${pathname}?${urlQuery}`;
+  const [draft, setDraft] = useState<{ location: string; value: string } | null>(null);
+  const query = draft?.location === location ? draft.value : urlQuery;
+  const setQuery = useCallback(
+    (value: string) => setDraft({ location, value }),
+    [location]
+  );
 
   const allItems =
     query.length === 0
@@ -65,10 +107,6 @@ export function SearchBar({ className, onNavigate, variant = "default" }: Search
   const showDropdown =
     isOpen &&
     (query.length >= 2 ? suggestions.length > 0 : query.length === 0 ? recentSearches.length > 0 : false);
-
-  useEffect(() => {
-    setRecentSearches(getRecentSearches());
-  }, []);
 
   const fetchSuggestions = useCallback(async (q: string) => {
     if (!q.trim() || q.length < 2) {

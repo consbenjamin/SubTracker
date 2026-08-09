@@ -171,6 +171,9 @@ export function SubscriptionForm({
 
   const [recordPayment, setRecordPayment] = useState(false);
   const formatCurrency = useFormatCurrency();
+  // react-hook-form no es compatible con el React Compiler: este componente
+  // queda sin optimizar. No hay nada que corregir salvo cambiar de librería.
+  // eslint-disable-next-line react-hooks/incompatible-library
   const paymentType = watch("payment_type");
   const totalAmount = watch("total_amount");
   const installmentCount = watch("installment_count");

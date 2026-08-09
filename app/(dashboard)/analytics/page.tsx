@@ -60,19 +60,23 @@ function CustomTooltipPie({
   );
 }
 
+/** Una fila de `monthlyExpenses`, que es lo que Recharts entrega en el tooltip. */
+interface MonthlyExpensePoint {
+  month: string;
+  gasto: number;
+  real: number;
+}
+
 function CustomTooltipBar({
   active,
   payload,
   formatter,
-  labelKey = "month",
   shownLabel,
   realLabel,
 }: {
   active?: boolean;
-  // Use a broad type here to be compatible with Recharts' Payload type
-  payload?: any[]; // eslint-disable-line @typescript-eslint/no-explicit-any
+  payload?: { payload: MonthlyExpensePoint }[];
   formatter: (v: number) => string;
-  labelKey?: string;
   shownLabel: string;
   realLabel: string;
 }) {
@@ -80,13 +84,13 @@ function CustomTooltipBar({
   const p = payload[0].payload;
   return (
     <div className="rounded-xl border border-border bg-card px-4 py-3 shadow-lg backdrop-blur-sm">
-      <p className="font-semibold text-foreground">{String(p[labelKey])}</p>
+      <p className="font-semibold text-foreground">{p.month}</p>
       <p className="mt-0.5 text-sm text-muted-foreground">
-        {shownLabel}: {formatter(p.gasto as number)}
+        {shownLabel}: {formatter(p.gasto)}
       </p>
-      {((p.real as number) ?? 0) > 0 && (
+      {p.real > 0 && (
         <p className="mt-0.5 text-xs text-muted-foreground/80">
-          {realLabel}: {formatter(p.real as number)}
+          {realLabel}: {formatter(p.real)}
         </p>
       )}
     </div>
@@ -450,9 +454,8 @@ export default function AnalyticsPage() {
                   content={({ active, payload }) => (
                     <CustomTooltipBar
                       active={active}
-                      payload={payload as any} // compatible with our broad payload type
+                      payload={payload as unknown as { payload: MonthlyExpensePoint }[]}
                       formatter={formatCurrency}
-                      labelKey="month"
                       shownLabel={t("shown")}
                       realLabel={t("real")}
                     />

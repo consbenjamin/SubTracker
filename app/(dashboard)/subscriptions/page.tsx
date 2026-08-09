@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
+import { Suspense, useCallback, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { Subscription, SubscriptionFormData } from "@/types";
@@ -30,19 +30,24 @@ function SubscriptionsContent() {
   const [editingSubscription, setEditingSubscription] = useState<Subscription | null>(null);
   const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [categoryFilter, setCategoryFilter] = useState("all");
-  const [page, setPage] = useState(1);
 
-  useEffect(() => {
-    setSearchQuery(searchParams.get("q") ?? "");
-    setPage(1);
-  }, [searchParams]);
+  // La búsqueda vive en la URL: se lee, no se copia a estado.
+  const searchQuery = searchParams.get("q") ?? "";
 
-  useEffect(() => {
-    setPage(1);
-  }, [statusFilter, categoryFilter]);
+  /**
+   * Cambiar de búsqueda o de filtro tiene que volver a la página 1. En vez de
+   * un efecto que resetee después de renderizar, la página se guarda junto al
+   * criterio que la originó y se descarta sola cuando ese criterio cambia.
+   */
+  const filterKey = `${searchQuery}|${statusFilter}|${categoryFilter}`;
+  const [pageState, setPageState] = useState({ key: filterKey, page: 1 });
+  const page = pageState.key === filterKey ? pageState.page : 1;
+  const setPage = useCallback(
+    (next: number) => setPageState({ key: filterKey, page: next }),
+    [filterKey]
+  );
 
   const closeModal = useCallback(() => {
     setIsModalOpen(false);
@@ -120,10 +125,9 @@ function SubscriptionsContent() {
     searchQuery.trim() !== "" || statusFilter !== "all" || categoryFilter !== "all";
 
   const clearFilters = useCallback(() => {
-    setSearchQuery("");
     setStatusFilter("all");
     setCategoryFilter("all");
-    setPage(1);
+    // Saca ?q= de la URL; la página vuelve sola a 1 al cambiar el criterio.
     router.push("/subscriptions");
   }, [router]);
 

@@ -1,6 +1,5 @@
 "use client";
 
-import { useState, useEffect } from "react";
 import { Menu, Sun, Moon, LogOut } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useSettings } from "@/lib/contexts/SettingsContext";
@@ -17,19 +16,17 @@ interface TopBarProps {
 export function TopBar({ onMenuClick, showMenuButton = false }: TopBarProps) {
   const t = useTranslations("nav");
   const tCommon = useTranslations("common");
-  const { resolvedTheme, setTheme } = useSettings();
+  const { resolvedTheme, setTheme, mounted: themeMounted } = useSettings();
   const supabase = createClient();
-  const [themeMounted, setThemeMounted] = useState(false);
 
   const handleLogout = async () => {
     await fetch("/api/auth/logout", { method: "POST" });
     await supabase.auth.signOut();
+    // Recarga dura a propósito: al cerrar sesión hay que descartar todo el
+    // estado en memoria (contextos, datos cacheados), cosa que router.push no hace.
+    // eslint-disable-next-line @next/next/no-location-assign-relative-destination
     window.location.href = "/login";
   };
-
-  useEffect(() => {
-    setThemeMounted(true);
-  }, []);
 
   return (
     <header

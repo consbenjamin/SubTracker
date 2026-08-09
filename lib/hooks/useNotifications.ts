@@ -1,9 +1,42 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useSyncExternalStore } from "react";
 import { Subscription } from "@/types";
 import { daysUntilPayment } from "@/lib/subscriptions";
 import { enablePushNotifications } from "@/lib/push-client";
+
+/**
+ * El navegador no avisa cuando cambia el permiso, así que el store solo se
+ * releé cuando nosotros lo pedimos (tras `requestPermission`). Alcanza: es el
+ * único momento en que puede cambiar sin salir de la app.
+ */
+const permissionListeners = new Set<() => void>();
+
+function notifyPermissionChanged() {
+  for (const listener of permissionListeners) listener();
+}
+
+function subscribeToPermission(onChange: () => void) {
+  permissionListeners.add(onChange);
+  return () => permissionListeners.delete(onChange);
+}
+
+/** El soporte y el permiso son estado del navegador, no del render. */
+function useNotificationSupport() {
+  const isSupported = useSyncExternalStore(
+    () => () => {},
+    () => "Notification" in window && "serviceWorker" in navigator,
+    () => false
+  );
+
+  const permission = useSyncExternalStore(
+    subscribeToPermission,
+    () => ("Notification" in window ? Notification.permission : "default"),
+    () => "default" as NotificationPermission
+  );
+
+  return { isSupported, permission };
+}
 
 /**
  * Avisos de vencimientos de hoy y de mañana.
@@ -15,22 +48,15 @@ import { enablePushNotifications } from "@/lib/push-client";
  * en public/sw.js.
  */
 export function useNotifications() {
-  const [permission, setPermission] = useState<NotificationPermission>("default");
-  const [isSupported, setIsSupported] = useState(false);
+  const { isSupported, permission } = useNotificationSupport();
   const pendingRef = useRef<Subscription[] | null>(null);
-
-  useEffect(() => {
-    const supported = "Notification" in window && "serviceWorker" in navigator;
-    setIsSupported(supported);
-    if (supported) setPermission(Notification.permission);
-  }, []);
 
   const requestPermission = useCallback(async () => {
     if (!("Notification" in window)) return false;
 
     if (Notification.permission === "default") {
       const result = await Notification.requestPermission();
-      setPermission(result);
+      notifyPermissionChanged();
       return result === "granted";
     }
 
