@@ -24,6 +24,7 @@ export default function EditSubscriptionPage() {
   const searchParams = useSearchParams();
   const t = useTranslations("subscriptionForm");
   const tCommon = useTranslations("common");
+  const tDetail = useTranslations("subscriptionDetail");
   const formatCurrency = useFormatCurrency();
   const toast = useToast();
   const subId =
@@ -182,10 +183,10 @@ export default function EditSubscriptionPage() {
           toast.error(
             typeof err.error === "string"
               ? err.error
-              : "No se pudo registrar el pago. Probá de nuevo."
+              : tDetail("paymentFailed")
           );
         } catch {
-          toast.error("No se pudo registrar el pago. Probá de nuevo.");
+          toast.error(tDetail("paymentFailed"));
         }
         return;
       }
@@ -207,7 +208,7 @@ export default function EditSubscriptionPage() {
         className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8"
         style={{ backgroundColor: "var(--background)" }}
       >
-        <p className="text-muted-foreground">Suscripción no encontrada</p>
+        <p className="text-muted-foreground">{tDetail("notFound")}</p>
       </div>
     );
   }
@@ -248,12 +249,10 @@ export default function EditSubscriptionPage() {
     >
       <header className="mb-6 sm:mb-10">
         <h1 className="text-xl font-semibold tracking-tight text-foreground sm:text-2xl lg:text-3xl">
-          {isInstallment ? "Detalle de compra" : "Editar suscripción"}
+          {tDetail(isInstallment ? "titleInstallment" : "titleSubscription")}
         </h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          {isInstallment
-            ? "Resumen del plan en cuotas y historial de pagos"
-            : "Modifica los datos de la suscripción"}
+          {tDetail(isInstallment ? "subtitleInstallment" : "subtitleSubscription")}
         </p>
       </header>
 
@@ -276,24 +275,24 @@ export default function EditSubscriptionPage() {
             <>
               <Card variant="outline" style={{ backgroundColor: "var(--card)" }}>
                 <CardHeader className="pb-2">
-                  <CardTitle className="text-base">Resumen</CardTitle>
+                  <CardTitle className="text-base">{tDetail("summary")}</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-3">
                   <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Total de la compra</span>
+                    <span className="text-muted-foreground">{tDetail("purchaseTotal")}</span>
                     <span className="font-semibold text-foreground">
                       {formatCurrency(installment.totalAmount)}
                     </span>
                   </div>
                   <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Cada cuota</span>
+                    <span className="text-muted-foreground">{tDetail("perInstallment")}</span>
                     <span className="font-semibold text-foreground">
                       {formatCurrency(subscription.price)}
                     </span>
                   </div>
                   <div className="flex items-center justify-between pt-2">
                     <span className="text-xs text-muted-foreground">
-                      Pagadas {installment.paid} de {installment.count}
+                      {tDetail("paidOf", { paid: installment.paid, count: installment.count })}
                     </span>
                     <div className="h-2 flex-1 max-w-[120px] overflow-hidden rounded-full bg-muted/60 ml-2">
                       <div
@@ -309,7 +308,7 @@ export default function EditSubscriptionPage() {
 
               <Card variant="outline" style={{ backgroundColor: "var(--card)" }}>
                 <CardHeader className="pb-2">
-                  <CardTitle className="text-base">Cuotas</CardTitle>
+                  <CardTitle className="text-base">{tDetail("installments")}</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-3">
                   {installmentRows.map((row) => (
@@ -335,7 +334,7 @@ export default function EditSubscriptionPage() {
                               : "text-muted-foreground"
                           )}
                         >
-                          {row.num} DE {installment.count}
+                          {tDetail("installmentOf", { num: row.num, count: installment.count })}
                         </span>
                         <span className="font-semibold text-foreground">
                           {formatCurrency(row.amount)}
@@ -345,13 +344,13 @@ export default function EditSubscriptionPage() {
                         {row.status === "paid" ? (
                           <span className="flex min-w-0 items-center gap-1.5 text-sm text-muted-foreground">
                             <Check className="h-4 w-4 shrink-0 text-emerald-600" />
-                            <span className="truncate">Pagada · {formatDate(row.date)}</span>
+                            <span className="truncate">{tDetail("statusPaid")} · {formatDate(row.date)}</span>
                           </span>
                         ) : row.status === "due" ? (
                           <>
                             <span className="flex min-w-0 items-center gap-1.5 text-sm text-muted-foreground">
                               <Circle className="h-4 w-4 shrink-0 text-amber-500" />
-                              <span className="truncate">Vence · {formatDate(row.date)}</span>
+                              <span className="truncate">{tDetail("statusDue")} · {formatDate(row.date)}</span>
                             </span>
                             <Button
                               type="button"
@@ -360,12 +359,12 @@ export default function EditSubscriptionPage() {
                               onClick={openPaymentModal}
                               className="w-full shrink-0 sm:w-auto"
                             >
-                              Pagar
+                              {tDetail("pay")}
                             </Button>
                           </>
                         ) : (
                           <span className="flex min-w-0 items-center gap-1.5 text-sm text-muted-foreground">
-                            <span className="truncate">Vence · {formatDate(row.date)}</span>
+                            <span className="truncate">{tDetail("statusDue")} · {formatDate(row.date)}</span>
                           </span>
                         )}
                       </div>
@@ -380,7 +379,7 @@ export default function EditSubscriptionPage() {
             <CardHeader className="flex flex-col gap-3 pb-2 sm:flex-row sm:items-center sm:justify-between sm:space-y-0">
               <CardTitle className="text-base flex items-center gap-2">
                 <Calendar className="h-4 w-4 shrink-0" />
-                {isInstallment ? "Historial de cuotas" : "Historial de pagos"}
+                {tDetail(isInstallment ? "historyInstallments" : "historyPayments")}
               </CardTitle>
               <Button
                 type="button"
@@ -390,14 +389,13 @@ export default function EditSubscriptionPage() {
                 className="w-full sm:w-auto"
               >
                 <Plus className="h-4 w-4 mr-1 shrink-0" />
-                {isInstallment ? "Registrar cuota" : "Registrar pago"}
+                {tDetail(isInstallment ? "recordInstallment" : "recordPayment")}
               </Button>
             </CardHeader>
             <CardContent>
               {payments.length === 0 ? (
                 <p className="text-sm text-muted-foreground py-4">
-                  No hay pagos registrados. Registra el primer pago o actualiza
-                  la próxima fecha de pago guardando con &quot;Registrar pago realizado&quot;.
+                  {tDetail("noPayments")}
                 </p>
               ) : (
                 <ul className="space-y-0">
@@ -430,18 +428,22 @@ export default function EditSubscriptionPage() {
         onClose={() => setPaymentModalOpen(false)}
         title={
           isInstallment
-            ? `Registrar cuota ${installment.nextInstallment} de ${installment.count}`
-            : "Registrar pago manual"
+            ? tDetail("recordInstallmentTitle", {
+                current: installment.nextInstallment,
+                count: installment.count,
+              })
+            : tDetail("recordPaymentTitle")
         }
       >
         <form onSubmit={handleRecordPayment} className="space-y-4">
           {isInstallment && (
             <p className="rounded-lg bg-muted/50 p-3 text-sm text-muted-foreground">
-              Monto de esta cuota: <strong className="text-foreground">{formatCurrency(subscription.price)}</strong>
+              {tDetail("thisInstallmentAmount")}{" "}
+              <strong className="text-foreground">{formatCurrency(subscription.price)}</strong>
             </p>
           )}
           <Input
-            label="Importe"
+            label={tDetail("amount")}
             type="number"
             step="0.01"
             value={paymentAmount}
@@ -449,7 +451,7 @@ export default function EditSubscriptionPage() {
             placeholder="0.00"
           />
           <Input
-            label="Fecha del pago"
+            label={tDetail("paymentDate")}
             type="date"
             value={paymentDate}
             onChange={(e) => setPaymentDate(e.target.value)}
@@ -461,7 +463,7 @@ export default function EditSubscriptionPage() {
               onClick={() => setPaymentModalOpen(false)}
               className="w-full sm:w-auto"
             >
-              Cancelar
+              {tCommon("cancel")}
             </Button>
             <Button
               type="submit"
@@ -473,7 +475,7 @@ export default function EditSubscriptionPage() {
               }
               className="w-full sm:w-auto"
             >
-              {paymentSubmitting ? "Guardando..." : "Registrar"}
+              {paymentSubmitting ? t("saving") : tDetail("record")}
             </Button>
           </div>
         </form>

@@ -11,36 +11,10 @@ import { Button } from "@/components/ui/Button";
 import { useFormatCurrency } from "@/lib/hooks/useFormatCurrency";
 import { CreditCard, Link2, Check, Calendar, Layers } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useTranslations } from "next-intl";
 
-const MONTHS = [
-  { value: "1", label: "Enero" },
-  { value: "2", label: "Febrero" },
-  { value: "3", label: "Marzo" },
-  { value: "4", label: "Abril" },
-  { value: "5", label: "Mayo" },
-  { value: "6", label: "Junio" },
-  { value: "7", label: "Julio" },
-  { value: "8", label: "Agosto" },
-  { value: "9", label: "Septiembre" },
-  { value: "10", label: "Octubre" },
-  { value: "11", label: "Noviembre" },
-  { value: "12", label: "Diciembre" },
-];
-
-const PAYMENT_METHODS = [
-  { value: "", label: "Seleccionar…" },
-  { value: "card", label: "Tarjeta" },
-  { value: "transfer", label: "Transferencia" },
-  { value: "cash", label: "Efectivo" },
-];
-
-const INSTALLMENT_OPTIONS = [
-  { value: "", label: "Seleccionar…" },
-  { value: "3", label: "3 cuotas" },
-  { value: "6", label: "6 cuotas" },
-  { value: "9", label: "9 cuotas" },
-  { value: "12", label: "12 cuotas" },
-];
+const MONTH_NUMBERS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12] as const;
+const INSTALLMENT_COUNTS = [3, 6, 9, 12] as const;
 
 type FormValues = PlannedPurchaseBody & {
   link?: string;
@@ -63,6 +37,10 @@ export function PlannedPurchaseForm({
   onSubmit,
   onCancel,
 }: PlannedPurchaseFormProps) {
+  const t = useTranslations("plannedPurchaseForm");
+  const tPurchases = useTranslations("purchases");
+  const tCommon = useTranslations("common");
+
   const now = new Date();
   const currentMonth = defaultMonth ?? now.getMonth() + 1;
   const currentYear = defaultYear ?? now.getFullYear();
@@ -127,15 +105,33 @@ export function PlannedPurchaseForm({
   const years = Array.from({ length: 5 }, (_, i) => now.getFullYear() + i);
   const yearOptions = years.map((y) => ({ value: String(y), label: String(y) }));
 
+  const monthOptions = MONTH_NUMBERS.map((m) => ({
+    value: String(m),
+    label: tPurchases(`months.${m}` as "months.1"),
+  }));
+  const paymentMethodOptions = [
+    { value: "", label: tCommon("select") },
+    { value: "card", label: t("card") },
+    { value: "transfer", label: t("transfer") },
+    { value: "cash", label: t("cash") },
+  ];
+  const installmentOptions = [
+    { value: "", label: tCommon("select") },
+    ...INSTALLMENT_COUNTS.map((n) => ({
+      value: String(n),
+      label: t("installmentsOption", { count: n }),
+    })),
+  ];
+
   return (
     <form onSubmit={handleSubmit(handleFormSubmit)} className="flex flex-col gap-6">
       {/* Qué comprar */}
       <div className="space-y-2">
         <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-          ¿Qué querés comprar?
+          {t("whatToBuy")}
         </p>
         <Input
-          placeholder="Ej: remera negra, juego Steam, auriculares"
+          placeholder={t("namePlaceholder")}
           error={errors.name?.message}
           {...register("name")}
         />
@@ -144,7 +140,7 @@ export function PlannedPurchaseForm({
       {/* Precio estimado */}
       <div className="space-y-2">
         <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-          ¿Cuánto sale? (opcional)
+          {t("priceLabel")}
         </p>
         <Input
           type="number"
@@ -159,8 +155,11 @@ export function PlannedPurchaseForm({
         />
         <p className="text-xs text-muted-foreground">
           {perInstallment != null
-            ? `En ${installmentCount} cuotas de ${formatCurrency(perInstallment)} cada una`
-            : "Si lo pagás en cuotas, poné el total de la compra."}
+            ? t("priceInstallmentHint", {
+                count: installmentCount ?? 0,
+                amount: formatCurrency(perInstallment),
+              })
+            : t("priceHint")}
         </p>
       </div>
 
@@ -168,7 +167,7 @@ export function PlannedPurchaseForm({
       <div className="space-y-2">
         <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
           <Calendar className="h-3.5 w-3.5" />
-          Cuándo
+          {t("when")}
         </p>
         <div className="grid grid-cols-2 gap-3">
           <Controller
@@ -176,8 +175,8 @@ export function PlannedPurchaseForm({
             control={control}
             render={({ field }) => (
               <Select
-                label="Mes"
-                options={MONTHS}
+                label={tCommon("month")}
+                options={monthOptions}
                 error={errors.planned_month?.message}
                 value={String(field.value)}
                 onChange={(e) => field.onChange(Number(e.target.value))}
@@ -189,7 +188,7 @@ export function PlannedPurchaseForm({
             control={control}
             render={({ field }) => (
               <Select
-                label="Año"
+                label={tCommon("year")}
                 options={yearOptions}
                 error={errors.planned_year?.message}
                 value={String(field.value)}
@@ -203,13 +202,13 @@ export function PlannedPurchaseForm({
       {/* Link opcional */}
       <div className="space-y-2">
         <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-          Opcional
+          {t("optional")}
         </p>
         <div className="relative">
           <Link2 className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground pointer-events-none z-10" />
           <input
             type="url"
-            placeholder="Link del producto"
+            placeholder={t("linkPlaceholder")}
             className={cn(
               "h-10 w-full rounded-[var(--radius-sm)] border border-[var(--input-border)] bg-[var(--input-bg)] pl-10 pr-3 py-2 text-[15px] text-foreground",
               "placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-[var(--input-focus-ring)] focus:border-foreground/30 transition-colors"
@@ -222,7 +221,7 @@ export function PlannedPurchaseForm({
       {/* Estado: ¿Ya lo compré? */}
       <div className="space-y-3">
         <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-          Estado
+          {t("status")}
         </p>
         <label
           className={cn(
@@ -239,7 +238,7 @@ export function PlannedPurchaseForm({
           />
           <span className="flex items-center gap-2 text-sm font-medium text-foreground">
             <Check className="h-4 w-4 text-green-600 dark:text-green-400" />
-            Ya lo compré
+            {t("alreadyBought")}
           </span>
         </label>
 
@@ -247,7 +246,7 @@ export function PlannedPurchaseForm({
           <div className="rounded-xl border border-border bg-muted/20 p-4 space-y-4">
             <div className="space-y-2">
               <p className="text-xs font-medium text-muted-foreground">
-                Día de compra (opcional)
+                {t("boughtDate")}
               </p>
               <input
                 type="date"
@@ -267,11 +266,11 @@ export function PlannedPurchaseForm({
             <div className="space-y-2">
               <p className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
                 <CreditCard className="h-3.5 w-3.5" />
-                Forma de pago
+                {t("paymentMethod")}
               </p>
               <Select
-                label="Forma de pago"
-                options={PAYMENT_METHODS}
+                aria-label={t("paymentMethod")}
+                options={paymentMethodOptions}
                 value={watch("payment_method") ?? ""}
                 error={errors.payment_method?.message}
                 {...register("payment_method", {
@@ -281,8 +280,8 @@ export function PlannedPurchaseForm({
             </div>
             {paymentMethod === "card" && (
               <Input
-                label="Nombre de la tarjeta"
-                placeholder="Ej: Visa Naranja, Mercado Pago"
+                label={t("cardNameLabel")}
+                placeholder={t("cardNamePlaceholder")}
                 error={errors.card_name?.message}
                 {...register("card_name")}
               />
@@ -295,10 +294,10 @@ export function PlannedPurchaseForm({
                 disabled={paymentMethod !== "card"}
               />
               <span className="text-sm text-foreground">
-                Lo pagué en cuotas
+                {t("paidInInstallments")}
                 {paymentMethod !== "card" && (
                   <span className="ml-2 text-xs text-muted-foreground">
-                    (solo con tarjeta)
+                    {t("onlyWithCard")}
                   </span>
                 )}
               </span>
@@ -308,14 +307,14 @@ export function PlannedPurchaseForm({
                 <div className="space-y-1.5">
                   <p className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
                     <Layers className="h-3.5 w-3.5" />
-                    Cuántas cuotas
+                    {t("howManyInstallments")}
                   </p>
                   <Controller
                     name="installment_count"
                     control={control}
                     render={({ field }) => (
                       <Select
-                        options={INSTALLMENT_OPTIONS}
+                        options={installmentOptions}
                         value={field.value != null ? String(field.value) : ""}
                         onChange={(e) => {
                           const v = e.target.value;
@@ -331,12 +330,12 @@ export function PlannedPurchaseForm({
                       className="h-4 w-4 rounded border-border text-primary focus:ring-2 focus:ring-primary/20"
                       {...register("installments_start_next_month")}
                     />
-                    Se paga el próximo mes
+                    {t("startsNextMonth")}
                   </label>
                 </div>
                 <div className="space-y-1.5">
                   <p className="text-xs font-medium text-muted-foreground">
-                    Cuántas cuotas ya pagué
+                    {t("howManyPaid")}
                   </p>
                   <Controller
                     name="installments_paid"
@@ -344,9 +343,9 @@ export function PlannedPurchaseForm({
                     render={({ field }) => {
                       const total = watch("installment_count") ?? 12;
                       const options = Array.from({ length: total + 1 }, (_, paid) => {
-                        if (paid === 0) return { value: "0", label: "0 (ninguna pagada)" };
-                        if (paid === total) return { value: String(paid), label: "Completado (todas pagadas)" };
-                        return { value: String(paid), label: `${paid} pagada(s)` };
+                        if (paid === 0) return { value: "0", label: t("nonePaid") };
+                        if (paid === total) return { value: String(paid), label: t("allPaid") };
+                        return { value: String(paid), label: t("somePaid", { count: paid }) };
                       });
                       return (
                         <Select
@@ -368,10 +367,10 @@ export function PlannedPurchaseForm({
       {/* Notas */}
       <div className="space-y-2">
         <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-          Notas
+          {t("notes")}
         </p>
         <Input
-          placeholder="Algo que quieras recordar"
+          placeholder={t("notesPlaceholder")}
           error={errors.notes?.message}
           {...register("notes")}
         />
@@ -380,10 +379,10 @@ export function PlannedPurchaseForm({
       {/* Acciones */}
       <div className="flex flex-wrap gap-2 justify-end pt-2 border-t border-border">
         <Button type="button" variant="ghost" onClick={onCancel}>
-          Cancelar
+          {t("cancel")}
         </Button>
         <Button type="submit" variant="primary" disabled={isSubmitting}>
-          {isSubmitting ? "Guardando…" : purchase ? "Actualizar" : "Agregar"}
+          {isSubmitting ? t("saving") : purchase ? t("update") : t("add")}
         </Button>
       </div>
     </form>
