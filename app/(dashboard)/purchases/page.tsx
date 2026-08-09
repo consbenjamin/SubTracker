@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useCallback, useEffect, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 import { PlannedPurchase } from "@/types";
 import { PlannedPurchaseCard } from "@/components/purchases/PlannedPurchaseCard";
@@ -11,113 +11,81 @@ import { Button } from "@/components/ui/Button";
 import { Select } from "@/components/ui/Select";
 import { LoadingState } from "@/components/ui/Loading";
 import { useToast } from "@/lib/contexts/ToastContext";
+import { usePlannedPurchases } from "@/lib/hooks/usePlannedPurchases";
 import type { PlannedPurchaseBody } from "@/lib/validations/schemas";
 import { ShoppingBag, Plus, Calendar } from "lucide-react";
 
-function useMonthsOptions() {
-  const t = useTranslations("purchases.months");
-  return [
-    { value: "1", label: t("1") }, { value: "2", label: t("2") }, { value: "3", label: t("3") },
-    { value: "4", label: t("4") }, { value: "5", label: t("5") }, { value: "6", label: t("6") },
-    { value: "7", label: t("7") }, { value: "8", label: t("8") }, { value: "9", label: t("9") },
-    { value: "10", label: t("10") }, { value: "11", label: t("11") }, { value: "12", label: t("12") },
-  ];
-}
+const MONTH_NUMBERS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12] as const;
+const YEARS_AHEAD = 5;
 
 function PurchasesContent() {
   const t = useTranslations("purchases");
   const tCommon = useTranslations("common");
+  const tMonths = useTranslations("purchases.months");
   const toast = useToast();
-  const MONTHS = useMonthsOptions();
-  const now = new Date();
-  const [purchases, setPurchases] = useState<PlannedPurchase[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [month, setMonth] = useState(now.getMonth() + 1);
-  const [year, setYear] = useState(now.getFullYear());
+
+  const currentYear = useMemo(() => new Date().getFullYear(), []);
+  const [month, setMonth] = useState(() => new Date().getMonth() + 1);
+  const [year, setYear] = useState(currentYear);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingPurchase, setEditingPurchase] = useState<PlannedPurchase | null>(null);
   const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
 
-  const fetchPurchases = useCallback(async () => {
-    try {
-      const params = new URLSearchParams({
-        month: String(month),
-        year: String(year),
-      });
-      const res = await fetch(`/api/planned-purchases?${params}`);
-      if (res.ok) {
-        const data = await res.json();
-        setPurchases(data);
-      }
-    } catch (err) {
-      console.error("Error fetching planned purchases:", err);
-      toast.error(t("errorLoad"));
-    } finally {
-      setLoading(false);
-    }
-  }, [month, year, toast, t]);
+  const { purchases, loading, loadFailed, save, remove } = usePlannedPurchases(month, year);
 
   useEffect(() => {
-    setLoading(true);
-    fetchPurchases();
-  }, [fetchPurchases]);
+    if (loadFailed) toast.error(t("errorLoad"));
+  }, [loadFailed, toast, t]);
 
-  const closeModal = useCallback(() => {
+  const monthOptions = MONTH_NUMBERS.map((m) => ({
+    value: String(m),
+    label: tMonths(String(m) as "1"),
+  }));
+  const yearOptions = Array.from({ length: YEARS_AHEAD }, (_, i) => {
+    const y = currentYear + i;
+    return { value: String(y), label: String(y) };
+  });
+
+  const closeModal = () => {
     setIsModalOpen(false);
     setEditingPurchase(null);
-  }, []);
+  };
 
-  /** Alta y edición comparten todo salvo la URL, el verbo y el mensaje de éxito. */
-  const savePurchase = useCallback(
-    async (data: PlannedPurchaseBody) => {
-      const editing = editingPurchase;
-      const res = await fetch(
-        editing ? `/api/planned-purchases/${editing.id}` : "/api/planned-purchases",
-        {
-          method: editing ? "PUT" : "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(data),
-        }
+  /** Alta y edición comparten todo salvo el id, el verbo y el mensaje de éxito. */
+  const savePurchase = async (data: PlannedPurchaseBody) => {
+    const editing = editingPurchase;
+    const result = await save(data, editing?.id);
+
+    if (!result.ok) {
+      toast.error(
+        result.invalidData
+          ? t("checkData")
+          : result.message || t(editing ? "errorUpdate" : "errorSave")
       );
+      return;
+    }
 
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        toast.error(
-          err.details ? t("checkData") : err.error || t(editing ? "errorUpdate" : "errorSave")
-        );
-        return;
-      }
+    closeModal();
+    toast.success(t(editing ? "purchaseUpdated" : "purchaseAdded"));
+  };
 
-      await fetchPurchases();
-      closeModal();
-      toast.success(t(editing ? "purchaseUpdated" : "purchaseAdded"));
-    },
-    [editingPurchase, fetchPurchases, closeModal, toast, t]
-  );
-
-  const handleEdit = useCallback((purchase: PlannedPurchase) => {
+  const handleEdit = (purchase: PlannedPurchase) => {
     setEditingPurchase(purchase);
     setIsModalOpen(true);
-  }, []);
+  };
 
-  const handleDeleteConfirm = useCallback(async () => {
+  const handleDeleteConfirm = async () => {
     if (!deleteTargetId) return;
     setDeleting(true);
     try {
-      const res = await fetch(`/api/planned-purchases/${deleteTargetId}`, {
-        method: "DELETE",
-      });
-      toast[res.ok ? "success" : "error"](t(res.ok ? "purchaseDeleted" : "errorDelete"));
-      if (res.ok) await fetchPurchases();
+      const ok = await remove(deleteTargetId);
+      toast[ok ? "success" : "error"](t(ok ? "purchaseDeleted" : "errorDelete"));
     } finally {
       setDeleting(false);
       setDeleteTargetId(null);
     }
-  }, [deleteTargetId, fetchPurchases, toast, t]);
-
-  const years = Array.from({ length: 5 }, (_, i) => now.getFullYear() + i);
-  const yearOptions = years.map((y) => ({ value: String(y), label: String(y) }));
+  };
 
   if (loading) return <LoadingState message={t("loading")} />;
 
@@ -154,7 +122,7 @@ function PurchasesContent() {
         <div className="flex items-center gap-2">
           <Select
             id="filter-month"
-            options={MONTHS}
+            options={monthOptions}
             value={String(month)}
             onChange={(e) => setMonth(Number(e.target.value))}
             className="min-w-[130px]"

@@ -36,11 +36,13 @@ const nextConfig = {
         key: "Content-Security-Policy",
         value: [
           "default-src 'self'",
-          "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
+          // va.vercel-scripts.com: script de @vercel/analytics (<Analytics /> en app/layout.tsx).
+          "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://va.vercel-scripts.com",
           "style-src 'self' 'unsafe-inline'",
           "img-src 'self' data: blob: https:",
           "font-src 'self' data:",
-          "connect-src 'self' https://*.supabase.co wss://*.supabase.co",
+          // vitals.vercel-insights.com: endpoint donde @vercel/analytics reporta.
+          "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://va.vercel-scripts.com https://vitals.vercel-insights.com",
           "frame-ancestors 'none'",
           "base-uri 'self'",
           "form-action 'self'",
