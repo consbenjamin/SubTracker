@@ -115,7 +115,18 @@
     "deleteConfirm": "Are you sure you want to delete this subscription? This action cannot be undone.",
     "editSubscription": "Edit subscription",
     "newSubscription": "New subscription",
-    "offlineWriteBlocked": "You're offline: changes can't be saved. Try again once you're back online."
+    "offlineWriteBlocked": "You're offline: changes can't be saved. Try again once you're back online.",
+    "purchasesThisMonth": "{month} purchases",
+    "purchasesSeeAll": "See all",
+    "purchasesPending": "{count, plural, =0 {None pending} one {# pending} other {# pending}}",
+    "purchasesBought": "{count, plural, =0 {None bought} one {# bought} other {# bought}}",
+    "purchasesAndMore": "and {count} more",
+    "purchasesOpenInstallments": "{count, plural, one {# purchase in installments} other {# purchases in installments}}",
+    "purchasesPendingLabel": "Still to buy",
+    "purchasesBoughtLabel": "Bought this month",
+    "purchasesNoPrice": "{count, plural, one {# without a price} other {# without a price}}",
+    "purchasesInstallmentsPerMonth": "{amount} per month in installments",
+    "purchasesRemainingTotal": "{amount} left"
   },
   "subscriptions": {
     "title": "Subscriptions",
@@ -314,7 +325,8 @@
     "statusPending": "Pending",
     "installmentsCompleted": "Completed ({count}/{count}) ✓",
     "installmentsPaid": "Paid {paid}/{count}",
-    "installmentsStartsNextMonth": "· starts next month"
+    "installmentsStartsNextMonth": "· starts next month",
+    "installmentsOf": "{count} installments of {amount}"
   },
   "plannedPurchaseForm": {
     "namePlaceholder": "e.g. black t-shirt, Steam game, headphones",

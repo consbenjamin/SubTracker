@@ -6,6 +6,8 @@ import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Edit, Trash2, ExternalLink, CreditCard, Banknote, Wallet } from "lucide-react";
 import { useTranslations } from "next-intl";
+import { useFormatCurrency } from "@/lib/hooks/useFormatCurrency";
+import { installmentAmount } from "@/lib/plannedPurchases";
 
 interface PlannedPurchaseCardProps {
   purchase: PlannedPurchase;
@@ -20,6 +22,12 @@ export function PlannedPurchaseCard({
 }: PlannedPurchaseCardProps) {
   const tPurchases = useTranslations("purchases");
   const tForm = useTranslations("plannedPurchaseForm");
+  const formatCurrency = useFormatCurrency();
+
+  const perInstallment =
+    purchase.bought_with_installments && purchase.installment_count && purchase.price != null
+      ? installmentAmount(purchase)
+      : null;
 
   const PaymentIcon =
     purchase.payment_method === "card"
@@ -85,9 +93,25 @@ export function PlannedPurchaseCard({
             </div>
           </div>
 
-          <p className="text-xs text-muted-foreground">
-            {monthLabel} {purchase.planned_year}
-          </p>
+          <div className="flex flex-wrap items-baseline gap-x-2">
+            {purchase.price != null && (
+              <p className="text-lg font-semibold tracking-tight text-foreground">
+                {formatCurrency(purchase.price)}
+              </p>
+            )}
+            <p className="text-xs text-muted-foreground">
+              {monthLabel} {purchase.planned_year}
+            </p>
+          </div>
+
+          {perInstallment != null && (
+            <p className="text-xs text-muted-foreground">
+              {tPurchases("installmentsOf", {
+                count: purchase.installment_count ?? 0,
+                amount: formatCurrency(perInstallment),
+              })}
+            </p>
+          )}
 
           {purchase.link && (
             <a

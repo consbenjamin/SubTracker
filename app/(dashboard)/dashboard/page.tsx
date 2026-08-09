@@ -20,6 +20,7 @@ import { useNotifications } from "@/lib/hooks/useNotifications";
 import { useToast } from "@/lib/contexts/ToastContext";
 import { useSettings } from "@/lib/contexts/SettingsContext";
 import { UpcomingCalendar } from "@/components/dashboard/UpcomingCalendar";
+import { PurchasesSummary } from "@/components/dashboard/PurchasesSummary";
 import { parseDateOnly } from "@/lib/date";
 import {
   daysUntilPayment,
@@ -276,6 +277,10 @@ export default function DashboardPage() {
           </Card>
         </section>
       )}
+
+      <section className="mb-10">
+        <PurchasesSummary />
+      </section>
 
       <section className="mb-10">
         <UpcomingCalendar subscriptions={subscriptions} onSubscriptionClick={handleEdit} />

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import type { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
+import { getUserSafe } from "@/lib/supabase/user";
 import { isRateLimitedRequest } from "@/lib/rate-limit";
 import { getClientIp, unauthorizedResponse } from "@/lib/api-auth";
 
@@ -29,9 +30,7 @@ export async function authenticate(
   }
 
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getUserSafe(supabase);
 
   if (!user) return unauthorizedResponse(request, path);
 

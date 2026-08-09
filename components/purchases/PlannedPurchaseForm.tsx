@@ -8,6 +8,7 @@ import type { PlannedPurchase } from "@/types";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { Button } from "@/components/ui/Button";
+import { useFormatCurrency } from "@/lib/hooks/useFormatCurrency";
 import { CreditCard, Link2, Check, Calendar, Layers } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -65,6 +66,7 @@ export function PlannedPurchaseForm({
   const now = new Date();
   const currentMonth = defaultMonth ?? now.getMonth() + 1;
   const currentYear = defaultYear ?? now.getFullYear();
+  const formatCurrency = useFormatCurrency();
 
   const {
     register,
@@ -77,6 +79,7 @@ export function PlannedPurchaseForm({
     resolver: zodResolver(plannedPurchaseBodySchema),
     defaultValues: {
       name: purchase?.name ?? "",
+      price: purchase?.price ?? null,
       link: purchase?.link ?? "",
       planned_month: purchase?.planned_month ?? currentMonth,
       planned_year: purchase?.planned_year ?? currentYear,
@@ -108,11 +111,18 @@ export function PlannedPurchaseForm({
   const handleFormSubmit = async (data: FormValues) => {
     await onSubmit({
       ...data,
+      price: data.price ?? null,
       link: data.link?.trim() || undefined,
       card_name: data.card_name?.trim() || null,
       notes: data.notes?.trim() || null,
     });
   };
+
+  const price = watch("price");
+  const installmentCount = watch("installment_count");
+  /** En cuotas, `price` es el total: mostramos cuánto cae por mes. */
+  const perInstallment =
+    boughtWithInstallments && installmentCount && price ? price / installmentCount : null;
 
   const years = Array.from({ length: 5 }, (_, i) => now.getFullYear() + i);
   const yearOptions = years.map((y) => ({ value: String(y), label: String(y) }));
@@ -129,6 +139,29 @@ export function PlannedPurchaseForm({
           error={errors.name?.message}
           {...register("name")}
         />
+      </div>
+
+      {/* Precio estimado */}
+      <div className="space-y-2">
+        <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+          ¿Cuánto sale? (opcional)
+        </p>
+        <Input
+          type="number"
+          step="0.01"
+          min={0}
+          inputMode="decimal"
+          placeholder="0.00"
+          error={errors.price?.message}
+          {...register("price", {
+            setValueAs: (v) => (v === "" || v == null ? null : Number(v)),
+          })}
+        />
+        <p className="text-xs text-muted-foreground">
+          {perInstallment != null
+            ? `En ${installmentCount} cuotas de ${formatCurrency(perInstallment)} cada una`
+            : "Si lo pagás en cuotas, poné el total de la compra."}
+        </p>
       </div>
 
       {/* Cuándo */}
