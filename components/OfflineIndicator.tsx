@@ -12,7 +12,11 @@ export function OfflineIndicator() {
   if (isOnline) return null;
 
   return (
-    <div className="fixed bottom-4 right-4 z-50">
+    // A la izquierda: abajo a la derecha vive el botón de agregar gasto.
+    <div
+      className="fixed left-4 z-50"
+      style={{ bottom: "calc(1rem + env(safe-area-inset-bottom, 0px))" }}
+    >
       <Badge variant="warning" className="flex items-center gap-2">
         <WifiOff className="h-4 w-4" />
         {t("offline")}

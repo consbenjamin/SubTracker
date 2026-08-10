@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { TopBar } from "@/components/layout/TopBar";
 import { Breadcrumbs } from "@/components/layout/Breadcrumbs";
+import { AddSubscriptionFab } from "@/components/subscriptions/AddSubscriptionFab";
 import { useIsMobile } from "@/lib/hooks/useMediaQuery";
 
 export function DashboardShell({ children }: { children: React.ReactNode }) {
@@ -45,6 +46,9 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
         <Breadcrumbs />
         <main className="min-h-full flex-1 bg-background">{children}</main>
       </div>
+      <Suspense fallback={null}>
+        <AddSubscriptionFab />
+      </Suspense>
     </div>
   );
 }

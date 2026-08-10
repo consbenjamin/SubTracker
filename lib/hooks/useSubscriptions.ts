@@ -6,6 +6,31 @@ import type { Subscription, SubscriptionFormData } from "@/types";
 const EMPTY: Subscription[] = [];
 
 /**
+ * Toda instancia del hook se registra acá. Cuando una crea, edita o borra,
+ * las demás recargan: así el botón flotante puede agregar un gasto desde
+ * cualquier pantalla y la lista que esté visible se entera.
+ */
+const refreshers = new Set<() => void>();
+
+/**
+ * Crea una suscripción sin suscribirse a la lista.
+ *
+ * El botón flotante solo necesita crear: usar el hook completo lo obligaría a
+ * pedir `/api/subscriptions` en cada pantalla nada más que para tener `create`.
+ */
+export async function createSubscription(data: SubscriptionFormData): Promise<boolean> {
+  const res = await fetch("/api/subscriptions", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) return false;
+
+  for (const refresh of refreshers) refresh();
+  return true;
+}
+
+/**
  * Carga y CRUD de suscripciones contra `/api/subscriptions`.
  * Devuelve `true` si la operación funcionó, para que cada página decida el mensaje.
  */
@@ -33,6 +58,13 @@ export function useSubscriptions() {
     refresh();
   }, [refresh]);
 
+  useEffect(() => {
+    refreshers.add(refresh);
+    return () => {
+      refreshers.delete(refresh);
+    };
+  }, [refresh]);
+
   /** El dashboard la usa para volcar la caché offline. */
   const setSubscriptions = useCallback((next: Subscription[]) => setData(next), []);
 
@@ -46,7 +78,11 @@ export function useSubscriptions() {
         }),
       });
       if (!res.ok) return false;
+      // Primero lo propio, para que quien llamó vea los datos ya frescos.
       await refresh();
+      for (const other of refreshers) {
+        if (other !== refresh) other();
+      }
       return true;
     },
     [refresh]
