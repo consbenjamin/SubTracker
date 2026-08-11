@@ -247,7 +247,7 @@ export function SubscriptionForm({
   };
 
   return (
-    <form onSubmit={handleSubmit(onSubmitForm)} className="space-y-6">
+    <form onSubmit={handleSubmit(onSubmitForm)} noValidate className="space-y-6">
       {!subscription && SUBSCRIPTION_TEMPLATES.length > 0 && (
         <div className="space-y-2">
           <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
@@ -276,9 +276,11 @@ export function SubscriptionForm({
           {t("whatIsThisExpense")}
         </p>
         <Input
-          {...register("name")}
+          maxLength={200}
+          autoComplete="off"
           error={errors.name?.message}
           placeholder={t("namePlaceholder")}
+          {...register("name")}
         />
       </div>
 
@@ -345,6 +347,8 @@ export function SubscriptionForm({
                 label={t("amountLabel")}
                 type="number"
                 step="0.01"
+                min={0}
+                max={99999999.99}
                 {...register("price", { valueAsNumber: true })}
                 error={errors.price?.message}
                 placeholder="0.00"
@@ -373,6 +377,8 @@ export function SubscriptionForm({
               label={t("totalAmountLabel")}
               type="number"
               step="0.01"
+              min={0}
+              max={99999999.99}
               {...register("total_amount", { valueAsNumber: true })}
               error={errors.total_amount?.message}
               placeholder="0"
@@ -454,8 +460,10 @@ export function SubscriptionForm({
             <Input
               label={t("category")}
               list="category-suggestions"
-              {...register("category")}
+              maxLength={100}
+              autoComplete="off"
               error={errors.category?.message}
+              {...register("category")}
               placeholder={t("categoryPlaceholder")}
             />
             <datalist id="category-suggestions">
@@ -479,6 +487,7 @@ export function SubscriptionForm({
 
       <Input
         label={t("notesOptional")}
+        maxLength={2000}
         {...register("notes")}
         error={errors.notes?.message}
         placeholder={t("notesPlaceholder")}

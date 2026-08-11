@@ -8,7 +8,7 @@ export function cn(...inputs: ClassValue[]) {
 
 export type CurrencyCode = string;
 
-export function formatCurrency(amount: number, currency: CurrencyCode = "EUR"): string {
+export function formatCurrency(amount: number, currency: CurrencyCode = "ARS"): string {
   return new Intl.NumberFormat("es-ES", {
     style: "currency",
     currency,

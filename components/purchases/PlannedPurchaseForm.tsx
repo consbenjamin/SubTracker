@@ -124,7 +124,14 @@ export function PlannedPurchaseForm({
   ];
 
   return (
-    <form onSubmit={handleSubmit(handleFormSubmit)} className="flex flex-col gap-6">
+    <form
+      onSubmit={handleSubmit(handleFormSubmit)}
+      // noValidate: la validación la hace zod. Sin esto el navegador se adelanta
+      // con su propio globo de error, en su idioma, y los mensajes traducidos
+      // de la app nunca llegan a verse.
+      noValidate
+      className="flex flex-col gap-6"
+    >
       {/* Qué comprar */}
       <div className="space-y-2">
         <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
@@ -133,6 +140,8 @@ export function PlannedPurchaseForm({
         <Input
           placeholder={t("namePlaceholder")}
           error={errors.name?.message}
+          maxLength={200}
+          autoComplete="off"
           {...register("name")}
         />
       </div>
@@ -146,7 +155,7 @@ export function PlannedPurchaseForm({
           type="number"
           step="0.01"
           min={0}
-          inputMode="decimal"
+          max={99999999.99}
           placeholder="0.00"
           error={errors.price?.message}
           {...register("price", {
@@ -205,14 +214,18 @@ export function PlannedPurchaseForm({
           {t("optional")}
         </p>
         <div className="relative">
-          <Link2 className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground pointer-events-none z-10" />
-          <input
+          <Link2 className="absolute left-3 top-[21px] h-4 w-4 -translate-y-1/2 text-muted-foreground pointer-events-none z-10" />
+          {/* Pasa por `Input` para heredar el manejo de error y accesibilidad:
+              antes era un input suelto y el error de URL inválida no se mostraba,
+              así que el formulario no enviaba sin explicar por qué. */}
+          <Input
             type="url"
+            inputMode="url"
+            maxLength={2000}
+            autoComplete="off"
             placeholder={t("linkPlaceholder")}
-            className={cn(
-              "h-10 w-full rounded-[var(--radius-sm)] border border-[var(--input-border)] bg-[var(--input-bg)] pl-10 pr-3 py-2 text-[15px] text-foreground",
-              "placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-[var(--input-focus-ring)] focus:border-foreground/30 transition-colors"
-            )}
+            error={errors.link?.message}
+            className="pl-10"
             {...register("link")}
           />
         </div>
@@ -283,6 +296,8 @@ export function PlannedPurchaseForm({
                 label={t("cardNameLabel")}
                 placeholder={t("cardNamePlaceholder")}
                 error={errors.card_name?.message}
+                maxLength={100}
+                autoComplete="off"
                 {...register("card_name")}
               />
             )}
@@ -375,6 +390,7 @@ export function PlannedPurchaseForm({
         <Input
           placeholder={t("notesPlaceholder")}
           error={errors.notes?.message}
+          maxLength={1000}
           {...register("notes")}
         />
       </div>

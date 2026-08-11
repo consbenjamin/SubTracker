@@ -121,8 +121,12 @@ export function isValidSubscriptionId(id: unknown): id is string {
 // --- Compras planeadas ---
 const plannedPurchasePaymentMethod = z.enum(["card", "transfer", "cash"]);
 
+const MAX_URL_LENGTH = 2000;
+
 const optionalUrl = z
   .string()
+  // Acotado antes de validar: sin tope se podría mandar una URL enorme.
+  .max(MAX_URL_LENGTH, "El link es demasiado largo")
   .transform((s) => (s?.trim() === "" ? undefined : s))
   .optional()
   .refine((s) => s === undefined || z.string().url().safeParse(s).success, "URL inválida");

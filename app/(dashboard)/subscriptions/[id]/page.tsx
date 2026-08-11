@@ -440,7 +440,7 @@ export default function EditSubscriptionPage() {
             : tDetail("recordPaymentTitle")
         }
       >
-        <form onSubmit={handleRecordPayment} className="space-y-4">
+        <form onSubmit={handleRecordPayment} noValidate className="space-y-4">
           {isInstallment && (
             <p className="rounded-lg bg-muted/50 p-3 text-sm text-muted-foreground">
               {tDetail("thisInstallmentAmount")}{" "}

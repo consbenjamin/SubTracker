@@ -16,14 +16,17 @@ const STORAGE_KEY = "subghost-settings";
 export type Theme = "light" | "dark" | "system";
 
 export type CurrencyCode =
-  | "EUR"
+  | "ARS"
   | "USD"
+  | "EUR"
   | "GBP"
   | "MXN"
-  | "ARS"
   | "CLP"
   | "COP"
   | "PEN";
+
+/** Moneda por defecto para cuentas nuevas. */
+export const DEFAULT_CURRENCY: CurrencyCode = "ARS";
 
 interface SettingsState {
   theme: Theme;
@@ -43,7 +46,7 @@ interface SettingsContextValue extends SettingsState {
 
 const defaultState: SettingsState = {
   theme: "system",
-  currency: "EUR",
+  currency: DEFAULT_CURRENCY,
   monthlyBudget: null,
 };
 

@@ -1,4 +1,4 @@
-import { forwardRef, SelectHTMLAttributes } from "react";
+import { forwardRef, SelectHTMLAttributes, useId } from "react";
 import { cn } from "@/lib/utils";
 
 interface SelectProps extends SelectHTMLAttributes<HTMLSelectElement> {
@@ -8,18 +8,10 @@ interface SelectProps extends SelectHTMLAttributes<HTMLSelectElement> {
 }
 
 export const Select = forwardRef<HTMLSelectElement, SelectProps>(
-  (
-    {
-      label,
-      error,
-      options,
-      className,
-      id,
-      ...props
-    },
-    ref
-  ) => {
-    const selectId = id || `select-${label?.toLowerCase().replace(/\s+/g, "-")}`;
+  ({ label, error, options, className, id, ...props }, ref) => {
+    const generatedId = useId();
+    const selectId = id ?? generatedId;
+    const errorId = `${selectId}-error`;
 
     return (
       <div className="w-full">
@@ -34,6 +26,8 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
         <select
           ref={ref}
           id={selectId}
+          aria-invalid={error ? true : undefined}
+          aria-describedby={error ? errorId : undefined}
           className={cn(
             "h-10 w-full rounded-[var(--radius-sm)] border border-[var(--input-border)] bg-[var(--input-bg)] px-3 py-2 text-[15px] text-foreground",
             "focus:outline-none focus:ring-2 focus:ring-[var(--input-focus-ring)] focus:border-foreground/30",
@@ -50,7 +44,9 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
           ))}
         </select>
         {error && (
-          <p className="mt-1.5 text-sm text-red-600 dark:text-red-400">{error}</p>
+          <p id={errorId} role="alert" className="mt-1.5 text-sm text-red-600 dark:text-red-400">
+            {error}
+          </p>
         )}
       </div>
     );
