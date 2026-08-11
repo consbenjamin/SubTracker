@@ -46,7 +46,10 @@ function StatCard({
 }) {
   return (
     <Card variant="outline" className="h-full">
-      <div className="flex h-full min-h-[88px] items-start justify-between gap-4">
+      {/* La altura mínima solo desde sm: ahí las tarjetas van en varias columnas
+          y tienen que alinearse aunque un título ocupe dos líneas. En una sola
+          columna solo agregaría espacio muerto. */}
+      <div className="flex h-full items-start justify-between gap-4 sm:min-h-[88px]">
         <div className="min-w-0">
           <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
             {label}

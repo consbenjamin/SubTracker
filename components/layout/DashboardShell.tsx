@@ -44,7 +44,9 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
           />
         </Suspense>
         <Breadcrumbs />
-        <main className="min-h-full flex-1 bg-background">{children}</main>
+        {/* pb-24: el botón flotante es `fixed` y taparía el final del contenido
+            (la paginación, la última tarjeta) al llegar abajo del scroll. */}
+        <main className="min-h-full flex-1 bg-background pb-24">{children}</main>
       </div>
       <Suspense fallback={null}>
         <AddSubscriptionFab />
