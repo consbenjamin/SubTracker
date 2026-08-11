@@ -93,12 +93,19 @@ export function SubscriptionCard({
       <div className="flex flex-1 flex-col gap-4 min-h-0">
         <div className="flex items-start justify-between gap-3 min-w-0">
           <div className="min-w-0 flex-1 overflow-hidden">
-            <div className="flex flex-wrap items-center gap-2">
-              <h3 className="truncate text-base font-semibold text-foreground">
+            {/* Sin flex-wrap: los badges se quedan siempre al lado del nombre y
+                es el nombre el que se recorta, así todas las tarjetas tienen la
+                misma estructura. El `min-w-0` es lo que habilita el truncate:
+                un ítem flex no baja de su ancho de contenido sin eso. */}
+            <div className="flex items-center gap-2">
+              <h3
+                className="min-w-0 flex-1 truncate text-base font-semibold text-foreground"
+                title={subscription.name}
+              >
                 {subscription.name}
               </h3>
               {isInstallment && (
-                <Badge variant="info" className="gap-1 text-xs">
+                <Badge variant="info" className="shrink-0 gap-1 text-xs">
                   <CreditCard className="h-3 w-3" />
                   {t("installment")}
                 </Badge>

@@ -68,7 +68,12 @@ export function PlannedPurchaseCard({
       <div className="flex flex-1 flex-col gap-3 min-h-0">
         <div className="flex flex-1 flex-col gap-2 min-w-0">
           <div className="flex items-start justify-between gap-2">
-            <h3 className="truncate text-base font-semibold text-foreground">
+            {/* min-w-0: sin eso el truncate no actúa y el nombre largo empuja
+                los botones fuera de la tarjeta. */}
+            <h3
+              className="min-w-0 flex-1 truncate text-base font-semibold text-foreground"
+              title={purchase.name}
+            >
               {purchase.name}
             </h3>
             <div className="flex shrink-0 gap-1">

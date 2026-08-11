@@ -27,7 +27,9 @@ export function Badge({
   return (
     <span
       className={cn(
-        "inline-flex items-center rounded-md px-2 py-0.5 text-xs font-medium",
+        // shrink-0 + whitespace-nowrap: un badge nunca debe partirse ni
+        // comprimirse; al lado de un texto largo se recorta el texto, no el badge.
+        "inline-flex shrink-0 items-center whitespace-nowrap rounded-md px-2 py-0.5 text-xs font-medium",
         variants[variant],
         className
       )}
