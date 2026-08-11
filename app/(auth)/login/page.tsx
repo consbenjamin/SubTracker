@@ -217,10 +217,12 @@ function LoginContent() {
             </div>
           </div>
 
+          {/* `outline` y no `secondary`: al lado del botón primario oscuro, un
+              borde define mejor el área clickeable que un relleno gris. */}
           <Button
-            variant="secondary"
+            variant="outline"
             size="lg"
-            className="w-full gap-3 rounded-lg py-6 text-base font-medium"
+            className="w-full gap-3 text-[15px] font-medium"
             onClick={handleGoogleLogin}
             disabled={loading}
             type="button"

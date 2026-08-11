@@ -9,16 +9,20 @@ const config: Config = {
   ],
   theme: {
     extend: {
+      // Canales RGB + <alpha-value>: es lo que permite que funcionen los
+      // modificadores de opacidad (bg-muted/60, hover:bg-foreground/10, etc.).
+      // Con un hex dentro de la var, Tailwind emitía CSS inválido y el estilo
+      // quedaba transparente.
       colors: {
-        background: "var(--background)",
-        foreground: "var(--foreground)",
-        muted: "var(--muted)",
-        "muted-foreground": "var(--muted-foreground)",
-        border: "var(--border)",
-        card: "var(--card)",
-        "card-foreground": "var(--card-foreground)",
-        primary: "var(--primary)",
-        "primary-foreground": "var(--primary-foreground)",
+        background: "rgb(var(--background-rgb) / <alpha-value>)",
+        foreground: "rgb(var(--foreground-rgb) / <alpha-value>)",
+        muted: "rgb(var(--muted-rgb) / <alpha-value>)",
+        "muted-foreground": "rgb(var(--muted-foreground-rgb) / <alpha-value>)",
+        border: "rgb(var(--border-rgb) / <alpha-value>)",
+        card: "rgb(var(--card-rgb) / <alpha-value>)",
+        "card-foreground": "rgb(var(--card-foreground-rgb) / <alpha-value>)",
+        primary: "rgb(var(--primary-rgb) / <alpha-value>)",
+        "primary-foreground": "rgb(var(--primary-foreground-rgb) / <alpha-value>)",
       },
       borderRadius: {
         sm: "var(--radius-sm)",
