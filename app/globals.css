@@ -208,6 +208,41 @@ main {
   appearance: none;
 }
 
+/* Fantasma de carga: flota suave y los puntos parpadean en cascada. */
+@keyframes ghost-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-7px);
+  }
+}
+@keyframes ghost-dot {
+  0%,
+  100% {
+    opacity: 0.25;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+/* Respeta a quien pidió menos movimiento en el sistema. */
+@media (prefers-reduced-motion: reduce) {
+  .ghost-float,
+  .ghost-dot {
+    animation: none !important;
+  }
+}
+
+.ghost-float {
+  animation: ghost-float 1.8s ease-in-out infinite;
+}
+.ghost-dot {
+  animation: ghost-dot 1.2s ease-in-out infinite;
+}
+
 /* Toast slide-in */
 @keyframes toast-in {
   from {

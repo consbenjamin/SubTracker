@@ -8,7 +8,7 @@ import { LazySubscriptionCard } from "@/components/subscriptions/LazySubscriptio
 import { Pagination } from "@/components/ui/Pagination";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { Modal } from "@/components/ui/Modal";
-import { LoadingState } from "@/components/ui/Loading";
+import { SkeletonCards, SkeletonHeader, SkeletonRows, SkeletonStats } from "@/components/ui/Loading";
 import { SubscriptionForm } from "@/components/subscriptions/SubscriptionForm";
 import { Button } from "@/components/ui/Button";
 import { ExportDropdown } from "@/components/ui/ExportDropdown";
@@ -188,7 +188,18 @@ export default function DashboardPage() {
   const budgetColor =
     budgetRatio > 1 ? "var(--chart-6)" : budgetRatio > 0.8 ? "var(--chart-5)" : "var(--chart-4)";
 
-  if (loading) return <LoadingState message={t("loadingSubscriptions")} className="min-h-[60vh]" />;
+  if (loading) {
+    return (
+      <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
+        <SkeletonHeader />
+        <SkeletonStats />
+        <div className="mb-10 space-y-6">
+          <SkeletonRows count={3} />
+        </div>
+        <SkeletonCards count={3} />
+      </div>
+    );
+  }
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6 sm:py-8 lg:px-8">

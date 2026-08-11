@@ -9,7 +9,7 @@ import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
 import { Select } from "@/components/ui/Select";
-import { LoadingState } from "@/components/ui/Loading";
+import { SkeletonCards, SkeletonHeader } from "@/components/ui/Loading";
 import { useToast } from "@/lib/contexts/ToastContext";
 import { usePlannedPurchases } from "@/lib/hooks/usePlannedPurchases";
 import type { PlannedPurchaseBody } from "@/lib/validations/schemas";
@@ -87,7 +87,14 @@ function PurchasesContent() {
     }
   };
 
-  if (loading) return <LoadingState message={t("loading")} />;
+  if (loading) {
+    return (
+      <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
+        <SkeletonHeader />
+        <SkeletonCards count={4} />
+      </div>
+    );
+  }
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
@@ -207,7 +214,14 @@ function PurchasesContent() {
 
 export default function PurchasesPage() {
   return (
-    <Suspense fallback={<LoadingState />}>
+    <Suspense
+      fallback={
+        <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
+          <SkeletonHeader />
+          <SkeletonCards count={4} />
+        </div>
+      }
+    >
       <PurchasesContent />
     </Suspense>
   );

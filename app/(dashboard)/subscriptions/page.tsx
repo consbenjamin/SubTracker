@@ -9,7 +9,7 @@ import { SubscriptionFilters } from "@/components/subscriptions/SubscriptionFilt
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { Modal } from "@/components/ui/Modal";
 import { Pagination } from "@/components/ui/Pagination";
-import { LoadingState } from "@/components/ui/Loading";
+import { SkeletonCards, SkeletonHeader } from "@/components/ui/Loading";
 import { SubscriptionForm } from "@/components/subscriptions/SubscriptionForm";
 import { Button } from "@/components/ui/Button";
 import { ExportDropdown } from "@/components/ui/ExportDropdown";
@@ -140,7 +140,14 @@ function SubscriptionsContent() {
     };
   }, [filteredSubscriptions, page]);
 
-  if (loading) return <LoadingState message={t("loading")} />;
+  if (loading) {
+    return (
+      <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
+        <SkeletonHeader />
+        <SkeletonCards />
+      </div>
+    );
+  }
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
@@ -233,7 +240,14 @@ function SubscriptionsContent() {
 
 export default function SubscriptionsPage() {
   return (
-    <Suspense fallback={<LoadingState />}>
+    <Suspense
+      fallback={
+        <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
+          <SkeletonHeader />
+          <SkeletonCards />
+        </div>
+      }
+    >
       <SubscriptionsContent />
     </Suspense>
   );

@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Modal } from "@/components/ui/Modal";
-import { LoadingState } from "@/components/ui/Loading";
+import { Skeleton, SkeletonHeader, SkeletonRows } from "@/components/ui/Loading";
 import { useFormatCurrency } from "@/lib/hooks/useFormatCurrency";
 import { formatDate } from "@/lib/utils";
 import { Calendar, Plus, Check, Circle } from "lucide-react";
@@ -205,7 +205,26 @@ export default function EditSubscriptionPage() {
     }
   };
 
-  if (loading) return <LoadingState message={tCommon("loading")} />;
+  if (loading) {
+    return (
+      <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
+        <SkeletonHeader />
+        <div className="grid gap-6 lg:grid-cols-5 lg:gap-8">
+          <div className="space-y-4 lg:col-span-3">
+            {Array.from({ length: 5 }, (_, i) => (
+              <div key={i} className="space-y-2">
+                <Skeleton className="h-3 w-28 bg-muted/70" />
+                <Skeleton className="h-10 w-full" />
+              </div>
+            ))}
+          </div>
+          <div className="lg:col-span-2">
+            <SkeletonRows count={3} />
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (!subscription) {
     return (
