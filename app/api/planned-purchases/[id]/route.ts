@@ -33,7 +33,7 @@ export async function PUT(request: Request, { params }: Params) {
   if (!isValidPlannedPurchaseId(id)) return invalidId();
 
   const auth = await authenticate(request, `/api/planned-purchases/${id}`, {
-    rateLimit: true,
+    rateLimit: "write",
   });
   if (auth instanceof NextResponse) return auth;
 
@@ -57,7 +57,7 @@ export async function DELETE(request: Request, { params }: Params) {
   if (!isValidPlannedPurchaseId(id)) return invalidId();
 
   const auth = await authenticate(request, `/api/planned-purchases/${id}`, {
-    rateLimit: true,
+    rateLimit: "write",
   });
   if (auth instanceof NextResponse) return auth;
 

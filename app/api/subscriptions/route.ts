@@ -20,7 +20,7 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  const auth = await authenticate(request, PATH, { rateLimit: true });
+  const auth = await authenticate(request, PATH, { rateLimit: "write" });
   if (auth instanceof NextResponse) return auth;
 
   const body = await parseBody(request, subscriptionBodySchema);

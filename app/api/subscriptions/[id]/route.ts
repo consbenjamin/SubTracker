@@ -34,7 +34,7 @@ export async function PUT(request: Request, { params }: Params) {
   if (!isValidSubscriptionId(id)) return invalidId();
 
   const auth = await authenticate(request, `/api/subscriptions/${id}`, {
-    rateLimit: true,
+    rateLimit: "write",
   });
   if (auth instanceof NextResponse) return auth;
 
@@ -107,7 +107,7 @@ export async function DELETE(request: Request, { params }: Params) {
   if (!isValidSubscriptionId(id)) return invalidId();
 
   const auth = await authenticate(request, `/api/subscriptions/${id}`, {
-    rateLimit: true,
+    rateLimit: "write",
   });
   if (auth instanceof NextResponse) return auth;
 

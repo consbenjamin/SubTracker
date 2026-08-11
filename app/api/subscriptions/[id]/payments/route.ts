@@ -40,7 +40,7 @@ export async function POST(request: Request, { params }: Params) {
   if (!isValidSubscriptionId(id)) return invalidId();
 
   const auth = await authenticate(request, `/api/subscriptions/${id}/payments`, {
-    rateLimit: true,
+    rateLimit: "write",
   });
   if (auth instanceof NextResponse) return auth;
 

@@ -2,8 +2,13 @@ import { NextResponse } from "next/server";
 import type { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { getUserSafe } from "@/lib/supabase/user";
-import { isRateLimitedRequest } from "@/lib/rate-limit";
+import {
+  isRateLimitedRequest,
+  secondsUntilReset,
+  type RateLimitBucket,
+} from "@/lib/rate-limit";
 import { getClientIp, unauthorizedResponse } from "@/lib/api-auth";
+import { logRateLimited } from "@/lib/security-logger";
 
 type Supabase = Awaited<ReturnType<typeof createClient>>;
 
@@ -12,21 +17,33 @@ export interface RouteContext {
   userId: string;
 }
 
+/** 429 con Retry-After, para que el cliente sepa cuándo reintentar. */
+export function tooManyRequests(seconds: number): NextResponse {
+  return NextResponse.json(
+    { error: "Demasiadas peticiones. Intentá de nuevo en un momento." },
+    { status: 429, headers: { "Retry-After": String(seconds) } }
+  );
+}
+
 /**
- * Boilerplate común de las rutas API: rate limit (solo escrituras), autenticación
- * y parseo/validación del body. Devuelve `NextResponse` si hay que cortar,
- * o el contexto ya autenticado si todo está bien.
+ * Boilerplate común de las rutas API: rate limit, autenticación y parseo del
+ * body. Devuelve `NextResponse` si hay que cortar, o el contexto autenticado.
+ *
+ * El límite se aplica siempre: por defecto con el cupo de lectura, y las rutas
+ * que escriben pasan "write". Es opt-out y no opt-in a propósito, para que una
+ * ruta nueva quede protegida aunque quien la escriba se olvide.
  */
 export async function authenticate(
   request: Request,
   path: string,
-  { rateLimit = false }: { rateLimit?: boolean } = {}
+  { rateLimit = "read" }: { rateLimit?: RateLimitBucket | false } = {}
 ): Promise<RouteContext | NextResponse> {
-  if (rateLimit && isRateLimitedRequest(getClientIp(request), "api")) {
-    return NextResponse.json(
-      { error: "Demasiadas peticiones. Intenta más tarde." },
-      { status: 429 }
-    );
+  if (rateLimit) {
+    const ip = getClientIp(request);
+    if (isRateLimitedRequest(ip, rateLimit)) {
+      logRateLimited(path, ip, rateLimit);
+      return tooManyRequests(secondsUntilReset(ip, rateLimit));
+    }
   }
 
   const supabase = await createClient();
