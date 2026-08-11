@@ -253,7 +253,15 @@ export function SubscriptionForm({
           <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
             {t("shortcuts")}
           </p>
-          <div className="flex flex-wrap gap-2">
+          {/* En móvil van en una sola fila que se desliza: con flex-wrap los 17
+              atajos ocupaban nueve filas y empujaban el formulario casi mil
+              píxeles hacia abajo. Desde sm vuelven a envolverse, que ahí sobra
+              ancho y verlos todos de una es mejor. */}
+          <div
+            className="no-scrollbar -mx-1 flex snap-x snap-mandatory gap-2 overflow-x-auto px-1 pb-1 sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0 sm:pb-0"
+            role="group"
+            aria-label={t("shortcuts")}
+          >
             {SUBSCRIPTION_TEMPLATES.map((template) => {
               const label = template.id === "gym" ? t("templateGym") : template.id === "newspaper" ? t("templateNewspaper") : template.id === "course" ? t("templateCourse") : template.name;
               return (
@@ -261,7 +269,7 @@ export function SubscriptionForm({
                   key={template.id}
                   type="button"
                   onClick={() => applyTemplate(template.name, template.category, template.billing_cycle)}
-                  className="rounded-full border border-border bg-muted/40 px-3 py-1.5 text-sm text-foreground transition-colors hover:bg-muted hover:border-foreground/20"
+                  className="shrink-0 snap-start whitespace-nowrap rounded-full border border-border bg-muted/40 px-3 py-1.5 text-sm text-foreground transition-colors hover:bg-muted hover:border-foreground/20"
                 >
                   {label}
                 </button>

@@ -162,6 +162,16 @@ main {
   .text-balance {
     text-wrap: balance;
   }
+
+  /* Para filas que se deslizan en móvil: la barra ocuparía más que el propio
+     contenido y el corte de los ítems ya indica que hay más para el costado. */
+  .no-scrollbar {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
 }
 
 /* Minimal scrollbar */
