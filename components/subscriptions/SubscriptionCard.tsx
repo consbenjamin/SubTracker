@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { formatDate } from "@/lib/utils";
 import { useFormatCurrency } from "@/lib/hooks/useFormatCurrency";
+import { categoryHueStyle } from "@/lib/categoryColor";
 import { Edit, Trash2, Calendar, CreditCard, ChevronDown, ChevronUp } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -219,7 +220,13 @@ export function SubscriptionCard({
         <div className="mt-auto space-y-1">
           {subscription.category && (
             <div>
-              <Badge variant="info" className="text-xs">
+              {/* El color sale del nombre de la categoría, así dos distintas
+                  nunca se confunden entre sí. Ver lib/categoryColor.ts. */}
+              <Badge
+                variant="custom"
+                className="category-badge text-xs"
+                style={categoryHueStyle(subscription.category)}
+              >
                 {subscription.category}
               </Badge>
             </div>

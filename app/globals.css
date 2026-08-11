@@ -208,6 +208,31 @@ main {
   appearance: none;
 }
 
+/*
+ * Badge de categoría. El tono lo pone `--cat-hue` desde JS (ver
+ * lib/categoryColor.ts); acá se fijan saturación y luminosidad por tema, que es
+ * lo que garantiza que cualquier tono quede legible.
+ */
+.category-badge {
+  background-color: hsl(var(--cat-hue) 85% 94%);
+  color: hsl(var(--cat-hue) 65% 30%);
+  border-color: hsl(var(--cat-hue) 60% 85%);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not(.light) .category-badge {
+    background-color: hsl(var(--cat-hue) 45% 16%);
+    color: hsl(var(--cat-hue) 75% 76%);
+    border-color: hsl(var(--cat-hue) 40% 28%);
+  }
+}
+
+.dark .category-badge {
+  background-color: hsl(var(--cat-hue) 45% 16%);
+  color: hsl(var(--cat-hue) 75% 76%);
+  border-color: hsl(var(--cat-hue) 40% 28%);
+}
+
 /* Fantasma de carga: flota suave y los puntos parpadean en cascada. */
 @keyframes ghost-float {
   0%,
