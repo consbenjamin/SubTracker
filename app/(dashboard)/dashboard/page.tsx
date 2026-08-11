@@ -20,6 +20,7 @@ import { useNotifications } from "@/lib/hooks/useNotifications";
 import { useToast } from "@/lib/contexts/ToastContext";
 import { useSettings } from "@/lib/contexts/SettingsContext";
 import { UpcomingCalendar } from "@/components/dashboard/UpcomingCalendar";
+import { CategoryColorProvider } from "@/lib/contexts/CategoryColorContext";
 import { PurchasesSummary } from "@/components/dashboard/PurchasesSummary";
 import { parseDateOnly } from "@/lib/date";
 import {
@@ -202,6 +203,9 @@ export default function DashboardPage() {
   }
 
   return (
+    // El color de cada categoría depende de su posición en el conjunto, así que
+    // el reparto se calcula acá arriba, donde se conocen todas las suscripciones.
+    <CategoryColorProvider subscriptions={subscriptions}>
     <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
       <header className="mb-6 flex flex-col gap-4 sm:mb-10 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
         <div className="min-w-0">
@@ -371,5 +375,6 @@ export default function DashboardPage() {
         />
       </Modal>
     </div>
+    </CategoryColorProvider>
   );
 }

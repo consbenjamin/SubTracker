@@ -16,6 +16,7 @@ import { ExportDropdown } from "@/components/ui/ExportDropdown";
 import { useToast } from "@/lib/contexts/ToastContext";
 import { useSubscriptions } from "@/lib/hooks/useSubscriptions";
 import { isSubscriptionCompleted } from "@/lib/subscriptions";
+import { CategoryColorProvider } from "@/lib/contexts/CategoryColorContext";
 
 const PAGE_SIZE = 12;
 
@@ -150,6 +151,9 @@ function SubscriptionsContent() {
   }
 
   return (
+    // El color de cada categoría depende de su posición en el conjunto, así que
+    // el reparto se calcula acá arriba, donde se conocen todas las suscripciones.
+    <CategoryColorProvider subscriptions={subscriptions}>
     <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
       <header className="mb-6 sm:mb-10 flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
         <div className="min-w-0">
@@ -235,6 +239,7 @@ function SubscriptionsContent() {
         />
       </Modal>
     </div>
+    </CategoryColorProvider>
   );
 }
 

@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/Button";
 import { formatDate } from "@/lib/utils";
 import { useFormatCurrency } from "@/lib/hooks/useFormatCurrency";
 import { categoryHueStyle } from "@/lib/categoryColor";
+import { useCategoryHue } from "@/lib/contexts/CategoryColorContext";
 import { Edit, Trash2, Calendar, CreditCard, ChevronDown, ChevronUp } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -47,6 +48,7 @@ export function SubscriptionCard({
   const t = useTranslations("subscriptionForm");
   const [expanded, setExpanded] = useState(false);
   const formatCurrency = useFormatCurrency();
+  const categoryHue = useCategoryHue(subscription.category ?? "");
   const installment = getInstallmentProgress(subscription);
   const isInstallment = isInstallmentSubscription(subscription);
   const isCompleted = isSubscriptionCompleted(subscription);
@@ -225,7 +227,7 @@ export function SubscriptionCard({
               <Badge
                 variant="custom"
                 className="category-badge text-xs"
-                style={categoryHueStyle(subscription.category)}
+                style={categoryHueStyle(categoryHue)}
               >
                 {subscription.category}
               </Badge>

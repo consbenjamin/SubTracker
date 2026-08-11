@@ -1,63 +1,77 @@
+import type { Subscription } from "@/types";
+
 /**
  * Color por categoría.
  *
- * Las categorías las escribe el usuario, así que no hay una lista fija que
- * mapear: el color se deriva del propio nombre. Al ser determinista, la misma
- * categoría se ve siempre igual, en cualquier pantalla y en cualquier sesión,
- * sin guardar nada.
+ * El color sale de la POSICIÓN de la categoría dentro de la lista del usuario,
+ * no de un hash de su nombre: así dos categorías distintas nunca comparten
+ * color mientras entren en la paleta. Ver CategoryColorProvider.
  *
- * Solo se elige el tono; la saturación y la luminosidad las fija el CSS según
- * el tema, para que ningún color quede ilegible en claro ni en oscuro.
+ * Del nombre solo se decide el tono; la saturación y la luminosidad las fija el
+ * CSS según el tema, para que ningún tono quede ilegible en claro ni en oscuro.
  */
 
 /**
- * Tonos elegidos a mano. No se usa `hash % 360`: además de caer en verdes lima
- * ilegibles, daría tonos vecinos que a simple vista son el mismo color.
- *
- * Son ocho y no más porque importa que se distingan de un vistazo, no que haya
- * muchos: entre cada uno hay al menos 40° de separación. Una paleta más grande
- * obliga a meter cyan junto a teal y azul, que es justo lo que se quiere evitar.
+ * Ocho tonos elegidos a mano, con 40° o más entre sí. Se prioriza que se
+ * distingan de un vistazo por sobre tener muchos: una paleta más grande obliga
+ * a meter cyan pegado a teal y azul, que a simple vista son el mismo color.
  */
 const HUES = [
-  0, //   rojo
-  30, //  naranja
-  52, //  ámbar
-  145, // verde
-  190, // cyan
   232, // azul
-  275, // violeta
+  30, //  naranja
+  145, // verde
   322, // rosa
+  52, //  ámbar
+  275, // violeta
+  190, // cyan
+  0, //   rojo
 ];
 
-/**
- * FNV-1a más una ronda de mezcla final.
- *
- * No necesita ser criptográfico, pero sí repartir parejo: los nombres de
- * categoría son cortos y se parecen entre sí, y con un hash simple varios caían
- * en el mismo color mientras otros quedaban sin usar. La mezcla del final
- * dispersa los bits altos y empareja el reparto.
- */
-function hash(text: string): number {
-  let h = 2166136261 >>> 0;
-  for (let i = 0; i < text.length; i++) {
-    h ^= text.charCodeAt(i);
-    h = Math.imul(h, 16777619) >>> 0;
-  }
-  h ^= h >>> 16;
-  h = Math.imul(h, 2246822507) >>> 0;
-  h ^= h >>> 13;
-  h = Math.imul(h, 3266489909) >>> 0;
-  return (h ^= h >>> 16) >>> 0;
+/** Normaliza para que "Streaming" y "streaming" sean la misma categoría. */
+export function normalizeCategory(category: string): string {
+  return category.trim().toLowerCase();
 }
 
-/** Tono asignado a una categoría. Ignora mayúsculas y espacios sobrantes. */
-export function categoryHue(category: string): number {
-  const normalized = category.trim().toLowerCase();
-  if (!normalized) return HUES[0];
-  return HUES[hash(normalized) % HUES.length];
+/**
+ * Tono para la categoría en la posición `index` de una lista de `total`.
+ *
+ * Hasta ocho usa la paleta curada. Si hay más, reparte tonos equiespaciados
+ * alrededor del círculo: pierde el ajuste fino de la paleta, pero garantiza que
+ * sigan siendo todos distintos, que es lo que importa.
+ */
+export function hueForIndex(index: number, total: number): number {
+  if (index < 0) return HUES[0];
+  if (total <= HUES.length) return HUES[index % HUES.length];
+  return Math.round((index * 360) / total);
+}
+
+/**
+ * Categorías del usuario ordenadas por antigüedad de uso.
+ *
+ * Se ordena por la suscripción más vieja que usa cada una, y no alfabéticamente,
+ * para que agregar una categoría nueva no le cambie el color a las que ya
+ * existían: la nueva se agrega al final y toma el siguiente color libre.
+ */
+export function orderedCategories(subscriptions: Subscription[]): string[] {
+  const firstSeen = new Map<string, string>();
+
+  for (const sub of subscriptions) {
+    const key = normalizeCategory(sub.category ?? "");
+    if (!key) continue;
+    const previous = firstSeen.get(key);
+    if (previous === undefined || sub.created_at < previous) {
+      firstSeen.set(key, sub.created_at);
+    }
+  }
+
+  return [...firstSeen.entries()]
+    .sort(([aKey, aDate], [bKey, bDate]) =>
+      aDate === bDate ? aKey.localeCompare(bKey) : aDate < bDate ? -1 : 1
+    )
+    .map(([key]) => key);
 }
 
 /** Estilo inline con el tono, para combinar con la clase `category-badge`. */
-export function categoryHueStyle(category: string): React.CSSProperties {
-  return { "--cat-hue": categoryHue(category) } as React.CSSProperties;
+export function categoryHueStyle(hue: number): React.CSSProperties {
+  return { "--cat-hue": hue } as React.CSSProperties;
 }
