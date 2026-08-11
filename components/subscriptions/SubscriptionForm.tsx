@@ -291,7 +291,7 @@ export function SubscriptionForm({
             className={cn(
               "flex cursor-pointer flex-col gap-1 rounded-xl border-2 p-4 transition-all",
               paymentType === "recurring"
-                ? "border-[var(--primary)] bg-[var(--primary)]/5"
+                ? "border-[var(--primary)] bg-primary/5"
                 : "border-border bg-muted/30 hover:border-muted-foreground/30"
             )}
           >
@@ -313,7 +313,7 @@ export function SubscriptionForm({
             className={cn(
               "flex cursor-pointer flex-col gap-1 rounded-xl border-2 p-4 transition-all",
               paymentType === "installment"
-                ? "border-[var(--primary)] bg-[var(--primary)]/5"
+                ? "border-[var(--primary)] bg-primary/5"
                 : "border-border bg-muted/30 hover:border-muted-foreground/30"
             )}
           >
@@ -387,7 +387,7 @@ export function SubscriptionForm({
                   className={cn(
                     "flex min-w-[4rem] cursor-pointer items-center justify-center rounded-lg border-2 px-4 py-3 text-sm font-medium transition-all",
                     installmentCount === option
-                      ? "border-[var(--primary)] bg-[var(--primary)]/10 text-foreground"
+                      ? "border-[var(--primary)] bg-primary/10 text-foreground"
                       : "border-border bg-muted/40 text-muted-foreground hover:border-muted-foreground/40"
                   )}
                 >

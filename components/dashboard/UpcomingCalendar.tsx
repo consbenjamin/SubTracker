@@ -146,7 +146,7 @@ export function UpcomingCalendar({
                   !selected &&
                     hasPay &&
                     !otherMonth &&
-                    "bg-[var(--chart-4)]/15 hover:bg-[var(--chart-4)]/25 text-foreground",
+                    "bg-chart-4/15 hover:bg-chart-4/25 text-foreground",
                   !selected && !hasPay && !today && "hover:bg-muted/50"
                 )}
               >
@@ -155,14 +155,14 @@ export function UpcomingCalendar({
                   <span
                     className={cn(
                       "mt-0.5 flex h-1.5 w-1.5 shrink-0 rounded-full sm:h-2 sm:w-2",
-                      selected ? "bg-primary-foreground/80" : "bg-[var(--chart-4)]"
+                      selected ? "bg-primary-foreground/80" : "bg-chart-4"
                     )}
                     aria-hidden
                   />
                 )}
                 {count > 1 && !selected && (
                   <span
-                    className="absolute -right-0.5 -top-0.5 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-[var(--chart-5)] text-[9px] font-bold text-white sm:-right-1 sm:-top-1 sm:h-4 sm:w-4 sm:text-[10px]"
+                    className="absolute -right-0.5 -top-0.5 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-chart-5 text-[9px] font-bold text-white sm:-right-1 sm:-top-1 sm:h-4 sm:w-4 sm:text-[10px]"
                     aria-label={t("dueCount", { count })}
                   >
                     {count}

@@ -23,6 +23,14 @@ const config: Config = {
         "card-foreground": "rgb(var(--card-foreground-rgb) / <alpha-value>)",
         primary: "rgb(var(--primary-rgb) / <alpha-value>)",
         "primary-foreground": "rgb(var(--primary-foreground-rgb) / <alpha-value>)",
+        // Paleta de gráficos. También como colores de Tailwind para poder usar
+        // opacidad (bg-chart-4/15): con [var(--chart-4)]/15 la regla se descartaba.
+        "chart-1": "rgb(var(--chart-1-rgb) / <alpha-value>)",
+        "chart-2": "rgb(var(--chart-2-rgb) / <alpha-value>)",
+        "chart-3": "rgb(var(--chart-3-rgb) / <alpha-value>)",
+        "chart-4": "rgb(var(--chart-4-rgb) / <alpha-value>)",
+        "chart-5": "rgb(var(--chart-5-rgb) / <alpha-value>)",
+        "chart-6": "rgb(var(--chart-6-rgb) / <alpha-value>)",
       },
       borderRadius: {
         sm: "var(--radius-sm)",

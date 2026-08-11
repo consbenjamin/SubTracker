@@ -43,12 +43,18 @@
   --radius-xl: 1.25rem;
   --radius-full: 9999px;
   /* Chart palette - professional gradient-friendly */
-  --chart-1: #6366f1;
-  --chart-2: #8b5cf6;
-  --chart-3: #06b6d4;
-  --chart-4: #10b981;
-  --chart-5: #f59e0b;
-  --chart-6: #ef4444;
+  --chart-1-rgb: 99 102 241;
+  --chart-1: rgb(var(--chart-1-rgb));
+  --chart-2-rgb: 139 92 246;
+  --chart-2: rgb(var(--chart-2-rgb));
+  --chart-3-rgb: 6 182 212;
+  --chart-3: rgb(var(--chart-3-rgb));
+  --chart-4-rgb: 16 185 129;
+  --chart-4: rgb(var(--chart-4-rgb));
+  --chart-5-rgb: 245 158 11;
+  --chart-5: rgb(var(--chart-5-rgb));
+  --chart-6-rgb: 239 68 68;
+  --chart-6: rgb(var(--chart-6-rgb));
   --chart-grid: rgba(0, 0, 0, 0.06);
 }
 
@@ -81,12 +87,18 @@
     --card-shadow: 0 1px 0 rgba(255, 255, 255, 0.05);
     --card-shadow-hover: 0 2px 8px rgba(0, 0, 0, 0.4);
     --chart-grid: rgba(255, 255, 255, 0.06);
-    --chart-1: #818cf8;
-    --chart-2: #a78bfa;
-    --chart-3: #22d3ee;
-    --chart-4: #34d399;
-    --chart-5: #fbbf24;
-    --chart-6: #f87171;
+    --chart-1-rgb: 129 140 248;
+    --chart-1: rgb(var(--chart-1-rgb));
+    --chart-2-rgb: 167 139 250;
+    --chart-2: rgb(var(--chart-2-rgb));
+    --chart-3-rgb: 34 211 238;
+    --chart-3: rgb(var(--chart-3-rgb));
+    --chart-4-rgb: 52 211 153;
+    --chart-4: rgb(var(--chart-4-rgb));
+    --chart-5-rgb: 251 191 36;
+    --chart-5: rgb(var(--chart-5-rgb));
+    --chart-6-rgb: 248 113 113;
+    --chart-6: rgb(var(--chart-6-rgb));
   }
 }
 
@@ -117,18 +129,26 @@
   --card-shadow: 0 1px 0 rgba(255, 255, 255, 0.05);
   --card-shadow-hover: 0 2px 8px rgba(0, 0, 0, 0.4);
   --chart-grid: rgba(255, 255, 255, 0.06);
-  --chart-1: #818cf8;
-  --chart-2: #a78bfa;
-  --chart-3: #22d3ee;
-  --chart-4: #34d399;
-  --chart-5: #fbbf24;
-  --chart-6: #f87171;
+  --chart-1-rgb: 129 140 248;
+  --chart-1: rgb(var(--chart-1-rgb));
+  --chart-2-rgb: 167 139 250;
+  --chart-2: rgb(var(--chart-2-rgb));
+  --chart-3-rgb: 34 211 238;
+  --chart-3: rgb(var(--chart-3-rgb));
+  --chart-4-rgb: 52 211 153;
+  --chart-4: rgb(var(--chart-4-rgb));
+  --chart-5-rgb: 251 191 36;
+  --chart-5: rgb(var(--chart-5-rgb));
+  --chart-6-rgb: 248 113 113;
+  --chart-6: rgb(var(--chart-6-rgb));
 }
 
 body {
   color: var(--foreground);
   background: var(--background);
-  font-feature-settings: "rlig" 1, "calt" 1;
+  font-feature-settings:
+    "rlig" 1,
+    "calt" 1;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }

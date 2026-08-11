@@ -227,7 +227,7 @@ export function PlannedPurchaseForm({
           className={cn(
             "flex cursor-pointer items-center gap-3 rounded-xl border-2 p-4 transition-all",
             bought
-              ? "border-[var(--primary)] bg-[var(--primary)]/5"
+              ? "border-[var(--primary)] bg-primary/5"
               : "border-border bg-muted/20 hover:border-muted-foreground/20"
           )}
         >
