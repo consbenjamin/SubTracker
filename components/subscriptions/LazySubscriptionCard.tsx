@@ -4,7 +4,6 @@ import { useInView } from "@/lib/hooks/useInView";
 import { SubscriptionCard, SUBSCRIPTION_CARD_MIN_HEIGHT } from "./SubscriptionCard";
 import type { Subscription } from "@/types";
 import { Card } from "@/components/ui/Card";
-import { cn } from "@/lib/utils";
 
 interface LazySubscriptionCardProps {
   subscription: Subscription;
@@ -31,12 +30,13 @@ export function LazySubscriptionCard({
           onDelete={onDelete}
         />
       ) : (
+        // `w-full min-w-0` igual que SubscriptionCard: el wrapper es flex, así
+        // que sin ancho explícito el placeholder se encogía a su contenido y
+        // cada tarjeta todavía fuera del viewport se dibujaba como una tira
+        // vertical de 42 px en vez de ocupar la columna.
         <Card
           variant="outline"
-          className={cn(
-            "animate-pulse border-border",
-            "h-full"
-          )}
+          className="h-full w-full min-w-0 animate-pulse border-border"
           style={{ minHeight: SUBSCRIPTION_CARD_MIN_HEIGHT }}
         >
           <div className="flex flex-col gap-3">

@@ -146,7 +146,12 @@ export function PlannedPurchaseCard({
               )}
             </div>
           ) : (
-            <Badge variant="default">{tPurchases("statusPending")}</Badge>
+            // self-start: el contenedor es `flex-col`, así que sin esto el
+            // badge se estiraba a todo el ancho de la tarjeta. La rama de
+            // arriba no lo necesita porque ya va dentro de una fila.
+            <Badge variant="default" className="self-start">
+              {tPurchases("statusPending")}
+            </Badge>
           )}
 
           {purchase.notes && (

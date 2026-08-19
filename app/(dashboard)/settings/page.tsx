@@ -63,22 +63,27 @@ export default function SettingsPage() {
             <p className="mb-4 text-sm text-muted-foreground">
               {t("appearanceHint")}
             </p>
-            <div className="flex flex-wrap gap-2 rounded-lg border border-border p-1">
+            {/* Grilla de tres y no `flex-wrap`: con `min-w-[100px]` los tres no
+                entraban en una fila de celular y "Sistema" caía solo abajo,
+                ocupando el ancho completo. */}
+            <div className="grid grid-cols-3 gap-1 rounded-lg border border-border p-1 sm:gap-2">
               {THEMES.map(({ value, label, icon: Icon }) => (
                 <button
                   key={value}
                   type="button"
                   onClick={() => setTheme(value)}
                   className={cn(
-                    "flex flex-1 min-w-[100px] items-center justify-center gap-2 rounded-md px-4 py-2.5 text-sm font-medium transition-colors",
+                    "flex min-w-0 items-center justify-center gap-1.5 rounded-md px-2 py-2.5 text-sm font-medium transition-colors sm:gap-2 sm:px-4",
                     "text-muted-foreground hover:bg-foreground/5 hover:text-foreground",
                     "dark:hover:bg-white/10",
                     theme === value &&
                       "bg-foreground/10 text-foreground dark:bg-white/15"
                   )}
                 >
-                  <Icon className="h-4 w-4 shrink-0" />
-                  {label}
+                  {/* Sin el ícono en mobile "Sistema" entra entero; con él se
+                      cortaba en "Siste...". */}
+                  <Icon className="hidden h-4 w-4 shrink-0 sm:block" />
+                  <span className="truncate">{label}</span>
                 </button>
               ))}
             </div>

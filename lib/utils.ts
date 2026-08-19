@@ -12,6 +12,9 @@ export function formatCurrency(amount: number, currency: CurrencyCode = "ARS"): 
   return new Intl.NumberFormat("es-ES", {
     style: "currency",
     currency,
+    // Por defecto es-ES agrupa recién a partir de cinco dígitos, así que
+    // convivían "7999,00 ARS" y "480.000,00 ARS" en la misma pantalla.
+    useGrouping: "always",
   }).format(amount);
 }
 
