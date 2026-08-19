@@ -12,7 +12,6 @@ import { useFormatCurrency } from "@/lib/hooks/useFormatCurrency";
 import { categoryHueStyle } from "@/lib/categoryColor";
 import { useCategoryHue } from "@/lib/contexts/CategoryColorContext";
 import { Edit, Trash2, Calendar, CreditCard, ChevronDown, ChevronUp } from "lucide-react";
-import { cn } from "@/lib/utils";
 import {
   daysUntilPayment,
   getAnnualEquivalent,
@@ -108,9 +107,12 @@ export function SubscriptionCard({
                 {subscription.name}
               </h3>
               {isInstallment && (
-                <Badge variant="info" className="shrink-0 gap-1 text-xs">
+                // En pantallas angostas queda solo el ícono: la palabra ya
+                // aparece dos veces abajo ("por cuota", "3 de 12 pagadas") y
+                // su ancho se lo comía al nombre, que quedaba en "Mos...".
+                <Badge variant="info" className="shrink-0 gap-1 text-xs" title={t("installment")}>
                   <CreditCard className="h-3 w-3" />
-                  {t("installment")}
+                  <span className="sr-only sm:not-sr-only">{t("installment")}</span>
                 </Badge>
               )}
               {getStatusBadge()}
@@ -136,7 +138,11 @@ export function SubscriptionCard({
               </p>
             )}
           </div>
-          <div className="flex shrink-0 gap-1 opacity-0 transition-opacity group-hover:opacity-100 sm:opacity-100">
+          {/* Siempre visibles. Antes eran `opacity-0` salvo hover, con un
+              `sm:opacity-100` que ya los mostraba fijos en desktop: el único
+              efecto real era esconderlos en el celular, donde no hay hover y
+              por lo tanto no había forma de editar ni borrar desde la lista. */}
+          <div className="flex shrink-0 gap-1">
             <Button
               variant="ghost"
               size="sm"
@@ -155,56 +161,72 @@ export function SubscriptionCard({
             </Button>
           </div>
         </div>
-        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted-foreground">
-          <Calendar className="h-4 w-4 shrink-0" />
-          <span>
-            {isInstallment ? t("nextInstallment") : t("nextPayment")}: {formatDate(subscription.next_payment_date)}
-          </span>
-          <span className={cn("shrink-0", urgency.color)}>({urgency.text})</span>
+        <div className="flex flex-col gap-2 text-sm text-muted-foreground">
+          {/* El ícono va pegado al texto y la urgencia fluye como parte de la
+              misma frase: si envolvía por `flex-wrap`, en pantallas angostas el
+              ícono se quedaba huérfano en su propia línea. */}
+          <p className="flex items-start gap-2">
+            <Calendar className="mt-0.5 h-4 w-4 shrink-0" />
+            <span className="min-w-0">
+              {isInstallment ? t("nextInstallment") : t("nextPayment")}:{" "}
+              {formatDate(subscription.next_payment_date)}{" "}
+              <span className={urgency.color}>({urgency.text})</span>
+            </span>
+          </p>
+          {/* Las acciones en su propia fila: dentro del texto cambiaban de
+              lugar según cuánto ocupara la fecha. */}
           {!isInstallment && subscription.status === "active" && remainingDays < 0 && (
-            <Button
-              type="button"
-              variant="primary"
-              size="sm"
-              className="whitespace-nowrap"
-              onClick={() => {
-                router.push(
-                  `/subscriptions/${subscription.id}?confirmDue=true&due=${encodeURIComponent(
-                    subscription.next_payment_date
-                  )}`
-                );
-              }}
-            >
-              {t("confirmPaymentCta")}
-            </Button>
+            <div>
+              <Button
+                type="button"
+                variant="primary"
+                size="sm"
+                className="h-9 whitespace-nowrap"
+                onClick={() => {
+                  router.push(
+                    `/subscriptions/${subscription.id}?confirmDue=true&due=${encodeURIComponent(
+                      subscription.next_payment_date
+                    )}`
+                  );
+                }}
+              >
+                {t("confirmPaymentCta")}
+              </Button>
+            </div>
           )}
           {isInstallment && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setExpanded((e) => !e)}
-              className="h-7 gap-1 px-2 text-sm font-medium text-foreground hover:bg-primary/10 hover:text-primary"
-            >
-              {expanded ? (
-                <>
-                  <ChevronUp className="h-4 w-4" />
-                  {t("showLess")}
-                </>
-              ) : (
-                <>
-                  <ChevronDown className="h-4 w-4" />
-                  {t("showProgress")}
-                </>
-              )}
-            </Button>
+            <div>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                aria-expanded={expanded}
+                onClick={() => setExpanded((e) => !e)}
+                // h-9 + select-none: en el celular un target de 28px se erra
+                // fácil, y al errarle se seleccionaba el texto del botón.
+                className="-ml-2 h-9 select-none gap-1 px-2 text-sm font-medium text-foreground hover:bg-primary/10 hover:text-primary"
+              >
+                {expanded ? (
+                  <>
+                    <ChevronUp className="h-4 w-4" />
+                    {t("showLess")}
+                  </>
+                ) : (
+                  <>
+                    <ChevronDown className="h-4 w-4" />
+                    {t("showProgress")}
+                  </>
+                )}
+              </Button>
+            </div>
           )}
         </div>
         {isInstallment && expanded && (
           <div className="space-y-2">
-            <div className="flex items-center justify-between text-xs text-muted-foreground">
-              <span>{t("planProgress")}</span>
+            <div className="flex items-center justify-between gap-2 text-xs text-muted-foreground">
+              <span className="truncate">{t("planProgress")}</span>
               {!installment.completed && (
-                <span className="font-medium text-foreground">
+                <span className="shrink-0 font-medium text-foreground">
                   {t("nextInstallmentOf", { current: installment.nextInstallment, count: installment.count })}
                 </span>
               )}
