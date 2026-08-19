@@ -89,7 +89,10 @@ export function SubscriptionCard({
 
   return (
     <Card
-      className="group flex h-full w-full min-w-0 flex-col transition-shadow hover:shadow-[var(--card-shadow)] hover:shadow-[var(--card-shadow-hover)]"
+      // Sin `h-full`: el contenedor es flex y ya la estira. Con `height: 100%`
+      // Safari no rehacía la altura al desplegar el progreso y el contenido
+      // terminaba fuera de la tarjeta.
+      className="group flex w-full min-w-0 flex-col transition-shadow hover:shadow-[var(--card-shadow)] hover:shadow-[var(--card-shadow-hover)]"
       style={{ minHeight: SUBSCRIPTION_CARD_MIN_HEIGHT }}
     >
       <div className="flex flex-1 flex-col gap-4 min-h-0">

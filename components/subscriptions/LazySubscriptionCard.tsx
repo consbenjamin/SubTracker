@@ -22,7 +22,11 @@ export function LazySubscriptionCard({
   const { ref, inView } = useInView({ rootMargin: "120px", threshold: 0 });
 
   return (
-    <div ref={ref} className="flex h-full" style={{ minHeight: SUBSCRIPTION_CARD_MIN_HEIGHT }}>
+    // Sin `h-full`: como ítem del grid ya se estira solo (`align-items:
+    // stretch`). Con `height: 100%` Safari fija la altura al montar y no la
+    // recalcula cuando la tarjeta crece al desplegar el progreso, así que el
+    // contenido se salía por abajo y lo tapaba la tarjeta siguiente.
+    <div ref={ref} className="flex" style={{ minHeight: SUBSCRIPTION_CARD_MIN_HEIGHT }}>
       {inView ? (
         <SubscriptionCard
           subscription={subscription}
@@ -36,7 +40,7 @@ export function LazySubscriptionCard({
         // vertical de 42 px en vez de ocupar la columna.
         <Card
           variant="outline"
-          className="h-full w-full min-w-0 animate-pulse border-border"
+          className="w-full min-w-0 animate-pulse border-border"
           style={{ minHeight: SUBSCRIPTION_CARD_MIN_HEIGHT }}
         >
           <div className="flex flex-col gap-3">

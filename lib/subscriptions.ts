@@ -136,8 +136,11 @@ export function getMonthlyEquivalent(subscription: Subscription): number {
 
 export function getAnnualEquivalent(subscription: Subscription): number {
   if (isInstallmentSubscription(subscription)) {
+    // Se resta lo pagado del total en vez de multiplicar la cuota por las que
+    // faltan: la cuota viene redondeada, así que 3 × 63.666,67 daba un saldo
+    // de 191.000,01 sobre un total de 191.000,00.
     const progress = getInstallmentProgress(subscription);
-    return progress.remaining * subscription.price;
+    return Math.max(progress.totalAmount - progress.paid * subscription.price, 0);
   }
 
   return getMonthlyEquivalent(subscription) * 12;
