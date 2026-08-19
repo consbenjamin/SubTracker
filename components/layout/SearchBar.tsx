@@ -232,7 +232,10 @@ export function SearchBar({ className, onNavigate, variant = "default" }: Search
           }}
           onFocus={() => setIsOpen(true)}
           onKeyDown={handleKeyDown}
-          placeholder={t("placeholder")}
+          // En el menú lateral el campo mide ~170 px de texto útil y
+          // "Buscar suscripciones…" se cortaba a mitad de palabra. El
+          // aria-label sigue siendo el largo, así que no se pierde contexto.
+          placeholder={isSidebar ? t("placeholderShort") : t("placeholder")}
           autoComplete="off"
           role="combobox"
           aria-label={t("ariaLabel")}

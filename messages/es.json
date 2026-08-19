@@ -407,6 +407,7 @@
   },
   "search": {
     "placeholder": "Buscar suscripciones…",
+    "placeholderShort": "Buscar…",
     "ariaLabel": "Buscar suscripciones",
     "recentSearches": "Búsquedas recientes",
     "clear": "Limpiar búsqueda",

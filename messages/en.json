@@ -407,6 +407,7 @@
   },
   "search": {
     "placeholder": "Search subscriptions…",
+    "placeholderShort": "Search…",
     "ariaLabel": "Search subscriptions",
     "recentSearches": "Recent searches",
     "clear": "Clear search",
