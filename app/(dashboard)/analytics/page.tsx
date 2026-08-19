@@ -329,8 +329,12 @@ export default function AnalyticsPage() {
                     strokeWidth={2}
                     animationBegin={0}
                     animationDuration={600}
-                    label={({ name, percent }) =>
-                      percent >= 0.08 ? `${name} ${(percent * 100).toFixed(0)}%` : ""
+                    // Solo el porcentaje: el nombre de la categoría no entra
+                    // al costado del donut en un celular y se cortaba
+                    // ("...cion 27%") o quedaba fuera de la pantalla. Los
+                    // nombres van en la leyenda de abajo.
+                    label={({ percent }) =>
+                      percent >= 0.08 ? `${(percent * 100).toFixed(0)}%` : ""
                     }
                     labelLine={{ stroke: "var(--muted-foreground)", strokeWidth: 1 }}
                   >
@@ -352,6 +356,20 @@ export default function AnalyticsPage() {
               <p className="py-12 text-center text-sm text-muted-foreground">
                 {t("noDataToShow")}
               </p>
+            )}
+            {categoryChartData.length > 0 && (
+              <ul className="mt-2 flex flex-wrap justify-center gap-x-4 gap-y-2 text-xs">
+                {categoryChartData.map((entry, i) => (
+                  <li key={entry.name} className="flex min-w-0 items-center gap-1.5">
+                    <span
+                      aria-hidden
+                      className="h-2.5 w-2.5 shrink-0 rounded-full"
+                      style={{ backgroundColor: CHART_COLORS[i % CHART_COLORS.length] }}
+                    />
+                    <span className="truncate text-muted-foreground">{entry.name}</span>
+                  </li>
+                ))}
+              </ul>
             )}
           </CardContent>
         </Card>

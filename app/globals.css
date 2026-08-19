@@ -179,6 +179,20 @@ main {
   * {
     @apply border-[var(--border)];
   }
+
+  /* iOS le da a los campos de fecha su propia apariencia nativa e ignora el
+     alto y el ancho que les pone el formulario: quedaban más altos y más
+     anchos que el resto de los campos. */
+  input[type="date"] {
+    -webkit-appearance: none;
+    appearance: none;
+  }
+
+  /* Sin esto Safari centra el valor dentro del campo y la fecha no queda
+     alineada con el texto de los demás inputs. */
+  input[type="date"]::-webkit-date-and-time-value {
+    text-align: left;
+  }
 }
 
 ::-webkit-scrollbar {

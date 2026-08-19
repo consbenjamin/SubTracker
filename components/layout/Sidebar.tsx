@@ -75,7 +75,11 @@ export function Sidebar({ isOpen = true, onClose, isMobile = false }: SidebarPro
   return (
     <aside
       className={cn(
-        "fixed left-0 top-0 z-30 flex h-screen w-[240px] flex-col border-r border-border bg-[var(--sidebar)]",
+        // En Safari `100vh` cuenta también el alto que ocupa la barra de
+        // direcciones, así que el pie del menú —donde está "Cerrar sesión"—
+        // quedaba debajo de ella y no se podía tocar. `dvh` mide el viewport
+        // que realmente se ve; `h-screen` queda de respaldo si no hay soporte.
+        "fixed left-0 top-0 z-30 flex h-screen w-[240px] flex-col border-r border-border bg-[var(--sidebar)] supports-[height:100dvh]:h-[100dvh]",
         "transition-transform duration-300 ease-out",
         isMobile && "lg:translate-x-0",
         isMobile && !isOpen && "-translate-x-full"
