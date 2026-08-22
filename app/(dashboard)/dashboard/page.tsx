@@ -70,7 +70,8 @@ function StatCard({
 export default function DashboardPage() {
   const t = useTranslations("dashboard");
   const tCommon = useTranslations("common");
-  const { subscriptions, setSubscriptions, loading, create, update, remove } =
+  const tSubs = useTranslations("subscriptions");
+  const { subscriptions, setSubscriptions, loading, error, refresh, create, update, remove } =
     useSubscriptions();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingSubscription, setEditingSubscription] = useState<Subscription | null>(null);
@@ -328,10 +329,22 @@ export default function DashboardPage() {
           {filteredSubscriptions.length === 0 ? (
             <Card variant="outline" className="col-span-full py-16 text-center">
               <CardContent>
+                {/* Un fallo de red no se muestra como "no hay suscripciones". */}
                 <p className="text-sm text-muted-foreground">
-                  {t("noSubscriptions")}
-                  {filter !== "all" ? ` ${t("noSubscriptionsFilter")}` : `. ${t("addFirst")}`}
+                  {error ? (
+                    tSubs("loadError")
+                  ) : (
+                    <>
+                      {t("noSubscriptions")}
+                      {filter !== "all" ? ` ${t("noSubscriptionsFilter")}` : `. ${t("addFirst")}`}
+                    </>
+                  )}
                 </p>
+                {error && (
+                  <Button variant="secondary" size="sm" className="mt-4" onClick={refresh}>
+                    {tSubs("retry")}
+                  </Button>
+                )}
               </CardContent>
             </Card>
           ) : (

@@ -11,6 +11,24 @@
 
 const CACHE = "subghost-v1";
 
+/**
+ * Tope de entradas de la caché.
+ *
+ * El nombre de la caché es fijo, así que `activate` nunca la borra: sin un
+ * límite, cada deploy dejaba dentro sus propios assets con hash y la caché
+ * crecía para siempre. Se recortan las más viejas (Cache Storage conserva el
+ * orden de inserción).
+ */
+const MAX_ENTRIES = 60;
+
+async function trimCache(cache) {
+  const keys = await cache.keys();
+  const excess = keys.length - MAX_ENTRIES;
+  for (let i = 0; i < excess; i += 1) {
+    await cache.delete(keys[i]);
+  }
+}
+
 /** Lo mínimo para que la app abra sin conexión. */
 const PRECACHE = ["/", "/manifest.webmanifest", "/icons/icon-192.png"];
 
@@ -52,7 +70,10 @@ self.addEventListener("fetch", (event) => {
       .then((response) => {
         if (response.ok && response.type === "basic") {
           const copy = response.clone();
-          caches.open(CACHE).then((cache) => cache.put(request, copy));
+          caches.open(CACHE).then(async (cache) => {
+            await cache.put(request, copy);
+            await trimCache(cache);
+          });
         }
         return response;
       })

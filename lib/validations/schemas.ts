@@ -17,8 +17,24 @@ const optionalInstallmentCount = z.preprocess(
   installmentCountSchema.nullable().optional()
 );
 
+/**
+ * Fecha real, no solo con forma de fecha: el regex por sí solo dejaba pasar
+ * "2026-13-05" y "2026-02-31", que después `new Date(y, m-1, d)` corría en
+ * silencio a enero de 2027 y al 3 de marzo.
+ */
+function isRealDate(value: string): boolean {
+  const [y, m, d] = value.split("-").map(Number);
+  const date = new Date(y, m - 1, d);
+  return (
+    date.getFullYear() === y && date.getMonth() === m - 1 && date.getDate() === d
+  );
+}
+
 const dateOnly = (message = "Formato fecha: YYYY-MM-DD") =>
-  z.string().regex(/^\d{4}-\d{2}-\d{2}$/, message);
+  z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, message)
+    .refine(isRealDate, "Esa fecha no existe");
 
 /**
  * Tope de los importes: igual al DECIMAL(10,2) de las columnas.
@@ -41,7 +57,8 @@ const subscriptionFields = {
   installment_count: optionalInstallmentCount,
   installments_paid: z.coerce.number().int().min(0).max(999).optional(),
   total_amount: amount().nullable().optional(),
-  next_payment_date: dateOnly().min(1, "La fecha es requerida"),
+  // Sin `.min(1)`: el regex ya exige los 10 caracteres.
+  next_payment_date: dateOnly("La fecha es requerida"),
   category: z
     .string()
     .trim()
@@ -67,6 +84,19 @@ function withInstallmentValidation<T extends z.ZodRawShape>(schema: z.ZodObject<
           code: z.ZodIssueCode.custom,
           path: ["total_amount"],
           message: "El monto total debe ser mayor a 0",
+        });
+      }
+
+      // La regla estaba solo en el formulario: la API aceptaba 10 cuotas
+      // pagadas sobre un plan de 3 y guardaba un plan imposible.
+      if (
+        data.installment_count != null &&
+        (data.installments_paid ?? 0) > data.installment_count
+      ) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["installments_paid"],
+          message: `No podés tener más de ${data.installment_count} cuotas pagadas`,
         });
       }
     }
@@ -123,13 +153,27 @@ const plannedPurchasePaymentMethod = z.enum(["card", "transfer", "cash"]);
 
 const MAX_URL_LENGTH = 2000;
 
+/**
+ * `z.string().url()` acepta cualquier esquema, incluidos `javascript:` y
+ * `data:text/html`, y el link se pinta como un `<a href>` en el que se puede
+ * hacer clic. Se restringe a http y https.
+ */
+function isSafeUrl(value: string): boolean {
+  try {
+    const { protocol } = new URL(value);
+    return protocol === "http:" || protocol === "https:";
+  } catch {
+    return false;
+  }
+}
+
 const optionalUrl = z
   .string()
   // Acotado antes de validar: sin tope se podría mandar una URL enorme.
   .max(MAX_URL_LENGTH, "El link es demasiado largo")
   .transform((s) => (s?.trim() === "" ? undefined : s))
   .optional()
-  .refine((s) => s === undefined || z.string().url().safeParse(s).success, "URL inválida");
+  .refine((s) => s === undefined || isSafeUrl(s), "El link debe empezar con http:// o https://");
 
 export const plannedPurchaseBodySchema = z
   .object({

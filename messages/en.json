@@ -136,6 +136,8 @@
     "addExpense": "Add expense",
     "noResultsFilters": "No results with these filters",
     "noExpensesYet": "No expenses yet. Add a subscription or an installment purchase.",
+    "loadError": "We couldn't load your expenses. Check your connection and try again.",
+    "retry": "Retry",
     "deleteExpense": "Delete expense",
     "deleteExpenseConfirm": "Delete this expense? This cannot be undone.",
     "editExpense": "Edit expense",

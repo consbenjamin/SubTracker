@@ -73,10 +73,15 @@ export async function PUT(request: Request, { params }: Params) {
       }
 
       if (current.payment_type === "installment" && current.installment_count != null) {
-        formData.installments_paid = Math.min(
-          (current.installments_paid ?? 0) + 1,
-          current.installment_count
-        );
+        // Igual que en POST /payments: el contador sale de los pagos que hay.
+        // Sumando uno, guardar dos veces con la misma fecha contaba dos cuotas
+        // y registraba un solo pago.
+        const { count } = await auth.supabase
+          .from("payment_history")
+          .select("id", { count: "exact", head: true })
+          .eq("subscription_id", id);
+
+        formData.installments_paid = Math.min(count ?? 0, current.installment_count);
       }
 
       // Recurrentes: avanzar a la próxima fecha solo si el usuario no la reprogramó a mano.

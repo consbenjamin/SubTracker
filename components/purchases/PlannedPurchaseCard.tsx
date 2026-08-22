@@ -8,6 +8,7 @@ import { Edit, Trash2, ExternalLink, CreditCard, Banknote, Wallet } from "lucide
 import { useTranslations } from "next-intl";
 import { useFormatCurrency } from "@/lib/hooks/useFormatCurrency";
 import { installmentAmount } from "@/lib/plannedPurchases";
+import { safeExternalUrl } from "@/lib/utils";
 
 interface PlannedPurchaseCardProps {
   purchase: PlannedPurchase;
@@ -28,6 +29,9 @@ export function PlannedPurchaseCard({
     purchase.bought_with_installments && purchase.installment_count && purchase.price != null
       ? installmentAmount(purchase)
       : null;
+
+  // Los links viejos pueden traer un esquema peligroso: se filtra al pintar.
+  const safeLink = safeExternalUrl(purchase.link);
 
   const PaymentIcon =
     purchase.payment_method === "card"
@@ -118,9 +122,9 @@ export function PlannedPurchaseCard({
             </p>
           )}
 
-          {purchase.link && (
+          {safeLink && (
             <a
-              href={purchase.link}
+              href={safeLink}
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center gap-1.5 text-sm text-primary hover:underline"

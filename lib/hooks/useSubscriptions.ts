@@ -38,16 +38,29 @@ export function useSubscriptions() {
   // null = todavía no llegó la primera respuesta. `loading` sale de ahí, en vez
   // de ser un flag aparte que haya que apagar desde el efecto.
   const [data, setData] = useState<Subscription[] | null>(null);
+  const [error, setError] = useState(false);
   const subscriptions = data ?? EMPTY;
   const loading = data === null;
 
   const refresh = useCallback(async () => {
+    // Ante un fallo no se vacía la lista: antes cualquier corte de red, un 500
+    // o un 429 del rate limiter dejaba la pantalla en "no tenés suscripciones",
+    // que es indistinguible de haberlas borrado todas. Se conserva lo último
+    // bueno y se marca el error para que la página lo diga.
     try {
       const res = await fetch("/api/subscriptions");
-      setData(res.ok ? await res.json() : EMPTY);
+      if (!res.ok) {
+        console.error("Error fetching subscriptions:", res.status);
+        setError(true);
+        setData((prev) => prev ?? EMPTY);
+        return;
+      }
+      setData(await res.json());
+      setError(false);
     } catch (err) {
       console.error("Error fetching subscriptions:", err);
-      setData(EMPTY);
+      setError(true);
+      setData((prev) => prev ?? EMPTY);
     }
   }, []);
 
@@ -104,5 +117,5 @@ export function useSubscriptions() {
     [send]
   );
 
-  return { subscriptions, setSubscriptions, loading, refresh, create, update, remove };
+  return { subscriptions, setSubscriptions, loading, error, refresh, create, update, remove };
 }

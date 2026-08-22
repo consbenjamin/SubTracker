@@ -26,3 +26,20 @@ export function formatDate(date: string | Date): string {
     day: "numeric",
   }).format(parseDateOnly(date));
 }
+
+/**
+ * URL segura para un `href`, o null.
+ *
+ * Los links de compras guardados antes de que la validación restringiera el
+ * esquema pueden ser `javascript:` o `data:`, que al hacer clic ejecutan código
+ * en la propia sesión. Se filtran también al pintarlos, no solo al guardarlos.
+ */
+export function safeExternalUrl(value: string | null | undefined): string | null {
+  if (!value) return null;
+  try {
+    const { protocol } = new URL(value);
+    return protocol === "http:" || protocol === "https:" ? value : null;
+  } catch {
+    return null;
+  }
+}

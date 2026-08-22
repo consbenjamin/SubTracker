@@ -26,7 +26,7 @@ function SubscriptionsContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const toast = useToast();
-  const { subscriptions, loading, create, update, remove } = useSubscriptions();
+  const { subscriptions, loading, error, refresh, create, update, remove } = useSubscriptions();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingSubscription, setEditingSubscription] = useState<Subscription | null>(null);
   const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
@@ -189,11 +189,20 @@ function SubscriptionsContent() {
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
         {filteredSubscriptions.length === 0 ? (
           <div className="col-span-full py-16 text-center">
+            {/* Un fallo de red no se muestra como "no tenés gastos": son cosas
+                distintas y confundirlas asusta. */}
             <p className="text-sm text-muted-foreground">
-              {hasActiveFilters
-                ? t("noResultsFilters")
-                : t("noExpensesYet")}
+              {error
+                ? t("loadError")
+                : hasActiveFilters
+                  ? t("noResultsFilters")
+                  : t("noExpensesYet")}
             </p>
+            {error && (
+              <Button variant="secondary" size="sm" className="mt-4" onClick={refresh}>
+                {t("retry")}
+              </Button>
+            )}
           </div>
         ) : (
           paginatedSubscriptions.map((subscription) => (

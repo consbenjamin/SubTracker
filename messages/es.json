@@ -136,6 +136,8 @@
     "addExpense": "Agregar gasto",
     "noResultsFilters": "No hay resultados con estos filtros",
     "noExpensesYet": "Aún no tenés gastos cargados. Agregá una suscripción o una compra en cuotas.",
+    "loadError": "No pudimos cargar tus gastos. Revisá tu conexión y volvé a intentar.",
+    "retry": "Reintentar",
     "deleteExpense": "Eliminar gasto",
     "deleteExpenseConfirm": "¿Eliminamos este gasto? No se puede deshacer.",
     "editExpense": "Editar gasto",

@@ -38,6 +38,16 @@ interface DueSubscription {
   user_id: string;
   name: string;
   next_payment_date: string;
+  payment_type: string | null;
+  installment_count: number | null;
+  installments_paid: number | null;
+}
+
+/** Un plan en cuotas ya saldado no tiene nada que avisar. */
+function isFinished(sub: DueSubscription): boolean {
+  if ((sub.payment_type ?? "recurring") !== "installment") return false;
+  if (sub.installment_count == null) return false;
+  return (sub.installments_paid ?? 0) >= sub.installment_count;
 }
 
 type Reason = "hoy" | "mañana" | "vencidas";
@@ -52,8 +62,12 @@ function daysBetween(from: string, to: string): number {
 }
 
 function buildMessage(subs: DueSubscription[], reason: Reason, today: string) {
+  // `confirmDue` abre el diálogo de "ya pagué este vencimiento", que es el
+  // flujo de los recurrentes. Una cuota se registra desde su propia ficha.
   const detail = (sub: DueSubscription) =>
-    `/subscriptions/${sub.id}?confirmDue=true&due=${encodeURIComponent(sub.next_payment_date)}`;
+    (sub.payment_type ?? "recurring") === "installment"
+      ? `/subscriptions/${sub.id}`
+      : `/subscriptions/${sub.id}?confirmDue=true&due=${encodeURIComponent(sub.next_payment_date)}`;
 
   if (reason === "vencidas") {
     if (subs.length === 1) {
@@ -103,12 +117,16 @@ export async function GET(request: Request) {
   const today = todayIn(TIMEZONE);
   const tomorrow = nextDay(today);
 
-  // Todo lo que vence hasta mañana (incluye lo ya vencido), solo recurrentes activas.
+  // Todo lo que vence hasta mañana, incluido lo ya vencido.
+  //
+  // Antes se filtraba por `payment_type = 'recurring'`, con lo cual una compra
+  // en cuotas no avisaba nunca: ni el día del vencimiento ni después. Ahora
+  // entran las dos, y las cuotas ya terminadas se descartan comparando las
+  // pagadas con el total del plan (no tienen nada que cobrar).
   const { data: due, error } = await supabase
     .from("subscriptions")
-    .select("id, user_id, name, next_payment_date")
+    .select("id, user_id, name, next_payment_date, payment_type, installment_count, installments_paid")
     .eq("status", "active")
-    .eq("payment_type", "recurring")
     .lte("next_payment_date", tomorrow);
 
   if (error) {
@@ -121,9 +139,14 @@ export async function GET(request: Request) {
   // Agrupamos por usuario para mandar un aviso por persona, no uno por suscripción.
   const byUser = new Map<string, DueSubscription[]>();
   for (const sub of due as DueSubscription[]) {
+    if (isFinished(sub)) continue;
     const list = byUser.get(sub.user_id);
     if (list) list.push(sub);
     else byUser.set(sub.user_id, [sub]);
+  }
+
+  if (!byUser.size) {
+    return NextResponse.json({ ok: true, today, sent: 0, reason: "sin vencimientos" });
   }
 
   const { data: devices, error: devicesError } = await supabase

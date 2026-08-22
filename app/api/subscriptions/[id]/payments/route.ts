@@ -97,6 +97,7 @@ export async function POST(request: Request, { params }: Params) {
     .limit(1);
 
   let payment = existing?.[0];
+  const isNewPayment = !payment;
   if (!payment) {
     const inserted = await auth.supabase
       .from("payment_history")
@@ -109,22 +110,36 @@ export async function POST(request: Request, { params }: Params) {
   }
 
   if (!isRecurring && sub.data.installment_count != null) {
-    const nextPaid = Math.min(
-      (sub.data.installments_paid ?? 0) + 1,
-      sub.data.installment_count
-    );
+    // El contador se deriva de los pagos que hay, en vez de sumar uno cada vez
+    // que entra por acá: registrar dos cuotas con la misma fecha no inserta un
+    // segundo pago (son el mismo día), pero antes igual sumaba dos al contador
+    // y adelantaba dos meses. Contando, el número siempre coincide con el
+    // historial y una discrepancia previa se corrige sola.
+    const { count } = await auth.supabase
+      .from("payment_history")
+      .select("id", { count: "exact", head: true })
+      .eq("subscription_id", id);
 
-    await auth.supabase
+    const nextPaid = Math.min(count ?? 0, sub.data.installment_count);
+
+    const update = await auth.supabase
       .from("subscriptions")
       .update({
         installments_paid: nextPaid,
-        next_payment_date:
-          nextPaid < sub.data.installment_count
-            ? addMonthsDateOnly(currentDue || paidDate, 1)
-            : paidDate,
+        // La fecha solo avanza con un pago nuevo: es acumulativa y no se puede
+        // recalcular contando.
+        ...(isNewPayment && {
+          next_payment_date:
+            nextPaid < sub.data.installment_count
+              ? addMonthsDateOnly(currentDue || paidDate, 1)
+              : paidDate,
+        }),
       })
       .eq("id", id)
       .eq("user_id", auth.userId);
+
+    // Sin esto el pago quedaba registrado y el plan sin avanzar, en silencio.
+    if (update.error) return dbError(update.error);
   }
 
   // Recurrentes (o legacy null): solo avanzamos si el pago corresponde al vencimiento actual.
