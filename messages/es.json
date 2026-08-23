@@ -466,7 +466,11 @@
     "filled": "Completé {count, plural, one {# campo} other {# campos}}. Revisalos antes de guardar.",
     "currencyMismatch": "Dijiste otra moneda: revisá el importe, se guarda en la moneda de la app.",
     "installmentCountUnsupported": "Solo se admiten planes de 3, 6, 9 o 12 cuotas.",
-    "denied": "El micrófono está bloqueado para este sitio. Habilitalo desde el candado de la barra de direcciones (y revisá que el navegador tenga permiso de micrófono en el sistema).",
-    "insecure": "El micrófono solo funciona en localhost o con https."
+    "denied": "El micrófono está bloqueado para este sitio. Habilitalo desde el candado de la barra de direcciones y recargá la página.",
+    "insecure": "El micrófono solo funciona en localhost o con https.",
+    "service": "El navegador no puede usar el dictado. En Mac suele ser el permiso del sistema: Ajustes del Sistema → Privacidad y seguridad → Micrófono, y activá tu navegador. Ese permiso es aparte del del sitio y no se pide solo.",
+    "noMic": "No encontramos ningún micrófono conectado.",
+    "network": "No se pudo conectar con el servicio de dictado. Revisá tu conexión.",
+    "errorCode": "Código: {code}"
   }
 }

@@ -466,7 +466,11 @@
     "filled": "Filled in {count, plural, one {# field} other {# fields}}. Check them before saving.",
     "currencyMismatch": "You said a different currency: check the amount, it's saved in the app's currency.",
     "installmentCountUnsupported": "Only 3, 6, 9 or 12 instalment plans are supported.",
-    "denied": "The microphone is blocked for this site. Enable it from the padlock in the address bar (and check your system lets the browser use the microphone).",
-    "insecure": "The microphone only works on localhost or over https."
+    "denied": "The microphone is blocked for this site. Enable it from the padlock in the address bar and reload the page.",
+    "insecure": "The microphone only works on localhost or over https.",
+    "service": "The browser can't use dictation. On a Mac this is usually the system permission: System Settings → Privacy & Security → Microphone, and turn your browser on. That one is separate from the site permission and isn't requested automatically.",
+    "noMic": "We couldn't find a microphone.",
+    "network": "Couldn't reach the dictation service. Check your connection.",
+    "errorCode": "Code: {code}"
   }
 }
