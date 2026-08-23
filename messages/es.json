@@ -462,10 +462,12 @@
     "stop": "Listo",
     "listening": "Escuchando…",
     "hint": "Ej: “Netflix siete mil novecientos noventa y nueve por mes”",
-    "micBlocked": "El micrófono está bloqueado. Habilitalo en los permisos del navegador.",
     "nothingFound": "No pude entender ningún dato. Probá de nuevo diciendo el nombre y el importe.",
     "filled": "Completé {count, plural, one {# campo} other {# campos}}. Revisalos antes de guardar.",
     "currencyMismatch": "Dijiste otra moneda: revisá el importe, se guarda en la moneda de la app.",
-    "installmentCountUnsupported": "Solo se admiten planes de 3, 6, 9 o 12 cuotas."
+    "installmentCountUnsupported": "Solo se admiten planes de 3, 6, 9 o 12 cuotas.",
+    "denied": "El micrófono está bloqueado para este sitio. Habilitalo desde el candado de la barra de direcciones (y revisá que el navegador tenga permiso de micrófono en el sistema).",
+    "noMic": "No encontramos ningún micrófono conectado.",
+    "insecure": "El micrófono solo funciona en localhost o con https."
   }
 }

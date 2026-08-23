@@ -83,11 +83,13 @@ export function VoiceFillButton({ onParsed, className }: VoiceFillButtonProps) {
         )}
       </button>
 
-      {voice.micBlocked && (
-        <p className="text-sm text-red-600 dark:text-red-400">{t("micBlocked")}</p>
+      {voice.problem && (
+        <p className="text-sm text-red-600 dark:text-red-400" role="alert">
+          {t(voice.problem)}
+        </p>
       )}
 
-      {!voice.micBlocked && (voice.listening || texto) && (
+      {!voice.problem && (voice.listening || texto) && (
         <p className="text-sm text-muted-foreground" aria-live="polite">
           {texto ? `“${texto}”` : t("listening")}
         </p>
@@ -97,7 +99,7 @@ export function VoiceFillButton({ onParsed, className }: VoiceFillButtonProps) {
         <p className="text-sm text-amber-600 dark:text-amber-400">{t("nothingFound")}</p>
       )}
 
-      {!voice.listening && !texto && !voice.micBlocked && (
+      {!voice.listening && !texto && !voice.problem && (
         <p className="text-xs text-muted-foreground">{t("hint")}</p>
       )}
     </div>

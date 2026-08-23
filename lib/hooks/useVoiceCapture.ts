@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import SpeechRecognition, { useSpeechRecognition } from "react-speech-recognition";
 
 /**
@@ -16,13 +16,16 @@ import SpeechRecognition, { useSpeechRecognition } from "react-speech-recognitio
  * abortar al desmontar.
  */
 
+/** Por qué no se pudo escuchar, para poder decir algo útil en pantalla. */
+export type VoiceProblem = "denied" | "noMic" | "insecure" | null;
+
 export interface VoiceCapture {
   supported: boolean;
   listening: boolean;
   /** Lo que se va escuchando, para mostrarlo mientras habla. */
   transcript: string;
-  /** true cuando el navegador tiene el micrófono bloqueado. */
-  micBlocked: boolean;
+  /** Qué impidió escuchar, o null si no hubo problema. */
+  problem: VoiceProblem;
   start: () => void;
   stop: () => void;
   reset: () => void;
@@ -40,6 +43,8 @@ export function useVoiceCapture(
     browserSupportsSpeechRecognition,
     isMicrophoneAvailable,
   } = useSpeechRecognition();
+
+  const [problem, setProblem] = useState<VoiceProblem>(null);
 
   // En un ref para que el efecto no dependa de la identidad de la función:
   // quien la pasa suele redefinirla en cada render.
@@ -64,8 +69,29 @@ export function useVoiceCapture(
     resetTranscript();
   }, [finalTranscript, resetTranscript]);
 
-  const start = useCallback(() => {
+  const start = useCallback(async () => {
+    setProblem(null);
     resetTranscript();
+
+    // El permiso se pide acá y no dentro del reconocimiento: así el navegador
+    // muestra su cartel en el momento del toque, que es cuando se entiende para
+    // qué se pide. Además distingue "lo negaste" de "no hay micrófono", cosa
+    // que la API de dictado no informa.
+    if (!window.isSecureContext) {
+      setProblem("insecure");
+      return;
+    }
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      // El reconocimiento abre su propio micrófono: este solo servía para pedir
+      // el permiso, y dejarlo abierto deja el indicador de grabación encendido.
+      stream.getTracks().forEach((track) => track.stop());
+    } catch (error) {
+      const nombre = (error as DOMException)?.name;
+      setProblem(nombre === "NotFoundError" || nombre === "OverconstrainedError" ? "noMic" : "denied");
+      return;
+    }
+
     // `continuous: false` a propósito: iOS no lo soporta y para dictar un gasto
     // alcanza con una frase.
     void SpeechRecognition.startListening({
@@ -89,7 +115,9 @@ export function useVoiceCapture(
     supported: browserSupportsSpeechRecognition,
     listening,
     transcript,
-    micBlocked: !isMicrophoneAvailable,
+    // `isMicrophoneAvailable` de la librería solo se entera después de fallar;
+    // el permiso que pedimos nosotros da el motivo antes de intentar.
+    problem: problem ?? (isMicrophoneAvailable ? null : "denied"),
     start,
     stop,
     reset: resetTranscript,
