@@ -85,7 +85,9 @@ export function VoiceFillButton({ onParsed, className }: VoiceFillButtonProps) {
 
       {voice.problem && (
         <div role="alert" className="space-y-1">
-          <p className="text-sm text-red-600 dark:text-red-400">{t(voice.problem)}</p>
+          <p className="text-sm text-red-600 dark:text-red-400">
+            {t(voice.problem, { origin: voice.origin })}
+          </p>
           {/* El código crudo del navegador: sin esto, dos causas muy distintas
               se ven igual y no hay por dónde empezar a mirar. */}
           {voice.problemCode && (

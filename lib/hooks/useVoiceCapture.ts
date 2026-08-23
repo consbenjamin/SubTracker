@@ -27,6 +27,8 @@ export interface VoiceCapture {
   problem: VoiceProblem;
   /** Código crudo del navegador, para diagnosticar lo que no previmos. */
   problemCode: string | null;
+  /** Origen exacto al que hay que darle permiso (el puerto importa). */
+  origin: string;
   start: () => void;
   stop: () => void;
   reset: () => void;
@@ -137,6 +139,21 @@ export function useVoiceCapture(
       if (!problema) return;
       setProblem(problema);
       setProblemCode(causa);
+
+      // Con `not-allowed` hay dos culpables posibles y el navegador no los
+      // distingue: que el sitio no tenga permiso, o que lo tenga y sea el
+      // sistema operativo el que se lo niega al navegador. Se pregunta: si el
+      // sitio ya lo tiene concedido, el que falta es el del sistema.
+      if (problema === "denied" && navigator.permissions) {
+        navigator.permissions
+          .query({ name: "microphone" as PermissionName })
+          .then((estado) => {
+            if (estado.state === "granted") setProblem("service");
+          })
+          .catch(() => {
+            // Navegador que no sabe responder: se deja el diagnóstico original.
+          });
+      }
     };
 
     // `onend` llega siempre: al terminar bien, al cortar, y también después de
@@ -165,5 +182,15 @@ export function useVoiceCapture(
     };
   }, []);
 
-  return { supported, listening, transcript, problem, problemCode, start, stop, reset };
+  return {
+    supported,
+    listening,
+    transcript,
+    problem,
+    problemCode,
+    origin: typeof window === "undefined" ? "" : window.location.host,
+    start,
+    stop,
+    reset,
+  };
 }
