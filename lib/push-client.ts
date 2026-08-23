@@ -56,6 +56,17 @@ export async function enablePushNotifications(): Promise<boolean> {
 
     return res.ok;
   } catch (err) {
+    // `AbortError: Registration failed - push service error` es el navegador
+    // sin poder registrarse contra su servicio de push (FCM en Chrome). Pasa
+    // seguido en desarrollo y no es un fallo de la app: se avisa sin ensuciar
+    // la consola con un error.
+    if ((err as DOMException)?.name === "AbortError") {
+      console.warn(
+        "[push] el navegador no pudo registrarse en su servicio de push. " +
+          "Las notificaciones quedan desactivadas en esta sesión."
+      );
+      return false;
+    }
     console.error("[push] no se pudo suscribir:", err);
     return false;
   }

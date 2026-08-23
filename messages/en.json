@@ -467,7 +467,6 @@
     "currencyMismatch": "You said a different currency: check the amount, it's saved in the app's currency.",
     "installmentCountUnsupported": "Only 3, 6, 9 or 12 instalment plans are supported.",
     "denied": "The microphone is blocked for this site. Enable it from the padlock in the address bar (and check your system lets the browser use the microphone).",
-    "noMic": "We couldn't find a microphone.",
     "insecure": "The microphone only works on localhost or over https."
   }
 }

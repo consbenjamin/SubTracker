@@ -17,7 +17,7 @@ import SpeechRecognition, { useSpeechRecognition } from "react-speech-recognitio
  */
 
 /** Por qué no se pudo escuchar, para poder decir algo útil en pantalla. */
-export type VoiceProblem = "denied" | "noMic" | "insecure" | null;
+export type VoiceProblem = "denied" | "insecure" | null;
 
 export interface VoiceCapture {
   supported: boolean;
@@ -45,8 +45,6 @@ export function useVoiceCapture(
   } = useSpeechRecognition();
 
   const [problem, setProblem] = useState<VoiceProblem>(null);
-  /** Ya se resolvió el permiso en esta pantalla: no volver a preguntar. */
-  const yaConcedido = useRef(false);
 
   // En un ref para que el efecto no dependa de la identidad de la función:
   // quien la pasa suele redefinirla en cada render.
@@ -71,59 +69,28 @@ export function useVoiceCapture(
     resetTranscript();
   }, [finalTranscript, resetTranscript]);
 
-  const start = useCallback(async () => {
+  const start = useCallback(() => {
     setProblem(null);
     resetTranscript();
 
-    // El permiso se pide acá y no dentro del reconocimiento: así el navegador
-    // muestra su cartel en el momento del toque, que es cuando se entiende para
-    // qué se pide. Además distingue "lo negaste" de "no hay micrófono", cosa
-    // que la API de dictado no informa.
     if (!window.isSecureContext) {
       setProblem("insecure");
       return;
     }
 
-    // Se consulta antes de pedir. Sin esto, `getUserMedia` en cada dictado
-    // volvía a mostrar el cartel del navegador aunque el permiso ya estuviera
-    // dado. Chrome y Safari (iOS 18) responden a esta consulta.
-    if (!yaConcedido.current) {
-      let estado: PermissionState | null = null;
-      try {
-        estado = (await navigator.permissions.query({ name: "microphone" as PermissionName })).state;
-      } catch {
-        // Navegador sin soporte: se sigue y lo resuelve el pedido de abajo.
-      }
-
-      if (estado === "denied") {
-        setProblem("denied");
-        return;
-      }
-
-      if (estado !== "granted") {
-        try {
-          const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-          // El reconocimiento abre su propio micrófono: este solo servía para
-          // pedir el permiso, y dejarlo abierto deja encendido el indicador de
-          // grabación.
-          stream.getTracks().forEach((track) => track.stop());
-        } catch (error) {
-          const nombre = (error as DOMException)?.name;
-          setProblem(
-            nombre === "NotFoundError" || nombre === "OverconstrainedError" ? "noMic" : "denied"
-          );
-          return;
-        }
-      }
-
-      // Que no se vuelva a preguntar en lo que dura esta pantalla, aunque el
-      // navegador no informe el permiso como concedido.
-      yaConcedido.current = true;
-    }
-
-    // `continuous: false` a propósito: iOS no lo soporta y para dictar un gasto
-    // alcanza con una frase.
+    // El permiso lo pide el propio reconocimiento, no nosotros.
+    //
+    // Pedirlo aparte con `getUserMedia` parecía más claro —el cartel salía justo
+    // al tocar el botón— pero son dos permisos distintos: el de micrófono y el
+    // de dictado. En Safari el primero no se recuerda entre recargas, así que
+    // el cartel reaparecía en cada dictado aunque ya estuviera concedido.
+    //
+    // Si el navegador lo tiene bloqueado, la librería lo marca en
+    // `isMicrophoneAvailable` y abajo se traduce a un mensaje que explica cómo
+    // habilitarlo.
     void SpeechRecognition.startListening({
+      // `continuous: false` a propósito: iOS no lo soporta y para dictar un
+      // gasto alcanza con una frase.
       continuous: false,
       language: locale === "en" ? "en-US" : "es-AR",
     });
