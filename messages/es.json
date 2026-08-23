@@ -468,7 +468,7 @@
     "installmentCountUnsupported": "Solo se admiten planes de 3, 6, 9 o 12 cuotas.",
     "denied": "Necesitamos permiso para usar el micrófono. Habilitalo en {origin} desde el candado de la barra y recargá.",
     "insecure": "El micrófono solo funciona en localhost o con https.",
-    "service": "Tu sistema no deja que el navegador use el micrófono: Ajustes del Sistema → Privacidad y seguridad → Micrófono.",
+    "service": "El sitio tiene permiso, pero tu Mac no deja que el navegador use el micrófono. Andá a Ajustes del Sistema → Privacidad y seguridad → Micrófono, activá tu navegador y volvé a abrirlo.",
     "noMic": "No encontramos ningún micrófono conectado.",
     "network": "No se pudo conectar con el servicio de dictado. Revisá tu conexión.",
     "errorCode": "Código: {code}"

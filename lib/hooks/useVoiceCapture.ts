@@ -156,8 +156,19 @@ export function useVoiceCapture(
             iniciar();
           })
           .catch(() => {
-            setProblem("denied");
             setProblemCode(causa);
+            // Si el sitio ya tenía permiso y aun así el navegador no consigue
+            // el micrófono, el que falta es el del sistema operativo: en una
+            // Mac, Chrome puede tener permitido el sitio y tener el micrófono
+            // denegado para Chrome entero. Ese no lo pide la página.
+            if (!navigator.permissions) {
+              setProblem("denied");
+              return;
+            }
+            navigator.permissions
+              .query({ name: "microphone" as PermissionName })
+              .then((estado) => setProblem(estado.state === "granted" ? "service" : "denied"))
+              .catch(() => setProblem("denied"));
           });
         return;
       }

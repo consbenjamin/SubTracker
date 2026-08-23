@@ -468,7 +468,7 @@
     "installmentCountUnsupported": "Only 3, 6, 9 or 12 instalment plans are supported.",
     "denied": "We need permission to use the microphone. Enable it for {origin} from the padlock in the address bar and reload.",
     "insecure": "The microphone only works on localhost or over https.",
-    "service": "Your system won't let the browser use the microphone: System Settings → Privacy & Security → Microphone.",
+    "service": "The site has permission, but your Mac won't let the browser use the microphone. Go to System Settings → Privacy & Security → Microphone, turn your browser on, then reopen it.",
     "noMic": "We couldn't find a microphone.",
     "network": "Couldn't reach the dictation service. Check your connection.",
     "errorCode": "Code: {code}"
