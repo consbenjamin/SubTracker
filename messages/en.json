@@ -466,9 +466,9 @@
     "filled": "Filled in {count, plural, one {# field} other {# fields}}. Check them before saving.",
     "currencyMismatch": "You said a different currency: check the amount, it's saved in the app's currency.",
     "installmentCountUnsupported": "Only 3, 6, 9 or 12 instalment plans are supported.",
-    "denied": "The microphone is blocked for {origin}. Enable it from the padlock in the address bar and reload. Note: the permission is per site and the port counts, so if you allowed it on another address you have to do it again here.",
+    "denied": "We need permission to use the microphone. Enable it for {origin} from the padlock in the address bar and reload.",
     "insecure": "The microphone only works on localhost or over https.",
-    "service": "The site has permission, but your system won't let the browser use the microphone: System Settings → Privacy & Security → Microphone, turn your browser on and reopen it.",
+    "service": "Your system won't let the browser use the microphone: System Settings → Privacy & Security → Microphone.",
     "noMic": "We couldn't find a microphone.",
     "network": "Couldn't reach the dictation service. Check your connection.",
     "errorCode": "Code: {code}"

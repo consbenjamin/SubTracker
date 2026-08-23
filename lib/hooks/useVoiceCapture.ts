@@ -66,6 +66,8 @@ export function useVoiceCapture(
   const reconocimiento = useRef<SpeechRecognition | null>(null);
   /** Lo último que se escuchó, para entregarlo cuando el dictado termina. */
   const textoFinal = useRef("");
+  /** El permiso se pide una sola vez por pantalla. */
+  const yaPedimosPermiso = useRef(false);
 
   // En un ref para que arrancar no dependa de la identidad de la función: quien
   // la pasa suele redefinirla en cada render.
@@ -95,7 +97,7 @@ export function useVoiceCapture(
     textoFinal.current = "";
   }, []);
 
-  const start = useCallback(() => {
+  const start = useCallback(function iniciar() {
     setProblem(null);
     setProblemCode(null);
     setTranscript("");
@@ -135,25 +137,35 @@ export function useVoiceCapture(
 
     instancia.onerror = (evento: SpeechRecognitionErrorEvent) => {
       const causa = evento.error;
+
+      // El reconocimiento usa el permiso del micrófono, pero no lo pide: si
+      // nadie lo pidió antes para este sitio, falla sin mostrar nada. Se pide
+      // acá con `getUserMedia`, que es lo que hace aparecer el cartel del
+      // navegador, y si lo conceden se reintenta solo.
+      if (causa === "not-allowed" && !yaPedimosPermiso.current) {
+        yaPedimosPermiso.current = true;
+        navigator.mediaDevices
+          .getUserMedia({ audio: true })
+          .then((stream) => {
+            // El reconocimiento abre su propio micrófono: este era solo para
+            // pedir el permiso, y dejarlo abierto deja prendida la lucecita.
+            stream.getTracks().forEach((track) => track.stop());
+            // Directo y no por una marca que lea `onend`: el reconocimiento ya
+            // terminó mucho antes de que la persona toque "permitir" en el
+            // cartel, así que esa marca llegaba siempre tarde.
+            iniciar();
+          })
+          .catch(() => {
+            setProblem("denied");
+            setProblemCode(causa);
+          });
+        return;
+      }
+
       const problema = PROBLEMA_POR_ERROR[causa];
       if (!problema) return;
       setProblem(problema);
       setProblemCode(causa);
-
-      // Con `not-allowed` hay dos culpables posibles y el navegador no los
-      // distingue: que el sitio no tenga permiso, o que lo tenga y sea el
-      // sistema operativo el que se lo niega al navegador. Se pregunta: si el
-      // sitio ya lo tiene concedido, el que falta es el del sistema.
-      if (problema === "denied" && navigator.permissions) {
-        navigator.permissions
-          .query({ name: "microphone" as PermissionName })
-          .then((estado) => {
-            if (estado.state === "granted") setProblem("service");
-          })
-          .catch(() => {
-            // Navegador que no sabe responder: se deja el diagnóstico original.
-          });
-      }
     };
 
     // `onend` llega siempre: al terminar bien, al cortar, y también después de
@@ -162,6 +174,7 @@ export function useVoiceCapture(
       setListening(false);
       const texto = textoFinal.current.trim();
       if (texto) onResultRef.current(texto);
+
     };
 
     reconocimiento.current = instancia;

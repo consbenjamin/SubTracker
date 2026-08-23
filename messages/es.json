@@ -466,9 +466,9 @@
     "filled": "Completé {count, plural, one {# campo} other {# campos}}. Revisalos antes de guardar.",
     "currencyMismatch": "Dijiste otra moneda: revisá el importe, se guarda en la moneda de la app.",
     "installmentCountUnsupported": "Solo se admiten planes de 3, 6, 9 o 12 cuotas.",
-    "denied": "El micrófono está bloqueado para {origin}. Habilitalo desde el candado de la barra de direcciones y recargá. Ojo: el permiso es por sitio y el puerto cuenta, así que si lo habilitaste en otra dirección hay que hacerlo de nuevo acá.",
+    "denied": "Necesitamos permiso para usar el micrófono. Habilitalo en {origin} desde el candado de la barra y recargá.",
     "insecure": "El micrófono solo funciona en localhost o con https.",
-    "service": "El sitio tiene permiso, pero el sistema no deja que el navegador use el micrófono: Ajustes del Sistema → Privacidad y seguridad → Micrófono, activá tu navegador y volvé a abrirlo.",
+    "service": "Tu sistema no deja que el navegador use el micrófono: Ajustes del Sistema → Privacidad y seguridad → Micrófono.",
     "noMic": "No encontramos ningún micrófono conectado.",
     "network": "No se pudo conectar con el servicio de dictado. Revisá tu conexión.",
     "errorCode": "Código: {code}"
