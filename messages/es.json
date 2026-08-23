@@ -456,5 +456,16 @@
     "thisInstallmentAmount": "Monto de esta cuota:",
     "titleInstallment": "Detalle de compra",
     "titleSubscription": "Editar suscripción"
+  },
+  "voice": {
+    "dictate": "Dictar",
+    "stop": "Listo",
+    "listening": "Escuchando…",
+    "hint": "Ej: “Netflix siete mil novecientos noventa y nueve por mes”",
+    "micBlocked": "El micrófono está bloqueado. Habilitalo en los permisos del navegador.",
+    "nothingFound": "No pude entender ningún dato. Probá de nuevo diciendo el nombre y el importe.",
+    "filled": "Completé {count, plural, one {# campo} other {# campos}}. Revisalos antes de guardar.",
+    "currencyMismatch": "Dijiste otra moneda: revisá el importe, se guarda en la moneda de la app.",
+    "installmentCountUnsupported": "Solo se admiten planes de 3, 6, 9 o 12 cuotas."
   }
 }

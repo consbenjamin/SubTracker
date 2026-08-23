@@ -21,6 +21,9 @@ import { INSTALLMENT_OPTIONS } from "@/lib/subscriptions";
 import { firstDayOfNextMonth } from "@/lib/date";
 import { useFormatCurrency } from "@/lib/hooks/useFormatCurrency";
 import { Repeat, CreditCard } from "lucide-react";
+import { VoiceFillButton } from "@/components/subscriptions/VoiceFillButton";
+import type { SpeechResult } from "@/lib/voice/parseSpeech";
+import { useToast } from "@/lib/contexts/ToastContext";
 import { cn } from "@/lib/utils";
 
 const optionalNumber = z.preprocess(
@@ -129,6 +132,8 @@ export function SubscriptionForm({
   onCancel,
 }: SubscriptionFormProps) {
   const t = useTranslations("subscriptionForm");
+  const tVoice = useTranslations("voice");
+  const toast = useToast();
   const subscriptionSchema = useMemo(
     () => buildSubscriptionSchema((key, values) => (values ? t(key, values) : t(key))),
     [t]
@@ -138,6 +143,8 @@ export function SubscriptionForm({
     handleSubmit,
     watch,
     reset,
+    setValue,
+    getValues,
     formState: { errors, isSubmitting },
   } = useForm<SubscriptionFormValues>({
     resolver: zodResolver(subscriptionSchema),
@@ -170,6 +177,8 @@ export function SubscriptionForm({
   });
 
   const [recordPayment, setRecordPayment] = useState(false);
+  /** Campos que llegaron por dictado, para señalarlos hasta que se guarde. */
+  const [speechFilled, setSpeechFilled] = useState<string[]>([]);
   const formatCurrency = useFormatCurrency();
   // react-hook-form no es compatible con el React Compiler: este componente
   // queda sin optimizar. No hay nada que corregir salvo cambiar de librería.
@@ -231,7 +240,55 @@ export function SubscriptionForm({
     }
   };
 
+  /**
+   * Vuelca en el formulario lo que se entendió del dictado.
+   *
+   * Se escribe campo por campo en vez de `reset`: lo dictado completa, no
+   * reemplaza, así lo que ya se había tipeado a mano no se pierde.
+   */
+  const applySpeech = (result: SpeechResult) => {
+    // Se aplica todo de una con `reset` en vez de campo por campo: el select de
+    // cuotas solo existe cuando el tipo ya es "en cuotas", y con `setValue`
+    // suelto llegaba antes de que ese campo estuviera en pantalla, así que el
+    // valor se perdía y quedaba el primero de la lista.
+    // Los botones de cantidad de cuotas solo existen cuando el tipo ya es "en
+    // cuotas": se aplican en dos pasos, porque en el primero todavía no están
+    // en pantalla y el valor se perdía sin dejar ninguno marcado.
+    const { installment_count, ...resto } = result.values;
+    reset({ ...getValues(), ...resto });
+    if (installment_count !== undefined) {
+      // Se marca el botón como lo haría una persona, en vez de escribir el
+      // valor: así el radio queda realmente seleccionado —importa para un
+      // lector de pantalla— y react-hook-form se entera por su propio onChange.
+      // En diferido porque estos botones recién se montan al cambiar el tipo.
+      // En diferido porque estos botones recién se montan cuando el tipo pasa
+      // a "en cuotas": aplicado junto con el resto, el valor se perdía.
+      //
+      // Queda pendiente que el `<input type="radio">` en sí no toma el atributo
+      // `checked` por esta vía —el botón se resalta y el formulario guarda bien,
+      // pero un lector de pantalla lo anuncia como no elegido—. Marcarlo a mano
+      // o controlarlo desde React rompía el clic con el dedo, así que se deja
+      // como está hasta encontrar una salida que no cambie ese comportamiento.
+      setTimeout(
+        () => setValue("installment_count", installment_count, { shouldValidate: true }),
+        0
+      );
+    }
+    setSpeechFilled(result.detected);
+    for (const aviso of result.warnings) {
+      toast.toast(tVoice(aviso as "currencyMismatch" | "installmentCountUnsupported"), "info");
+    }
+    if (result.detected.length) {
+      toast.success(tVoice("filled", { count: result.detected.length }));
+    }
+  };
+
+  /** Resalta los campos que completó el dictado, para que se revisen. */
+  const voiceRing = (campo: string) =>
+    speechFilled.includes(campo) ? "border-foreground/40 ring-2 ring-[var(--input-focus-ring)]" : undefined;
+
   const applyTemplate = (name: string, category: string, billing_cycle: BillingCycle) => {
+    setSpeechFilled([]);
     reset({
       name,
       price: 0,
@@ -248,6 +305,11 @@ export function SubscriptionForm({
 
   return (
     <form onSubmit={handleSubmit(onSubmitForm)} noValidate className="space-y-6">
+      {/* Solo al crear: dictar sobre un gasto que ya existe pisaría lo cargado. */}
+      {!subscription && (
+        <VoiceFillButton onParsed={applySpeech} />
+      )}
+
       {!subscription && SUBSCRIPTION_TEMPLATES.length > 0 && (
         <div className="space-y-2">
           <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
@@ -289,6 +351,7 @@ export function SubscriptionForm({
           error={errors.name?.message}
           placeholder={t("namePlaceholder")}
           {...register("name")}
+          className={voiceRing("name")}
         />
       </div>
 
@@ -400,7 +463,10 @@ export function SubscriptionForm({
                   key={option}
                   className={cn(
                     "flex min-w-[4rem] cursor-pointer items-center justify-center rounded-lg border-2 px-4 py-3 text-sm font-medium transition-all",
-                    installmentCount === option
+                    // Comparación numérica: al elegir con el dedo el valor
+                    // llega como texto ("6"), y con `===` a secas el botón
+                    // elegido nunca se resaltaba.
+                    Number(installmentCount) === option
                       ? "border-[var(--primary)] bg-primary/10 text-foreground"
                       : "border-border bg-muted/40 text-muted-foreground hover:border-muted-foreground/40"
                   )}
@@ -456,6 +522,7 @@ export function SubscriptionForm({
           type="date"
           {...register("next_payment_date")}
           error={errors.next_payment_date?.message}
+          className={voiceRing("next_payment_date")}
         />
       </div>
 
@@ -472,6 +539,7 @@ export function SubscriptionForm({
               autoComplete="off"
               error={errors.category?.message}
               {...register("category")}
+              className={voiceRing("category")}
               placeholder={t("categoryPlaceholder")}
             />
             <datalist id="category-suggestions">

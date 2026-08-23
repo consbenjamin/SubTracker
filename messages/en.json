@@ -456,5 +456,16 @@
     "thisInstallmentAmount": "This installment:",
     "titleInstallment": "Purchase details",
     "titleSubscription": "Edit subscription"
+  },
+  "voice": {
+    "dictate": "Dictate",
+    "stop": "Done",
+    "listening": "Listening…",
+    "hint": "E.g. “Netflix seven thousand nine hundred a month”",
+    "micBlocked": "The microphone is blocked. Enable it in your browser permissions.",
+    "nothingFound": "I couldn't make out any details. Try again with the name and the amount.",
+    "filled": "Filled in {count, plural, one {# field} other {# fields}}. Check them before saving.",
+    "currencyMismatch": "You said a different currency: check the amount, it's saved in the app's currency.",
+    "installmentCountUnsupported": "Only 3, 6, 9 or 12 instalment plans are supported."
   }
 }
