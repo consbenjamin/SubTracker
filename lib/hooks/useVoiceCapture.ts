@@ -45,6 +45,8 @@ export function useVoiceCapture(
   } = useSpeechRecognition();
 
   const [problem, setProblem] = useState<VoiceProblem>(null);
+  /** Ya se resolvió el permiso en esta pantalla: no volver a preguntar. */
+  const yaConcedido = useRef(false);
 
   // En un ref para que el efecto no dependa de la identidad de la función:
   // quien la pasa suele redefinirla en cada render.
@@ -81,15 +83,42 @@ export function useVoiceCapture(
       setProblem("insecure");
       return;
     }
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      // El reconocimiento abre su propio micrófono: este solo servía para pedir
-      // el permiso, y dejarlo abierto deja el indicador de grabación encendido.
-      stream.getTracks().forEach((track) => track.stop());
-    } catch (error) {
-      const nombre = (error as DOMException)?.name;
-      setProblem(nombre === "NotFoundError" || nombre === "OverconstrainedError" ? "noMic" : "denied");
-      return;
+
+    // Se consulta antes de pedir. Sin esto, `getUserMedia` en cada dictado
+    // volvía a mostrar el cartel del navegador aunque el permiso ya estuviera
+    // dado. Chrome y Safari (iOS 18) responden a esta consulta.
+    if (!yaConcedido.current) {
+      let estado: PermissionState | null = null;
+      try {
+        estado = (await navigator.permissions.query({ name: "microphone" as PermissionName })).state;
+      } catch {
+        // Navegador sin soporte: se sigue y lo resuelve el pedido de abajo.
+      }
+
+      if (estado === "denied") {
+        setProblem("denied");
+        return;
+      }
+
+      if (estado !== "granted") {
+        try {
+          const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+          // El reconocimiento abre su propio micrófono: este solo servía para
+          // pedir el permiso, y dejarlo abierto deja encendido el indicador de
+          // grabación.
+          stream.getTracks().forEach((track) => track.stop());
+        } catch (error) {
+          const nombre = (error as DOMException)?.name;
+          setProblem(
+            nombre === "NotFoundError" || nombre === "OverconstrainedError" ? "noMic" : "denied"
+          );
+          return;
+        }
+      }
+
+      // Que no se vuelva a preguntar en lo que dura esta pantalla, aunque el
+      // navegador no informe el permiso como concedido.
+      yaConcedido.current = true;
     }
 
     // `continuous: false` a propósito: iOS no lo soporta y para dictar un gasto
