@@ -471,6 +471,7 @@
     "service": "El sitio tiene permiso, pero tu Mac no deja que el navegador use el micrófono. Andá a Ajustes del Sistema → Privacidad y seguridad → Micrófono, activá tu navegador y volvé a abrirlo.",
     "noMic": "No encontramos ningún micrófono conectado.",
     "network": "No se pudo conectar con el servicio de dictado. Revisá tu conexión.",
-    "errorCode": "Código: {code}"
+    "errorCode": "Código: {code}",
+    "brave": "Brave desactiva el dictado por privacidad: el reconocimiento de voz de Chromium manda el audio a servidores de Google. No es un problema de permisos. Probá desde Chrome, Edge o Safari."
   }
 }

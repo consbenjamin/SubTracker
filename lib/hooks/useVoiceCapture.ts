@@ -17,7 +17,7 @@ import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "
  */
 
 /** Por qué no se pudo escuchar, o null si no hubo problema. */
-export type VoiceProblem = "denied" | "service" | "noMic" | "network" | "insecure" | null;
+export type VoiceProblem = "denied" | "service" | "noMic" | "network" | "insecure" | "brave" | null;
 
 export interface VoiceCapture {
   supported: boolean;
@@ -68,6 +68,19 @@ export function useVoiceCapture(
   const textoFinal = useRef("");
   /** El permiso se pide una sola vez por pantalla. */
   const yaPedimosPermiso = useRef(false);
+  /**
+   * Brave deja la Web Speech API a la vista pero desactivada: el dictado de
+   * Chromium manda el audio a los servidores de Google y Brave no lo permite.
+   * La API responde como si faltara un permiso, así que sin detectarlo el aviso
+   * mandaba a revisar permisos que estaban bien.
+   */
+  const esBrave = useRef(false);
+  useEffect(() => {
+    const marca = (navigator as unknown as { brave?: { isBrave: () => Promise<boolean> } }).brave;
+    marca?.isBrave().then((si) => {
+      esBrave.current = si;
+    });
+  }, []);
 
   // En un ref para que arrancar no dependa de la identidad de la función: quien
   // la pasa suele redefinirla en cada render.
@@ -142,6 +155,12 @@ export function useVoiceCapture(
       // nadie lo pidió antes para este sitio, falla sin mostrar nada. Se pide
       // acá con `getUserMedia`, que es lo que hace aparecer el cartel del
       // navegador, y si lo conceden se reintenta solo.
+      if (esBrave.current && (causa === "not-allowed" || causa === "service-not-allowed")) {
+        setProblem("brave");
+        setProblemCode(causa);
+        return;
+      }
+
       if (causa === "not-allowed" && !yaPedimosPermiso.current) {
         yaPedimosPermiso.current = true;
         navigator.mediaDevices

@@ -471,6 +471,7 @@
     "service": "The site has permission, but your Mac won't let the browser use the microphone. Go to System Settings → Privacy & Security → Microphone, turn your browser on, then reopen it.",
     "noMic": "We couldn't find a microphone.",
     "network": "Couldn't reach the dictation service. Check your connection.",
-    "errorCode": "Code: {code}"
+    "errorCode": "Code: {code}",
+    "brave": "Brave disables dictation for privacy: Chromium's speech recognition sends audio to Google's servers. It isn't a permissions problem. Try Chrome, Edge or Safari."
   }
 }
