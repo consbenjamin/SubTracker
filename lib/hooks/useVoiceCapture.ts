@@ -41,7 +41,6 @@ export function useVoiceCapture(
     listening,
     resetTranscript,
     browserSupportsSpeechRecognition,
-    isMicrophoneAvailable,
   } = useSpeechRecognition();
 
   const [problem, setProblem] = useState<VoiceProblem>(null);
@@ -68,6 +67,48 @@ export function useVoiceCapture(
     // Deja el buffer limpio para el próximo dictado; también corta este efecto.
     resetTranscript();
   }, [finalTranscript, resetTranscript]);
+
+  /**
+   * Se escucha el error del reconocimiento en vez de mirar el
+   * `isMicrophoneAvailable` de la librería, que una vez que se apaga no vuelve
+   * a encenderse: el aviso quedaba para siempre en pantalla aunque después se
+   * concediera el permiso.
+   *
+   * Además, cuando el navegador niega el micrófono la librería deja el
+   * reconocimiento inservible —reemplaza sus manejadores por funciones vacías—.
+   * El síntoma es engañoso: el botón vuelve a ponerse en "grabando" pero ya no
+   * llega ningún resultado. Rearmando el motor acá, el siguiente intento
+   * funciona sin recargar la página.
+   */
+  const manejarError = useCallback((evento: Event) => {
+    const causa = (evento as unknown as { error?: string }).error;
+    if (causa !== "not-allowed" && causa !== "service-not-allowed") return;
+
+    setProblem("denied");
+
+    const actual = SpeechRecognition.getRecognition();
+    const motor =
+      (actual?.constructor as typeof globalThis.SpeechRecognition | undefined) ??
+      window.SpeechRecognition ??
+      window.webkitSpeechRecognition;
+    if (motor) SpeechRecognition.applyPolyfill(motor);
+
+    // Y se fuerza el fin de la escucha. Al anular `onend`, la librería se queda
+    // creyendo que sigue grabando: el botón mostraba "Listo" para siempre y el
+    // toque siguiente lo tomaba como parar, no como empezar. De ahí la
+    // sensación de que tocarlo no hacía nada.
+    void SpeechRecognition.abortListening();
+  }, []);
+
+  // Sin lista de dependencias a propósito: rearmar el motor crea una instancia
+  // nueva, y así el listener se vuelve a colocar sobre la vigente. Registrarlo
+  // dentro de `start` llegaba tarde y el primer fallo pasaba desapercibido.
+  useEffect(() => {
+    const reconocimiento = SpeechRecognition.getRecognition();
+    if (!reconocimiento) return;
+    reconocimiento.addEventListener("error", manejarError);
+    return () => reconocimiento.removeEventListener("error", manejarError);
+  });
 
   const start = useCallback(() => {
     setProblem(null);
@@ -111,9 +152,7 @@ export function useVoiceCapture(
     supported: browserSupportsSpeechRecognition,
     listening,
     transcript,
-    // `isMicrophoneAvailable` de la librería solo se entera después de fallar;
-    // el permiso que pedimos nosotros da el motivo antes de intentar.
-    problem: problem ?? (isMicrophoneAvailable ? null : "denied"),
+    problem,
     start,
     stop,
     reset: resetTranscript,
