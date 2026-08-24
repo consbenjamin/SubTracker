@@ -423,6 +423,7 @@ export function SubscriptionForm({
                 {...register("price", { valueAsNumber: true })}
                 error={errors.price?.message}
                 placeholder="0.00"
+                className={voiceRing("price")}
               />
               <Select
                 label={t("howOften")}
@@ -433,6 +434,7 @@ export function SubscriptionForm({
                 ]}
                 {...register("billing_cycle")}
                 error={errors.billing_cycle?.message}
+                className={voiceRing("billing_cycle")}
               />
             </div>
           </div>
@@ -453,6 +455,7 @@ export function SubscriptionForm({
               {...register("total_amount", { valueAsNumber: true })}
               error={errors.total_amount?.message}
               placeholder="0"
+              className={voiceRing("total_amount")}
             />
           </div>
           <div className="space-y-2">

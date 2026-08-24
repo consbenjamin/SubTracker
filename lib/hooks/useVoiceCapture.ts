@@ -125,10 +125,23 @@ export function useVoiceCapture(
     if (!Motor) return;
 
     // Se corta lo anterior antes de empezar: dos reconocimientos a la vez hacen
-    // que el navegador aborte los dos.
-    reconocimiento.current?.abort();
+    // que el navegador aborte los dos. Se la desreferencia primero para que
+    // quede fuera de juego desde ya: lo que dispare al abortarse ya no es
+    // "la instancia vigente" y no toca el estado de la nueva.
+    const anterior = reconocimiento.current;
+    reconocimiento.current = null;
+    anterior?.abort();
 
     const instancia = new Motor();
+    /**
+     * Si ya avisamos por qué falló, `onend` no vuelve a hablar: si no, encima
+     * del error aparecía "no se escuchó nada", que manda a mirar el lado
+     * equivocado.
+     */
+    let yaAvisamos = false;
+    /** Solo la instancia vigente toca el estado; ver el guardaespaldas de abajo. */
+    const vigente = () => reconocimiento.current === instancia;
+
     instancia.lang = locale === "en" ? "en-US" : "es-AR";
     // `continuous: false` a propósito: iOS no lo soporta y para dictar un gasto
     // alcanza con una frase.
@@ -137,6 +150,7 @@ export function useVoiceCapture(
     instancia.interimResults = true;
 
     instancia.onresult = (evento: SpeechRecognitionEvent) => {
+      if (!vigente()) return;
       let final = "";
       let parcial = "";
       for (let i = evento.resultIndex; i < evento.results.length; i += 1) {
@@ -149,6 +163,7 @@ export function useVoiceCapture(
     };
 
     instancia.onerror = (evento: SpeechRecognitionErrorEvent) => {
+      if (!vigente()) return;
       const causa = evento.error;
 
       // El reconocimiento usa el permiso del micrófono, pero no lo pide: si
@@ -156,6 +171,7 @@ export function useVoiceCapture(
       // acá con `getUserMedia`, que es lo que hace aparecer el cartel del
       // navegador, y si lo conceden se reintenta solo.
       if (esBrave.current && (causa === "not-allowed" || causa === "service-not-allowed")) {
+        yaAvisamos = true;
         setProblem("brave");
         setProblemCode(causa);
         return;
@@ -163,6 +179,8 @@ export function useVoiceCapture(
 
       if (causa === "not-allowed" && !yaPedimosPermiso.current) {
         yaPedimosPermiso.current = true;
+        // El aviso lo da el reintento (o su fallo): mientras tanto callamos.
+        yaAvisamos = true;
         navigator.mediaDevices
           .getUserMedia({ audio: true })
           .then((stream) => {
@@ -194,6 +212,7 @@ export function useVoiceCapture(
 
       const problema = PROBLEMA_POR_ERROR[causa];
       if (!problema) return;
+      yaAvisamos = true;
       setProblem(problema);
       setProblemCode(causa);
     };
@@ -201,10 +220,16 @@ export function useVoiceCapture(
     // `onend` llega siempre: al terminar bien, al cortar, y también después de
     // un error. Es el único lugar donde apagar el estado de escucha.
     instancia.onend = () => {
+      // Al reintentar, el `onend` de la instancia abortada llegaba después de
+      // que la nueva ya estaba escuchando y apagaba el estado: el botón volvía
+      // a decir "Dictar" con el micrófono abierto.
+      if (!vigente()) return;
+      reconocimiento.current = null;
       setListening(false);
-      const texto = textoFinal.current.trim();
-      if (texto) onResultRef.current(texto);
-
+      if (yaAvisamos) return;
+      // Se entrega incluso vacío: el silencio también es un resultado, y sin
+      // esto cortar sin hablar no producía ninguna señal en pantalla.
+      onResultRef.current(textoFinal.current.trim());
     };
 
     reconocimiento.current = instancia;
@@ -212,16 +237,22 @@ export function useVoiceCapture(
     try {
       instancia.start();
     } catch {
-      // `start()` tira si ya venía escuchando; el estado se corrige solo con el
-      // `onend` de la instancia anterior.
+      // Si `start()` tira, la instancia nunca arrancó y su `onend` no va a
+      // llegar: hay que bajar el estado acá o el botón queda "escuchando" para
+      // siempre.
+      reconocimiento.current = null;
       setListening(false);
     }
   }, [locale]);
 
-  // Cortar el micrófono si la pantalla se cierra mientras escucha.
+  // Cortar el micrófono si la pantalla se cierra mientras escucha. Igual que al
+  // reiniciar: primero se la saca de circulación, así lo que dispare al
+  // abortarse no intenta contar un resultado que ya no tiene a quién.
   useEffect(() => {
     return () => {
-      reconocimiento.current?.abort();
+      const abierto = reconocimiento.current;
+      reconocimiento.current = null;
+      abierto?.abort();
     };
   }, []);
 

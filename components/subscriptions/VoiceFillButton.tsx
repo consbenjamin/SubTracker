@@ -24,13 +24,22 @@ export function VoiceFillButton({ onParsed, className }: VoiceFillButtonProps) {
   const t = useTranslations("voice");
   const locale = useLocale();
   const [lastHeard, setLastHeard] = useState<string | null>(null);
-  const [nothingFound, setNothingFound] = useState(false);
+  /** null = nada que decir; "silence" = no se oyó nada; "parse" = se oyó pero no se entendió. */
+  const [miss, setMiss] = useState<"silence" | "parse" | null>(null);
 
   const handleResult = useCallback(
     (texto: string) => {
+      // Sin texto el dictado terminó sin oír nada. Se distingue de "no entendí"
+      // porque se arreglan distinto: uno es hablar más cerca, el otro es decir
+      // el nombre y el importe.
+      if (!texto) {
+        setLastHeard(null);
+        setMiss("silence");
+        return;
+      }
       setLastHeard(texto);
       const result = parseSpeech(texto);
-      setNothingFound(result.detected.length === 0);
+      setMiss(result.detected.length === 0 ? "parse" : null);
       if (result.detected.length) onParsed(result);
     },
     [onParsed]
@@ -52,7 +61,7 @@ export function VoiceFillButton({ onParsed, className }: VoiceFillButtonProps) {
             return;
           }
           setLastHeard(null);
-          setNothingFound(false);
+          setMiss(null);
           voice.start();
         }}
         aria-pressed={voice.listening}
@@ -104,11 +113,13 @@ export function VoiceFillButton({ onParsed, className }: VoiceFillButtonProps) {
         </p>
       )}
 
-      {nothingFound && (
-        <p className="text-sm text-amber-600 dark:text-amber-400">{t("nothingFound")}</p>
+      {miss && (
+        <p className="text-sm text-amber-600 dark:text-amber-400" role="status">
+          {miss === "silence" ? t("noSpeech") : t("nothingFound")}
+        </p>
       )}
 
-      {!voice.listening && !texto && !voice.problem && (
+      {!voice.listening && !texto && !voice.problem && !miss && (
         <p className="text-xs text-muted-foreground">{t("hint")}</p>
       )}
     </div>
