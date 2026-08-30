@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { isValidSubscriptionId, paymentBodySchema } from "@/lib/validations/schemas";
-import { addBillingCycle, addMonthsDateOnly, toDateOnly } from "@/lib/date";
+import { nextBillingDate, toDateOnly } from "@/lib/date";
 import { authenticate, dbError, parseBody, NO_STORE } from "@/lib/api/route";
 
 type Params = { params: Promise<{ id: string }> };
@@ -44,9 +44,12 @@ export async function POST(request: Request, { params }: Params) {
   });
   if (auth instanceof NextResponse) return auth;
 
+  // `*` y no una lista: así `billing_day` llega cuando existe y no rompe
+  // mientras la migración 009 no se haya corrido, en vez de fallar la consulta
+  // entera por nombrar una columna que todavía no está.
   const sub = await auth.supabase
     .from("subscriptions")
-    .select("id, price, payment_type, billing_cycle, installment_count, installments_paid, next_payment_date")
+    .select("*")
     .eq("id", id)
     .eq("user_id", auth.userId)
     .single();
@@ -60,6 +63,10 @@ export async function POST(request: Request, { params }: Params) {
 
   const isRecurring = (sub.data.payment_type ?? "recurring") === "recurring";
   const currentDue = toDateOnly(sub.data.next_payment_date);
+  // Ancla del ciclo. Falta mientras la migración 009 no se haya corrido: ahí
+  // `nextBillingDate` usa el día de la fecha actual, que es el comportamiento
+  // de siempre.
+  const billingDay: number | null = sub.data.billing_day ?? null;
 
   let paidDate = body.data.payment_date;
   let insertAmount = body.data.amount;
@@ -131,7 +138,9 @@ export async function POST(request: Request, { params }: Params) {
         ...(isNewPayment && {
           next_payment_date:
             nextPaid < sub.data.installment_count
-              ? addMonthsDateOnly(currentDue || paidDate, 1)
+              // Las cuotas también son mensuales y también se corrían: una
+              // compra del 31 quedaba en 28 después de febrero.
+              ? nextBillingDate(currentDue || paidDate, "monthly", billingDay)
               : paidDate,
         }),
       })
@@ -147,7 +156,11 @@ export async function POST(request: Request, { params }: Params) {
     const update = await auth.supabase
       .from("subscriptions")
       .update({
-        next_payment_date: addBillingCycle(currentDue, sub.data.billing_cycle ?? "monthly"),
+        next_payment_date: nextBillingDate(
+          currentDue,
+          sub.data.billing_cycle ?? "monthly",
+          billingDay
+        ),
       })
       .eq("id", id)
       .eq("user_id", auth.userId);

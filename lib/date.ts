@@ -38,9 +38,60 @@ const MONTHS_PER_CYCLE: Record<BillingCycle, number> = {
   yearly: 12,
 };
 
-/** Próximo vencimiento según el ciclo de facturación. */
+/** Día del mes que una fecha de cobro representa: el ancla del ciclo. */
+export function billingDayOf(dateStr: string): number {
+  return parseDateOnly(dateStr).getDate();
+}
+
+/**
+ * Próximo vencimiento según el ciclo, anclado al día que corresponde.
+ *
+ * `anchorDay` es el día del mes en que se cobra de verdad. Sin él, un cobro del
+ * 31 se corría para siempre: febrero lo recorta al 28 y el ciclo siguiente
+ * arranca desde ese 28, así que marzo daba 28 y nunca volvía al 31. Pasando el
+ * ancla se elige primero el mes y recién después el día, que es el ancla o el
+ * último del mes si ese mes es más corto; el recorte de febrero no se hereda.
+ */
+export function nextBillingDate(
+  dateStr: string,
+  billingCycle: BillingCycle,
+  anchorDay?: number | null
+): string {
+  return addMonthsAnchored(dateStr, MONTHS_PER_CYCLE[billingCycle] ?? 1, anchorDay);
+}
+
+/**
+ * Suma meses respetando un día ancla.
+ *
+ * Es la primitiva de `nextBillingDate`, para los cálculos que no van de a un
+ * ciclo: el calendario de cuotas proyecta la número N de una sola vez.
+ */
+export function addMonthsAnchored(
+  dateStr: string,
+  months: number,
+  anchorDay?: number | null
+): string {
+  const desde = parseDateOnly(dateStr);
+  const ancla = anchorDay ?? desde.getDate();
+
+  // Día 1 del mes destino: `new Date` normaliza los meses fuera de rango, así
+  // que sumar 12 a diciembre cae en el año siguiente sin hacer cuentas.
+  const destino = new Date(desde.getFullYear(), desde.getMonth() + months, 1);
+  // Día 0 del mes siguiente = último del destino.
+  const ultimoDelMes = new Date(destino.getFullYear(), destino.getMonth() + 1, 0).getDate();
+  destino.setDate(Math.min(ancla, ultimoDelMes));
+  return toDateOnly(destino);
+}
+
+/**
+ * Próximo vencimiento sin ancla conocida.
+ *
+ * Equivale a `nextBillingDate` tomando como ancla el día de `dateStr`, que es
+ * lo mismo que hacía antes: se mantiene para los llamadores que no tienen de
+ * dónde sacar el ancla.
+ */
 export function addBillingCycle(dateStr: string, billingCycle: BillingCycle): string {
-  return addMonthsDateOnly(dateStr, MONTHS_PER_CYCLE[billingCycle] ?? 1);
+  return nextBillingDate(dateStr, billingCycle, null);
 }
 
 /** Hoy en formato YYYY-MM-DD (calendario local). */

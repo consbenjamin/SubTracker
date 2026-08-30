@@ -14,12 +14,12 @@ import { useFormatCurrency } from "@/lib/hooks/useFormatCurrency";
 import { formatDate } from "@/lib/utils";
 import { Calendar, Plus, Check, Circle } from "lucide-react";
 import { getInstallmentProgress, isInstallmentSubscription } from "@/lib/subscriptions";
-import { addMonthsDateOnly, toDateOnly, todayDateOnly } from "@/lib/date";
+import { addMonthsAnchored, toDateOnly, todayDateOnly } from "@/lib/date";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/lib/contexts/ToastContext";
 import { useConfirmPayment } from "@/lib/hooks/useConfirmPayment";
 import { refreshSubscriptions } from "@/lib/hooks/useSubscriptions";
-import { addBillingCycle } from "@/lib/date";
+import { nextBillingDate } from "@/lib/date";
 
 export default function EditSubscriptionPage() {
   const router = useRouter();
@@ -269,7 +269,14 @@ export default function EditSubscriptionPage() {
             status: isPaid ? ("paid" as const) : isNext ? ("due" as const) : ("upcoming" as const),
             date: payment
               ? toDateOnly(payment.payment_date)
-              : addMonthsDateOnly(nextDue, num - installment.nextInstallment),
+              // Anclado igual que el avance del servidor: si no, un plan que
+              // cobra el 31 mostraba el calendario corrido respecto de las
+              // fechas que después se guardan.
+              : addMonthsAnchored(
+                  nextDue,
+                  num - installment.nextInstallment,
+                  subscription.billing_day ?? null
+                ),
             amount: subscription.price,
           };
         });
@@ -532,9 +539,10 @@ export default function EditSubscriptionPage() {
             {t("confirmPaymentBody", {
               due: formatDate(confirmDueDate ?? subscription.next_payment_date),
               next: formatDate(
-                addBillingCycle(
+                nextBillingDate(
                   (confirmDueDate ?? subscription.next_payment_date).toString().slice(0, 10),
-                  subscription.billing_cycle ?? "monthly"
+                  subscription.billing_cycle ?? "monthly",
+                  subscription.billing_day ?? null
                 )
               ),
             })}

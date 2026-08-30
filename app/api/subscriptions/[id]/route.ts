@@ -4,7 +4,7 @@ import {
   subscriptionUpdateBodySchema,
 } from "@/lib/validations/schemas";
 import { normalizeSubscriptionPayload } from "@/lib/subscriptions";
-import { addBillingCycle, toDateOnly, todayDateOnly } from "@/lib/date";
+import { billingDayOf, nextBillingDate, toDateOnly, todayDateOnly } from "@/lib/date";
 import { authenticate, dbError, parseBody, NO_STORE } from "@/lib/api/route";
 
 type Params = { params: Promise<{ id: string }> };
@@ -43,11 +43,19 @@ export async function PUT(request: Request, { params }: Params) {
 
   const { record_payment, ...rest } = body.data;
   const formData = normalizeSubscriptionPayload(rest);
+  /**
+   * Si la fecha que se guarda la eligió la persona, hay que re-anclar el día de
+   * cobro. Solo deja de valer cuando la movemos nosotros al registrar un pago:
+   * ahí el ancla es justamente lo que no tiene que cambiar.
+   */
+  let reAnclar = true;
 
   if (record_payment) {
+    // `*` y no una lista: `billing_day` llega cuando existe y no rompe mientras
+    // la migración 009 no se haya corrido.
     const { data: current } = await auth.supabase
       .from("subscriptions")
-      .select("price, next_payment_date, billing_cycle, payment_type, installment_count, installments_paid")
+      .select("*")
       .eq("id", id)
       .eq("user_id", auth.userId)
       .single();
@@ -87,10 +95,13 @@ export async function PUT(request: Request, { params }: Params) {
       // Recurrentes: avanzar a la próxima fecha solo si el usuario no la reprogramó a mano.
       const isRecurring = (current.payment_type ?? "recurring") === "recurring";
       if (isRecurring && currentDue && toDateOnly(formData.next_payment_date) === currentDue) {
-        formData.next_payment_date = addBillingCycle(
+        formData.next_payment_date = nextBillingDate(
           currentDue,
-          current.billing_cycle ?? "monthly"
+          current.billing_cycle ?? "monthly",
+          current.billing_day ?? null
         );
+        // La fecha la movimos nosotros, no la persona: el ancla queda igual.
+        reAnclar = false;
       }
     }
   }
@@ -104,6 +115,30 @@ export async function PUT(request: Request, { params }: Params) {
     .single();
 
   if (error) return dbError(error);
+
+  // El ancla va en una escritura aparte y a propósito. Si fuera parte de
+  // `formData`, con la migración 009 sin correr la edición entera fallaría por
+  // una columna que no existe; así lo importante ya quedó guardado y esto es un
+  // ajuste que puede no aplicar. Sin ancla el cálculo usa el día de la fecha,
+  // que es como venía funcionando.
+  if (reAnclar && formData.next_payment_date) {
+    const billing_day = billingDayOf(toDateOnly(formData.next_payment_date));
+    const ancla = await auth.supabase
+      .from("subscriptions")
+      .update({ billing_day })
+      .eq("id", id)
+      .eq("user_id", auth.userId);
+
+    if (ancla.error) {
+      console.error("No se pudo anclar el día de cobro:", ancla.error.message);
+    } else if (data) {
+      // `data` salió del update anterior y no vio este cambio. Sin corregirlo,
+      // la pantalla proyectaría el próximo cobro con el ancla vieja hasta la
+      // siguiente recarga.
+      data.billing_day = billing_day;
+    }
+  }
+
   return NextResponse.json(data);
 }
 

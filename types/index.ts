@@ -13,6 +13,13 @@ export interface Subscription {
   installments_paid: number;
   total_amount?: number | null;
   next_payment_date: string;
+  /**
+   * Día del mes en que se cobra, independiente de dónde quedó
+   * `next_payment_date`. Sin esto un cobro del 31 se corría al 28 al pasar por
+   * febrero y no volvía nunca (ver migración 009). Opcional porque las
+   * respuestas anteriores a esa migración no lo traen.
+   */
+  billing_day?: number | null;
   category: string;
   status: SubscriptionStatus;
   notes?: string;

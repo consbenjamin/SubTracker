@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Modal } from "@/components/ui/Modal";
 import { useConfirmPayment } from "@/lib/hooks/useConfirmPayment";
-import { addBillingCycle } from "@/lib/date";
+import { nextBillingDate } from "@/lib/date";
 import { formatDate } from "@/lib/utils";
 import { useFormatCurrency } from "@/lib/hooks/useFormatCurrency";
 import { categoryHueStyle } from "@/lib/categoryColor";
@@ -104,9 +104,10 @@ export function SubscriptionCard({
    */
   const nextDueAfterPayment = isInstallment
     ? null
-    : addBillingCycle(
+    : nextBillingDate(
         subscription.next_payment_date.toString().slice(0, 10),
-        subscription.billing_cycle ?? "monthly"
+        subscription.billing_cycle ?? "monthly",
+        subscription.billing_day ?? null
       );
   const yearlySavingsIfCancelled = subscription.status === "active" ? getAnnualEquivalent(subscription) : null;
 

@@ -14,6 +14,10 @@
     "module": "esnext",
     "moduleResolution": "bundler",
     "resolveJsonModule": true,
+    // Los .spec.ts los corre Node directamente (`npm test`), y en ESM el
+    // import necesita la extensión escrita. Con `noEmit` no cambia nada de lo
+    // que produce el build: solo permite que tsc también los revise.
+    "allowImportingTsExtensions": true,
     "isolatedModules": true,
     "jsx": "react-jsx",
     "incremental": true,
