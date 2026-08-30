@@ -2,7 +2,17 @@ import coreWebVitals from "eslint-config-next/core-web-vitals";
 import typescript from "eslint-config-next/typescript";
 
 const config = [
-  { ignores: [".next/**", "node_modules/**", "public/sw.js", "public/workbox-*.js"] },
+  // `.next.nosync` es donde cae el build de verdad: `.next` es un symlink que
+  // apunta ahí para que iCloud no sincronice la salida (ver .gitignore).
+  {
+    ignores: [
+      ".next/**",
+      ".next.nosync/**",
+      "node_modules/**",
+      "public/sw.js",
+      "public/workbox-*.js",
+    ],
+  },
   ...coreWebVitals,
   ...typescript,
   {

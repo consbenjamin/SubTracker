@@ -9,7 +9,15 @@
 /coverage
 
 # next.js
-/.next/
+# Sin barra final a proposito: ahora `.next` es un symlink, no un directorio, y
+# la regla `/.next/` solo tapaba directorios.
+/.next
+# El proyecto vive en ~/Desktop, que iCloud sincroniza. iCloud no sube nada
+# que termine en `.nosync`, asi que `.next` es un symlink a esta carpeta y el
+# build real cae afuera de la sincronizacion. Sin esto iCloud dejaba copias de
+# conflicto ("routes-manifest 2.json") adentro de la salida del build, y dos de
+# ellas eran .ts: rompian el typecheck con "Duplicate identifier".
+/.next.nosync/
 /out/
 
 # production
