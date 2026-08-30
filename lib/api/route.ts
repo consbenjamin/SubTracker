@@ -77,9 +77,21 @@ export async function parseBody<T extends z.ZodTypeAny>(
   return { data: parsed.data };
 }
 
-/** Respuesta de error de Supabase → 500 con el mensaje. */
-export function dbError(error: { message: string }): NextResponse {
-  return NextResponse.json({ error: error.message }, { status: 500 });
+/**
+ * Error de Supabase → 500 con un mensaje que se pueda leer.
+ *
+ * El detalle crudo va al log del servidor y no a la respuesta: Postgres
+ * contesta cosas como `column "x" of relation "y" does not exist`, que no le
+ * dice nada a quien lo lee y de paso describe el esquema a cualquiera que
+ * mande una petición. En Vercel el `console.error` queda en los logs de la
+ * función, que es donde hay que mirar cuando esto aparece.
+ */
+export function dbError(error: { message: string }, context?: string): NextResponse {
+  console.error(`[db] ${context ?? "error"}: ${error.message}`);
+  return NextResponse.json(
+    { error: "No pudimos guardar el cambio. Probá de nuevo en un momento." },
+    { status: 500 }
+  );
 }
 
 /** Respuestas que no deben cachearse (detalle y pagos). */

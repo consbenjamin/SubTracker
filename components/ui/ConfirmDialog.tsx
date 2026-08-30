@@ -30,7 +30,15 @@ export function ConfirmDialog({
   loading = false,
 }: ConfirmDialogProps) {
   const handleConfirm = async () => {
-    await onConfirm();
+    try {
+      await onConfirm();
+    } catch (error) {
+      // El diálogo queda abierto para reintentar: cerrarlo daría por hecho que
+      // la acción salió bien. El aviso lo da quien pasó `onConfirm`, que es el
+      // único que sabe qué se estaba haciendo.
+      console.error("La acción confirmada falló:", error);
+      return;
+    }
     onClose();
   };
 

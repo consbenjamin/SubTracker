@@ -8,6 +8,7 @@ import { exportSubscriptionsCsv, exportPaymentsCsv } from "@/lib/exportCsv";
 import { exportSubscriptionsPdf, exportPaymentsPdf } from "@/lib/exportPdf";
 import { Download, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useToast } from "@/lib/contexts/ToastContext";
 
 type Dataset = "subscriptions" | "payments";
 type Format = "csv" | "pdf";
@@ -19,6 +20,7 @@ interface ExportDropdownProps {
 
 export function ExportDropdown({ subscriptions }: ExportDropdownProps) {
   const t = useTranslations("export");
+  const toast = useToast();
   const [open, setOpen] = useState(false);
   const [exporting, setExporting] = useState<ExportKey | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -33,26 +35,36 @@ export function ExportDropdown({ subscriptions }: ExportDropdownProps) {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const loadSubscriptions = async (): Promise<Subscription[]> => {
+  /** null = no se pudo traer. Distinto de una lista legítimamente vacía. */
+  const loadSubscriptions = async (): Promise<Subscription[] | null> => {
     if (subscriptions?.length) return subscriptions;
     const res = await fetch("/api/subscriptions");
-    return res.ok ? ((await res.json()) as Subscription[]) : [];
+    return res.ok ? ((await res.json()) as Subscription[]) : null;
   };
 
   const handleExport = async (dataset: Dataset, format: Format) => {
     setExporting(`${dataset}-${format}`);
     try {
       const subs = await loadSubscriptions();
+      // Antes, un fallo de red daba una lista vacía y el archivo se generaba
+      // igual: te bajabas un CSV sin filas creyendo que ese era tu historial.
+      if (!subs) return toast.error(t("errorLoading"));
 
       if (dataset === "subscriptions") {
+        if (!subs.length) return toast.toast(t("nothingToExport"), "info");
         (format === "csv" ? exportSubscriptionsCsv : exportSubscriptionsPdf)(subs);
         return;
       }
 
       const res = await fetch("/api/payments");
-      const payments: PaymentHistory[] = res.ok ? await res.json() : [];
+      if (!res.ok) return toast.error(t("errorLoading"));
+      const payments: PaymentHistory[] = await res.json();
+      if (!payments.length) return toast.toast(t("nothingToExport"), "info");
       const names = subs.length ? new Map(subs.map((s) => [s.id, s.name])) : undefined;
       (format === "csv" ? exportPaymentsCsv : exportPaymentsPdf)(payments, names);
+    } catch (error) {
+      console.error("Error exportando:", error);
+      toast.error(t("errorLoading"));
     } finally {
       setExporting(null);
       setOpen(false);

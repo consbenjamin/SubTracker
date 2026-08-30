@@ -39,7 +39,12 @@ export default function EditSubscriptionPage() {
   // undefined = todavía cargando · null = no existe. `loading` sale de acá.
   const [subscription, setSubscription] = useState<Subscription | null | undefined>(undefined);
   const [payments, setPayments] = useState<PaymentHistory[]>([]);
-  const loading = subscription === undefined;
+  /** La carga falló (red, 500, 429). Distinto de que el gasto no exista. */
+  const [loadFailed, setLoadFailed] = useState(false);
+  const [paymentsFailed, setPaymentsFailed] = useState(false);
+  // `undefined` sigue siendo "todavía no llegó", salvo que ya sepamos que
+  // falló: si no, un error dejaba el esqueleto girando para siempre.
+  const loading = subscription === undefined && !loadFailed;
   const [paymentModalOpen, setPaymentModalOpen] = useState(false);
   const [paymentAmount, setPaymentAmount] = useState("");
   const [paymentDate, setPaymentDate] = useState(todayDateOnly);
@@ -76,10 +81,26 @@ export default function EditSubscriptionPage() {
     if (!subId) return;
     try {
       const res = await fetch(`/api/subscriptions/${subId}`, { cache: "no-store" });
-      setSubscription(res.ok ? await res.json() : null);
+      if (res.ok) {
+        setSubscription(await res.json());
+        setLoadFailed(false);
+        return;
+      }
+      // Solo un 404 significa que el gasto no existe. Un 500, un 429 del rate
+      // limiter o una sesión vencida caían acá también y la pantalla decía
+      // "no encontrado": mandaba a buscar algo que sí estaba.
+      if (res.status === 404) {
+        setSubscription(null);
+        setLoadFailed(false);
+        return;
+      }
+      // No se pisa lo que ya estaba: si esto es una recarga posterior a guardar
+      // un pago, tirar los datos convertiría la pantalla entera en un error
+      // por un refresco que falló.
+      setLoadFailed(true);
     } catch (error) {
       console.error("Error fetching subscription:", error);
-      setSubscription(null);
+      setLoadFailed(true);
     }
   }, [subId]);
 
@@ -87,9 +108,17 @@ export default function EditSubscriptionPage() {
     if (!subId) return;
     try {
       const res = await fetch(`/api/subscriptions/${subId}/payments`, { cache: "no-store" });
-      if (res.ok) setPayments(await res.json());
+      if (res.ok) {
+        setPayments(await res.json());
+        setPaymentsFailed(false);
+        return;
+      }
+      setPaymentsFailed(true);
     } catch (error) {
       console.error("Error fetching payments:", error);
+      // El historial vacío se lee como "nunca pagaste nada", que es lo
+      // contrario de "no lo pudimos traer".
+      setPaymentsFailed(true);
     }
   }, [subId]);
 
@@ -246,7 +275,27 @@ export default function EditSubscriptionPage() {
         className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8"
         style={{ backgroundColor: "var(--background)" }}
       >
-        <p className="text-muted-foreground">{tDetail("notFound")}</p>
+        <p className="text-muted-foreground">
+          {loadFailed ? tDetail("loadError") : tDetail("notFound")}
+        </p>
+        <div className="mt-4 flex flex-wrap gap-2">
+          {loadFailed && (
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={() => {
+                setLoadFailed(false);
+                fetchSubscription();
+                fetchPayments();
+              }}
+            >
+              {tDetail("retry")}
+            </Button>
+          )}
+          <Button variant="secondary" size="sm" onClick={() => router.push("/subscriptions")}>
+            {tDetail("backToList")}
+          </Button>
+        </div>
       </div>
     );
   }
@@ -439,9 +488,23 @@ export default function EditSubscriptionPage() {
             </CardHeader>
             <CardContent>
               {payments.length === 0 ? (
-                <p className="text-sm text-muted-foreground py-4">
-                  {tDetail("noPayments")}
-                </p>
+                // Un historial que no se pudo traer no es un historial vacío:
+                // decir "todavía no registraste pagos" sugiere que se perdieron.
+                <div className="py-4">
+                  <p className="text-sm text-muted-foreground">
+                    {paymentsFailed ? tDetail("paymentsLoadError") : tDetail("noPayments")}
+                  </p>
+                  {paymentsFailed && (
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      className="mt-3"
+                      onClick={() => fetchPayments()}
+                    >
+                      {tDetail("retry")}
+                    </Button>
+                  )}
+                </div>
               ) : (
                 <ul className="space-y-0">
                   {payments.map((p) => (

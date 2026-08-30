@@ -428,7 +428,9 @@
     "pdf": "PDF",
     "csv": "CSV",
     "subscriptions": "Suscripciones",
-    "paymentHistory": "Historial de pagos"
+    "paymentHistory": "Historial de pagos",
+    "errorLoading": "No pudimos traer los datos, así que no generamos el archivo. Probá de nuevo.",
+    "nothingToExport": "No hay nada para exportar todavía."
   },
   "pagination": {
     "prev": "Anterior",
@@ -463,7 +465,11 @@
     "thisInstallmentAmount": "Monto de esta cuota:",
     "titleInstallment": "Detalle de compra",
     "titleSubscription": "Editar suscripción",
-    "paymentRecorded": "Pago registrado."
+    "paymentRecorded": "Pago registrado.",
+    "loadError": "No pudimos cargar este gasto. Puede ser tu conexión: probá de nuevo.",
+    "paymentsLoadError": "No pudimos cargar el historial. No quiere decir que esté vacío.",
+    "retry": "Reintentar",
+    "backToList": "Volver a mis gastos"
   },
   "voice": {
     "dictate": "Dictar",

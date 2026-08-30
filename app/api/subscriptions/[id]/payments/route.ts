@@ -112,7 +112,7 @@ export async function POST(request: Request, { params }: Params) {
       .select()
       .single();
 
-    if (inserted.error) return dbError(inserted.error);
+    if (inserted.error) return dbError(inserted.error, "insertar pago");
     payment = inserted.data;
   }
 
@@ -148,7 +148,7 @@ export async function POST(request: Request, { params }: Params) {
       .eq("user_id", auth.userId);
 
     // Sin esto el pago quedaba registrado y el plan sin avanzar, en silencio.
-    if (update.error) return dbError(update.error);
+    if (update.error) return dbError(update.error, "avanzar plan en cuotas");
   }
 
   // Recurrentes (o legacy null): solo avanzamos si el pago corresponde al vencimiento actual.
@@ -168,7 +168,7 @@ export async function POST(request: Request, { params }: Params) {
     // Igual que en el plan de cuotas: sin esto el pago quedaba registrado, la
     // fecha sin avanzar y la respuesta decía que todo salió bien. Desde afuera
     // era idéntico a "confirmé y no pasó nada".
-    if (update.error) return dbError(update.error);
+    if (update.error) return dbError(update.error, "avanzar vencimiento recurrente");
   }
 
   // Se devuelve la suscripción ya actualizada, no solo el pago: quien confirma

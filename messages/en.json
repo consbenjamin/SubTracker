@@ -428,7 +428,9 @@
     "pdf": "PDF",
     "csv": "CSV",
     "subscriptions": "Subscriptions",
-    "paymentHistory": "Payment history"
+    "paymentHistory": "Payment history",
+    "errorLoading": "We couldn't fetch your data, so no file was created. Try again.",
+    "nothingToExport": "There is nothing to export yet."
   },
   "pagination": {
     "prev": "Previous",
@@ -463,7 +465,11 @@
     "thisInstallmentAmount": "This installment:",
     "titleInstallment": "Purchase details",
     "titleSubscription": "Edit subscription",
-    "paymentRecorded": "Payment recorded."
+    "paymentRecorded": "Payment recorded.",
+    "loadError": "We couldn't load this expense. It may be your connection: try again.",
+    "paymentsLoadError": "We couldn't load the history. That doesn't mean it's empty.",
+    "retry": "Retry",
+    "backToList": "Back to my expenses"
   },
   "voice": {
     "dictate": "Dictate",
