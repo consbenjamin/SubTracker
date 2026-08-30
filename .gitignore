@@ -1,6 +1,15 @@
 # See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
 # dependencies
+# node_modules NO lleva el tratamiento `.nosync` que sí tiene `.next` (ver más
+# abajo): se probó y no funciona. npm borra la carpeta y la rehace en cada
+# install —lo avisa él mismo con "reify Removing non-directory node_modules"—,
+# así que el symlink no sobrevive ni a un `npm install`.
+#
+# Como el proyecto vive en ~/Desktop y iCloud lo sincroniza, cada tanto van a
+# aparecer copias de conflicto acá adentro ("package 2.json"). Se limpian con
+# `rm -rf node_modules && npm install`. La solución de fondo sería sacar el
+# proyecto de una carpeta sincronizada.
 /node_modules
 /.pnp
 .pnp.js
