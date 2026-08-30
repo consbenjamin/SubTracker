@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Subscription, PaymentHistory } from "@/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
+import { Button } from "@/components/ui/Button";
 import { SkeletonChart, SkeletonHeader, SkeletonStats } from "@/components/ui/Loading";
 import { lastMonths, monthKey, parseDateOnly } from "@/lib/date";
 import { useFormatCurrency } from "@/lib/hooks/useFormatCurrency";
@@ -104,21 +105,33 @@ export default function AnalyticsPage() {
   const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
   const [payments, setPayments] = useState<PaymentHistory[]>([]);
   const [loading, setLoading] = useState(true);
+  const [failed, setFailed] = useState(false);
 
   useEffect(() => {
     const load = async <T,>(url: string, apply: (data: T) => void) => {
       try {
         const res = await fetch(url);
-        if (res.ok) apply((await res.json()) as T);
+        if (res.ok) {
+          apply((await res.json()) as T);
+          return true;
+        }
+        console.error(`Error fetching ${url}:`, res.status);
       } catch (error) {
         console.error(`Error fetching ${url}:`, error);
       }
+      return false;
     };
 
+    // Un corte de red, un 500 o un 429 del rate limiter dejaban las listas
+    // vacías, y toda la pantalla decía "no hay datos para mostrar": igual que
+    // no tener ningún gasto cargado. Son cosas distintas y hay que decirlas
+    // distinto (mismo criterio que en la lista de gastos).
     Promise.all([
       load("/api/subscriptions", setSubscriptions),
       load("/api/payments", setPayments),
-    ]).finally(() => setLoading(false));
+    ])
+      .then((oks) => setFailed(oks.some((ok) => !ok)))
+      .finally(() => setLoading(false));
   }, []);
 
   const activeSubscriptions = useMemo(
@@ -205,6 +218,25 @@ export default function AnalyticsPage() {
           {t("subtitle")}
         </p>
       </header>
+
+      {/* Sin esto, unos datos que no llegaron se leían como cero gastos: los
+          números de abajo daban 0 y los gráficos "no hay datos para mostrar". */}
+      {failed && (
+        <div
+          role="alert"
+          className="mb-6 flex flex-col gap-3 rounded-lg border border-amber-500/30 bg-amber-500/5 p-4 sm:flex-row sm:items-center sm:justify-between"
+        >
+          <p className="text-sm text-amber-700 dark:text-amber-400">{t("loadError")}</p>
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => window.location.reload()}
+            className="w-full shrink-0 sm:w-auto"
+          >
+            {t("retry")}
+          </Button>
+        </div>
+      )}
 
       <div className="mb-10 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Card variant="outline" className="transition-shadow duration-200 hover:shadow-[var(--card-shadow-hover)]">

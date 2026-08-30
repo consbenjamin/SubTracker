@@ -149,12 +149,16 @@ export default function EditSubscriptionPage() {
       // 429 del rate limiter o un 500 dejaban el diálogo abierto sin decir una
       // palabra, indistinguible de que el botón no respondiera.
       if (!response.ok) {
+        // Igual que al confirmar: solo los 4xx traen un texto pensado para
+        // leerse. Los 5xx vienen con el mensaje crudo de Postgres.
         let mensaje = tDetail("paymentFailed");
-        try {
-          const cuerpo = await response.json();
-          if (typeof cuerpo?.error === "string") mensaje = cuerpo.error;
-        } catch {
-          // Respuesta sin JSON: queda el mensaje genérico.
+        if (response.status < 500) {
+          try {
+            const cuerpo = await response.json();
+            if (typeof cuerpo?.error === "string") mensaje = cuerpo.error;
+          } catch {
+            // Respuesta sin JSON: queda el mensaje genérico.
+          }
         }
         toast.error(mensaje);
         return;

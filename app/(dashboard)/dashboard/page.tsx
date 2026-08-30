@@ -175,9 +175,17 @@ export default function DashboardPage() {
   }, [filter, subscriptions, activeSubscriptions]);
 
   const totalPages = Math.max(1, Math.ceil(filteredSubscriptions.length / PAGE_SIZE));
+  /**
+   * La página elegida puede quedar más allá del final cuando la lista se achica
+   * —borrar el último gasto de la última página, o confirmar un pago con el
+   * filtro "próximos"—. Ahí el recorte daba vacío y `Pagination` se escondía
+   * sola por quedar una sola página: la grilla quedaba en blanco y sin ningún
+   * control para volver.
+   */
+  const currentPage = Math.min(page, totalPages);
   const paginatedSubscriptions = filteredSubscriptions.slice(
-    (page - 1) * PAGE_SIZE,
-    page * PAGE_SIZE
+    (currentPage - 1) * PAGE_SIZE,
+    currentPage * PAGE_SIZE
   );
 
   const filterTabs: { key: Filter; label: string }[] = [
@@ -360,7 +368,7 @@ export default function DashboardPage() {
         </div>
 
         {totalPages > 1 && (
-          <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
+          <Pagination page={currentPage} totalPages={totalPages} onPageChange={setPage} />
         )}
       </section>
 

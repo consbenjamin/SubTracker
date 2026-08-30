@@ -410,7 +410,9 @@
     "monthlyExpensesHint": "Real data from history when payments exist; otherwise projection.",
     "chartSpend": "Spend",
     "subscriptionsLabel": "Subscriptions",
-    "perMonth": "/mo"
+    "perMonth": "/mo",
+    "loadError": "We couldn't load your data, so the numbers below are incomplete. Check your connection and try again.",
+    "retry": "Retry"
   },
   "search": {
     "placeholder": "Search subscriptions…",

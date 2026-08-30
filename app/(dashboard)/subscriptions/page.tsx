@@ -132,11 +132,17 @@ function SubscriptionsContent() {
     router.push("/subscriptions");
   }, [router]);
 
-  const { totalPages, paginatedSubscriptions } = useMemo(() => {
+  const { totalPages, currentPage, paginatedSubscriptions } = useMemo(() => {
     const total = Math.max(1, Math.ceil(filteredSubscriptions.length / PAGE_SIZE));
-    const start = (page - 1) * PAGE_SIZE;
+    // La página elegida puede quedar más allá del final cuando la lista se
+    // achica sin que cambie el filtro —borrar el último gasto de la última
+    // página—. Ahí el recorte daba vacío y `Pagination` se escondía sola por
+    // quedar una sola página: la grilla quedaba en blanco y sin forma de volver.
+    const actual = Math.min(page, total);
+    const start = (actual - 1) * PAGE_SIZE;
     return {
       totalPages: total,
+      currentPage: actual,
       paginatedSubscriptions: filteredSubscriptions.slice(start, start + PAGE_SIZE),
     };
   }, [filteredSubscriptions, page]);
@@ -218,7 +224,7 @@ function SubscriptionsContent() {
 
       {filteredSubscriptions.length > 0 && totalPages > 1 && (
         <Pagination
-          page={page}
+          page={currentPage}
           totalPages={totalPages}
           onPageChange={setPage}
         />

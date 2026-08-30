@@ -55,15 +55,18 @@ export function useConfirmPayment() {
         });
 
         if (!res.ok) {
-          // El 409 ("ese vencimiento ya no es el actual") trae un texto que
-          // explica qué hacer; conviene mostrarlo tal cual antes que un error
-          // genérico que no dice nada.
+          // Solo los 4xx traen un texto escrito para leer —el 409 explica que
+          // el vencimiento cambió y hay que recargar—. Los 5xx salen de
+          // `dbError`, que devuelve el mensaje crudo de Postgres: mostrarlo era
+          // ininteligible y encima ventilaba nombres de columnas.
           let mensaje = t("paymentFailed");
-          try {
-            const cuerpo = await res.json();
-            if (typeof cuerpo?.error === "string") mensaje = cuerpo.error;
-          } catch {
-            // Respuesta sin JSON: queda el mensaje genérico.
+          if (res.status < 500) {
+            try {
+              const cuerpo = await res.json();
+              if (typeof cuerpo?.error === "string") mensaje = cuerpo.error;
+            } catch {
+              // Respuesta sin JSON: queda el mensaje genérico.
+            }
           }
           toast.error(mensaje);
           return "failed";

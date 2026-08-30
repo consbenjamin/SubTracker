@@ -410,7 +410,9 @@
     "monthlyExpensesHint": "Datos reales del historial cuando hay pagos; si no, proyección.",
     "chartSpend": "Gasto",
     "subscriptionsLabel": "Suscripciones",
-    "perMonth": "/mes"
+    "perMonth": "/mes",
+    "loadError": "No pudimos cargar tus datos, así que los números de abajo están incompletos. Revisá tu conexión y volvé a intentar.",
+    "retry": "Reintentar"
   },
   "search": {
     "placeholder": "Buscar suscripciones…",
