@@ -1,12 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { Subscription } from "@/types";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
+import { Modal } from "@/components/ui/Modal";
+import { useConfirmPayment } from "@/lib/hooks/useConfirmPayment";
+import { addBillingCycle } from "@/lib/date";
 import { formatDate } from "@/lib/utils";
 import { useFormatCurrency } from "@/lib/hooks/useFormatCurrency";
 import { categoryHueStyle } from "@/lib/categoryColor";
@@ -43,9 +45,10 @@ export function SubscriptionCard({
   onEdit,
   onDelete,
 }: SubscriptionCardProps) {
-  const router = useRouter();
   const t = useTranslations("subscriptionForm");
   const [expanded, setExpanded] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const { confirmPayment, submitting } = useConfirmPayment();
   const formatCurrency = useFormatCurrency();
   const categoryHue = useCategoryHue(subscription.category ?? "");
   const installment = getInstallmentProgress(subscription);
@@ -85,6 +88,26 @@ export function SubscriptionCard({
 
   const urgency = getPaymentUrgency();
   const cycleLabel = t(getCycleLabelKey(subscription));
+  /**
+   * Solo recurrentes: una cuota se confirma desde el detalle, donde se ve de
+   * qué número de cuota se trata.
+   */
+  const canConfirmPayment =
+    !isInstallment && subscription.status === "active" && remainingDays <= 0;
+  /**
+   * Se anticipa a dónde va a quedar el próximo cobro. Es la misma función que
+   * usa el servidor, así que lo que dice el diálogo es lo que después pasa.
+   *
+   * No se ata a `canConfirmPayment`: al confirmar el último vencimiento ese
+   * pasa a falso un render antes de que se cierre el diálogo, y la frase se
+   * quedaba sin fecha por un instante.
+   */
+  const nextDueAfterPayment = isInstallment
+    ? null
+    : addBillingCycle(
+        subscription.next_payment_date.toString().slice(0, 10),
+        subscription.billing_cycle ?? "monthly"
+      );
   const yearlySavingsIfCancelled = subscription.status === "active" ? getAnnualEquivalent(subscription) : null;
 
   return (
@@ -178,20 +201,17 @@ export function SubscriptionCard({
           </p>
           {/* Las acciones en su propia fila: dentro del texto cambiaban de
               lugar según cuánto ocupara la fecha. */}
-          {!isInstallment && subscription.status === "active" && remainingDays < 0 && (
+          {/* Desde el día del vencimiento, no solo cuando ya pasó: el pago se
+              hace el día que vence, y exigir que estuviera vencido dejaba sin
+              forma de confirmarlo justo el día en que hacía falta. */}
+          {canConfirmPayment && (
             <div>
               <Button
                 type="button"
                 variant="primary"
                 size="sm"
                 className="h-9 whitespace-nowrap"
-                onClick={() => {
-                  router.push(
-                    `/subscriptions/${subscription.id}?confirmDue=true&due=${encodeURIComponent(
-                      subscription.next_payment_date
-                    )}`
-                  );
-                }}
+                onClick={() => setConfirmOpen(true)}
               >
                 {t("confirmPaymentCta")}
               </Button>
@@ -267,6 +287,59 @@ export function SubscriptionCard({
           )}
         </div>
       </div>
+
+      {/* En la misma pantalla y no navegando al detalle: antes el botón llevaba
+          a otra página, que abría este mismo diálogo y te dejaba ahí. Se perdía
+          el lugar en la lista y no quedaba claro si el pago se había guardado. */}
+      <Modal
+        isOpen={confirmOpen}
+        onClose={() => setConfirmOpen(false)}
+        title={t("confirmPaymentTitle")}
+        size="sm"
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-foreground">
+            {t("confirmPaymentSubject", {
+              name: subscription.name,
+              amount: formatCurrency(subscription.price),
+            })}
+          </p>
+          <p className="text-sm text-muted-foreground">
+            {t("confirmPaymentBody", {
+              due: formatDate(subscription.next_payment_date),
+              next: nextDueAfterPayment ? formatDate(nextDueAfterPayment) : "",
+            })}
+          </p>
+          <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => setConfirmOpen(false)}
+              className="w-full sm:w-auto"
+              disabled={submitting}
+            >
+              {t("confirmPaymentNo")}
+            </Button>
+            <Button
+              type="button"
+              variant="primary"
+              onClick={async () => {
+                // Solo se cierra cuando no queda nada vencido. Ante un error el
+                // diálogo sigue a la vista junto al mensaje que dice por qué, y
+                // si venía atrasada varios meses se queda abierto mostrando ya
+                // el vencimiento siguiente: así ponerse al día es seguir
+                // tocando el mismo botón, y no repetir todo el recorrido una
+                // vez por mes atrasado.
+                if ((await confirmPayment(subscription)) === "done") setConfirmOpen(false);
+              }}
+              className="w-full sm:w-auto"
+              disabled={submitting}
+            >
+              {submitting ? t("saving") : t("confirmPaymentYes")}
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </Card>
   );
 }

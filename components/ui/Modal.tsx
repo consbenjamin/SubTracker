@@ -1,6 +1,7 @@
 "use client";
 
 import { ReactNode, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "./Button";
@@ -31,7 +32,10 @@ export function Modal({
     };
   }, [isOpen]);
 
-  if (!isOpen) return null;
+  // El `document` falta en el render del servidor. Nunca hay un modal abierto
+  // al montar —los abre siempre un gesto de la persona—, así que en el servidor
+  // esto ya devolvía null por `isOpen`.
+  if (!isOpen || typeof document === "undefined") return null;
 
   const sizes = {
     sm: "max-w-md",
@@ -40,7 +44,12 @@ export function Modal({
     xl: "max-w-4xl",
   };
 
-  return (
+  // Al body y no donde lo escribieron: desde que hay modales dentro de una
+  // tarjeta de la grilla, `position: fixed` dejó de ser confiable ahí. Basta un
+  // ancestro con `transform`, `filter` o `backdrop-blur` para que "fijo" pase a
+  // medirse contra esa caja y no contra la pantalla, y el diálogo aparezca
+  // recortado dentro de la tarjeta.
+  return createPortal(
     <div
       className="fixed inset-0 z-50 flex items-end justify-center sm:items-center p-0 sm:p-4 min-h-0"
       style={{ backgroundColor: "rgba(0,0,0,0.5)" }}
@@ -71,6 +80,7 @@ export function Modal({
           {children}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

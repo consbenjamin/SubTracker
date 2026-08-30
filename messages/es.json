@@ -246,15 +246,20 @@
     "yearlySavingsIfCancel": "Ahorro anual si cancelas: {amount}",
     "confirmPaymentCta": "Confirmar pago",
     "confirmPaymentTitle": "Confirmar pago",
-    "confirmPaymentBody": "¿Marcaste el pago de {due}? Si ya lo hiciste, el sistema va a actualizar la próxima fecha de cobro.",
-    "confirmPaymentNo": "No pagué",
-    "confirmPaymentYes": "Sí pagué",
+    "confirmPaymentBody": "¿Ya pagaste el vencimiento del {due}? Queda guardado en el historial y el próximo cobro pasa al {next}.",
+    "confirmPaymentNo": "Todavía no",
+    "confirmPaymentYes": "Sí, ya pagué",
     "categorySuggestions": "Streaming,Software,Fitness,Música,Noticias,Cloud,Gaming,Educación,Hogar,Comida,Transporte,Ropa,Salud,Otro",
     "templateGym": "Gimnasio",
     "templateNewspaper": "Periódico / Revista",
     "templateCourse": "Curso online",
     "shortcuts": "Atajos",
-    "errorUpdate": "No se pudo actualizar el gasto"
+    "errorUpdate": "No se pudo actualizar el gasto",
+    "confirmPaymentSubject": "Vas a registrar el pago de {name} por {amount}.",
+    "paymentFailed": "No se pudo registrar el pago. Probá de nuevo.",
+    "paymentRecorded": "Pago registrado.",
+    "paymentRecordedNext": "Pago registrado. El próximo cobro es el {due}.",
+    "paymentRecordedStillDue": "Pago registrado. Todavía queda vencido el del {due}: confirmá ese también."
   },
   "calendar": {
     "upcomingDue": "Próximos vencimientos",
@@ -455,7 +460,8 @@
     "summary": "Resumen",
     "thisInstallmentAmount": "Monto de esta cuota:",
     "titleInstallment": "Detalle de compra",
-    "titleSubscription": "Editar suscripción"
+    "titleSubscription": "Editar suscripción",
+    "paymentRecorded": "Pago registrado."
   },
   "voice": {
     "dictate": "Dictar",

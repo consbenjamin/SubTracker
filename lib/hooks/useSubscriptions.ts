@@ -10,7 +10,20 @@ const EMPTY: Subscription[] = [];
  * las demás recargan: así el botón flotante puede agregar un gasto desde
  * cualquier pantalla y la lista que esté visible se entera.
  */
-const refreshers = new Set<() => void>();
+const refreshers = new Set<() => Promise<void> | void>();
+
+/**
+ * Recarga todas las listas montadas.
+ *
+ * La usa quien cambia una suscripción sin pasar por el CRUD del hook —
+ * registrar un pago mueve la próxima fecha de cobro— para que la tarjeta que
+ * está en pantalla no siga mostrando el vencimiento viejo.
+ */
+export async function refreshSubscriptions(): Promise<void> {
+  // Se espera a que terminen: quien confirma un pago decide qué mostrar según
+  // el vencimiento nuevo, y con las recargas en el aire leería el viejo.
+  await Promise.all([...refreshers].map((refresh) => refresh()));
+}
 
 /**
  * Crea una suscripción sin suscribirse a la lista.

@@ -246,15 +246,20 @@
     "yearlySavingsIfCancel": "Annual savings if you cancel: {amount}",
     "confirmPaymentCta": "Confirm payment",
     "confirmPaymentTitle": "Confirm payment",
-    "confirmPaymentBody": "Did you mark the payment for {due}? If so, the system will update your next billing date.",
-    "confirmPaymentNo": "I didn't pay",
-    "confirmPaymentYes": "I paid",
+    "confirmPaymentBody": "Did you already pay the {due} bill? It gets saved to your history and the next charge moves to {next}.",
+    "confirmPaymentNo": "Not yet",
+    "confirmPaymentYes": "Yes, I paid it",
     "categorySuggestions": "Streaming,Software,Fitness,Music,News,Cloud,Gaming,Education,Home,Food,Transport,Clothes,Health,Other",
     "templateGym": "Gym",
     "templateNewspaper": "Newspaper / Magazine",
     "templateCourse": "Online course",
     "shortcuts": "Shortcuts",
-    "errorUpdate": "Could not update the expense"
+    "errorUpdate": "Could not update the expense",
+    "confirmPaymentSubject": "You're about to record the {name} payment of {amount}.",
+    "paymentFailed": "Couldn't record the payment. Try again.",
+    "paymentRecorded": "Payment recorded.",
+    "paymentRecordedNext": "Payment recorded. The next charge is on {due}.",
+    "paymentRecordedStillDue": "Payment recorded. The {due} one is still overdue: confirm that one too."
   },
   "calendar": {
     "upcomingDue": "Upcoming due dates",
@@ -455,7 +460,8 @@
     "summary": "Summary",
     "thisInstallmentAmount": "This installment:",
     "titleInstallment": "Purchase details",
-    "titleSubscription": "Edit subscription"
+    "titleSubscription": "Edit subscription",
+    "paymentRecorded": "Payment recorded."
   },
   "voice": {
     "dictate": "Dictate",

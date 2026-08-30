@@ -17,6 +17,9 @@ import { getInstallmentProgress, isInstallmentSubscription } from "@/lib/subscri
 import { addMonthsDateOnly, toDateOnly, todayDateOnly } from "@/lib/date";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/lib/contexts/ToastContext";
+import { useConfirmPayment } from "@/lib/hooks/useConfirmPayment";
+import { refreshSubscriptions } from "@/lib/hooks/useSubscriptions";
+import { addBillingCycle } from "@/lib/date";
 
 export default function EditSubscriptionPage() {
   const router = useRouter();
@@ -27,6 +30,7 @@ export default function EditSubscriptionPage() {
   const tDetail = useTranslations("subscriptionDetail");
   const formatCurrency = useFormatCurrency();
   const toast = useToast();
+  const { confirmPayment, submitting: confirmingDue } = useConfirmPayment();
   const subId =
     typeof params.id === "string" ? params.id : params.id?.[0] ?? "";
   /** Evita reabrir el modal cuando la URL aún tiene ?confirmDue y se refresca la suscripción. */
@@ -141,11 +145,29 @@ export default function EditSubscriptionPage() {
           body: JSON.stringify({ amount, payment_date: paymentDate }),
         }
       );
-      if (response.ok) {
-        setPaymentModalOpen(false);
-        fetchSubscription();
-        fetchPayments();
+      // Antes solo miraba `response.ok` y no hacía nada en el else: un 409, un
+      // 429 del rate limiter o un 500 dejaban el diálogo abierto sin decir una
+      // palabra, indistinguible de que el botón no respondiera.
+      if (!response.ok) {
+        let mensaje = tDetail("paymentFailed");
+        try {
+          const cuerpo = await response.json();
+          if (typeof cuerpo?.error === "string") mensaje = cuerpo.error;
+        } catch {
+          // Respuesta sin JSON: queda el mensaje genérico.
+        }
+        toast.error(mensaje);
+        return;
       }
+
+      setPaymentModalOpen(false);
+      toast.success(tDetail("paymentRecorded"));
+      // Registrar un pago mueve la próxima fecha: las listas de otras pantallas
+      // tienen que enterarse igual que cuando se confirma desde la tarjeta.
+      refreshSubscriptions();
+      await Promise.all([fetchSubscription(), fetchPayments()]);
+    } catch {
+      toast.error(tDetail("paymentFailed"));
     } finally {
       setPaymentSubmitting(false);
     }
@@ -166,43 +188,31 @@ export default function EditSubscriptionPage() {
       return;
     }
 
+    // Mismo camino que el botón de la tarjeta: los mensajes de éxito, de error
+    // y el aviso de "todavía queda otro vencido" tienen que ser los mismos
+    // vengas de la lista o del link de una notificación.
     const due = (confirmDueDate ?? subscription.next_payment_date)
       .toString()
       .slice(0, 10);
-    setPaymentSubmitting(true);
-    try {
-      const response = await fetch(`/api/subscriptions/${subId}/payments`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          amount: subscription.price,
-          payment_date: due,
-          confirm_due: true,
-          expected_due: due,
-        }),
-      });
+    const resultado = await confirmPayment(subscription, due);
+    if (resultado === "failed") return;
 
-      if (!response.ok) {
-        try {
-          const err = await response.json();
-          toast.error(
-            typeof err.error === "string"
-              ? err.error
-              : tDetail("paymentFailed")
-          );
-        } catch {
-          toast.error(tDetail("paymentFailed"));
-        }
-        return;
-      }
+    // Esta pantalla no se suscribe a la lista, así que recarga lo suyo aparte.
+    await Promise.all([fetchSubscription(), fetchPayments()]);
 
-      confirmDueDismissedRef.current = true;
-      setConfirmDueOpen(false);
+    // Si todavía queda un vencimiento atrasado, el diálogo sigue abierto sobre
+    // el siguiente. La fecha la toma de `subscription`, que la recarga de
+    // arriba ya dejó al día; hay que soltar la del deep link para no repetir la
+    // vieja y chocar contra el 409 del servidor.
+    if (resultado === "still-due") {
+      setConfirmDueDate(null);
       router.replace(`/subscriptions/${subId}`);
-      await Promise.all([fetchSubscription(), fetchPayments()]);
-    } finally {
-      setPaymentSubmitting(false);
+      return;
     }
+
+    confirmDueDismissedRef.current = true;
+    setConfirmDueOpen(false);
+    router.replace(`/subscriptions/${subId}`);
   };
 
   if (loading) {
@@ -512,9 +522,21 @@ export default function EditSubscriptionPage() {
         size="sm"
       >
         <div className="space-y-4">
+          <p className="text-sm text-foreground">
+            {t("confirmPaymentSubject", {
+              name: subscription.name,
+              amount: formatCurrency(subscription.price),
+            })}
+          </p>
           <p className="text-sm text-muted-foreground">
             {t("confirmPaymentBody", {
               due: formatDate(confirmDueDate ?? subscription.next_payment_date),
+              next: formatDate(
+                addBillingCycle(
+                  (confirmDueDate ?? subscription.next_payment_date).toString().slice(0, 10),
+                  subscription.billing_cycle ?? "monthly"
+                )
+              ),
             })}
           </p>
           <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
@@ -523,7 +545,7 @@ export default function EditSubscriptionPage() {
               variant="secondary"
               onClick={() => handleConfirmDue(false)}
               className="w-full sm:w-auto"
-              disabled={paymentSubmitting}
+              disabled={confirmingDue}
             >
               {t("confirmPaymentNo")}
             </Button>
@@ -532,9 +554,9 @@ export default function EditSubscriptionPage() {
               variant="primary"
               onClick={() => handleConfirmDue(true)}
               className="w-full sm:w-auto"
-              disabled={paymentSubmitting}
+              disabled={confirmingDue}
             >
-              {paymentSubmitting ? t("saving") : t("confirmPaymentYes")}
+              {confirmingDue ? t("saving") : t("confirmPaymentYes")}
             </Button>
           </div>
         </div>

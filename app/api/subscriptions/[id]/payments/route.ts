@@ -144,14 +144,29 @@ export async function POST(request: Request, { params }: Params) {
 
   // Recurrentes (o legacy null): solo avanzamos si el pago corresponde al vencimiento actual.
   if (isRecurring && currentDue === paidDate) {
-    await auth.supabase
+    const update = await auth.supabase
       .from("subscriptions")
       .update({
         next_payment_date: addBillingCycle(currentDue, sub.data.billing_cycle ?? "monthly"),
       })
       .eq("id", id)
       .eq("user_id", auth.userId);
+
+    // Igual que en el plan de cuotas: sin esto el pago quedaba registrado, la
+    // fecha sin avanzar y la respuesta decía que todo salió bien. Desde afuera
+    // era idéntico a "confirmé y no pasó nada".
+    if (update.error) return dbError(update.error);
   }
 
-  return NextResponse.json(payment, NO_STORE);
+  // Se devuelve la suscripción ya actualizada, no solo el pago: quien confirma
+  // necesita saber cuál es el nuevo vencimiento para decir si todavía queda
+  // algo vencido, y adivinarlo en el cliente repetiría la regla de negocio.
+  const fresh = await auth.supabase
+    .from("subscriptions")
+    .select("*")
+    .eq("id", id)
+    .eq("user_id", auth.userId)
+    .single();
+
+  return NextResponse.json({ payment, subscription: fresh.data ?? null }, NO_STORE);
 }
