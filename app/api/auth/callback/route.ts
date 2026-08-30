@@ -2,6 +2,7 @@ import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { isRateLimitedRequest } from "@/lib/rate-limit";
 import { logAuthFailure, logRateLimited } from "@/lib/security-logger";
+import { safeInternalPath } from "@/lib/safeRedirect";
 
 // Evitar que Next.js cachee esta ruta GET (sino puede devolver respuesta vieja o []).
 export const dynamic = "force-dynamic";
@@ -30,22 +31,22 @@ function redirectResponse(
   headers.set("X-Auth-Callback", "1");
   setCookieHeaders.forEach((value) => headers.append("Set-Cookie", value));
 
-  const html = `<!DOCTYPE html><html><head><meta http-equiv="refresh" content="0;url=${encodeURI(location)}"><title>Redirigiendo</title></head><body><p>Redirigiendo...</p><script>window.location.replace(${JSON.stringify(location)});</script></body></html>`;
+  // `<` en vez de `<`: `JSON.stringify` no escapa los signos de menor, así
+  // que un destino que contuviera `</script>` cerraría el bloque acá adentro y
+  // lo que siguiera se ejecutaría como código. `safeInternalPath` ya lo impide
+  // aguas arriba; esto es la segunda barrera, por si alguien agrega otra
+  // llamada a esta función sin pasar por ahí.
+  const paraScript = JSON.stringify(location).replace(/</g, "\\u003c");
+  const html = `<!DOCTYPE html><html><head><meta http-equiv="refresh" content="0;url=${encodeURI(location)}"><title>Redirigiendo</title></head><body><p>Redirigiendo...</p><script>window.location.replace(${paraScript});</script></body></html>`;
   return new Response(html, { status: 302, headers });
 }
+
 
 export async function GET(request: Request) {
   const requestUrl = new URL(request.url);
   const origin = requestUrl.origin;
   const code = requestUrl.searchParams.get("code");
-  const nextParam = requestUrl.searchParams.get("next") ?? "/dashboard";
-  const safeNext =
-    typeof nextParam === "string" &&
-    nextParam.startsWith("/") &&
-    !nextParam.startsWith("//")
-      ? nextParam
-      : "/dashboard";
-  const successRedirectUrl = `${origin}${safeNext}`;
+  const successRedirectUrl = `${origin}${safeInternalPath(requestUrl.searchParams.get("next"))}`;
 
   try {
     const ip = getClientIp(request);

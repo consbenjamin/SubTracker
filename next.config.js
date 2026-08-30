@@ -18,8 +18,13 @@ const nextConfig = {
       { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
       { key: "X-Permitted-Cross-Domain-Policies", value: "none" },
       {
+        // `microphone=(self)` y no `microphone=()`: la lista vacía apaga el
+        // micrófono para todos los orígenes, el propio incluido, así que el
+        // dictado de gastos quedaba bloqueado por la propia app y el error
+        // era indistinguible de un permiso denegado por la persona.
+        // El resto sigue en lista vacía: nada de esto se usa.
         key: "Permissions-Policy",
-        value: "camera=(), microphone=(), geolocation=(), payment=()",
+        value: "camera=(), microphone=(self), geolocation=(), payment=()",
       },
       {
         key: "Content-Security-Policy",
